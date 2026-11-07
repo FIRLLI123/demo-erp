@@ -1,0 +1,1015 @@
+# PRODUCT REQUIREMENTS DOCUMENT (PRD)
+## POS & Inventory Distribution Management System
+
+**Project:** POS & Inventory Distribution Management System  
+**Backend:** Laravel 13  
+**PHP:** 8.3  
+**Database:** MySQL  
+**Frontend:** Blade, Tailwind CSS, Alpine.js  
+**Dashboard Charts:** Chart.js  
+**Target Platform:** Web Dashboard (Admin/Management) dan Android Native Java (Sales)  
+**Development Approach:** Incremental Development
+
+---
+
+# 1. PROJECT OVERVIEW
+
+## 1.1 Background
+
+Membangun sistem POS dan Inventory berbasis web untuk perusahaan distributor produk telekomunikasi Telkomsel, meliputi:
+
+- SA (Starter Pack / SIM Card)
+- VOUCHER
+- MODEM
+
+Sistem digunakan untuk mengelola pengadaan barang, penerimaan barang, distribusi stok antar-gudang, penjualan, pengiriman, piutang, pembayaran, serta monitoring operasional perusahaan.
+
+Web Dashboard menjadi pusat pengelolaan master data dan transaksi oleh Admin, Warehouse, Finance, dan Management.
+
+Ke depannya, Android Native Java digunakan oleh Sales untuk membuat Sales Order, melihat stok, melakukan penjualan, serta melihat laporan penjualan pribadi.
+
+## 1.2 Main Objectives
+
+1. Mempermudah pengelolaan inventory berdasarkan Area, Cluster, TAP, dan Sales.
+2. Mengelola stok berdasarkan dua metode:
+   - ICCID-Based Inventory.
+   - Quantity-Based Inventory.
+3. Memantau pergerakan barang antar-gudang.
+4. Mengelola transaksi penjualan dan customer.
+5. Memantau performa sales dan distribusi.
+6. Menyediakan dashboard analytics untuk management.
+
+## 1.3 Development Scope
+
+Pengembangan awal difokuskan pada Web Dashboard.
+
+Android Native Java belum dikerjakan, tetapi backend dan database harus memiliki fondasi yang memungkinkan integrasi API Android pada tahap berikutnya.
+
+Target awal adalah Demo Prototype yang memiliki beberapa proses transaksi interaktif dan data dummy yang realistis.
+
+---
+
+# 2. BUSINESS STRUCTURE
+
+## 2.1 Organization Hierarchy
+
+Struktur organisasi wajib mengikuti hierarki:
+
+AREA → CLUSTER → TAP → SALES
+
+Relasi:
+
+- Satu Area memiliki banyak Cluster.
+- Satu Cluster memiliki banyak TAP.
+- Satu TAP memiliki banyak Sales.
+- Satu Sales memiliki banyak Warehouse.
+
+Area, Cluster, TAP, dan Sales harus menggunakan relasi database sebenarnya.
+
+## 2.2 Warehouse Structure
+
+Terdapat tiga jenis warehouse:
+
+| Warehouse Type | Description |
+|---|---|
+| MAIN | Gudang besar milik TAP |
+| INVENTORY | Gudang inventory milik TAP |
+| SALES | Gudang operasional milik Sales |
+
+Business Rules:
+
+1. Setiap TAP mempunyai satu MAIN Warehouse.
+2. Setiap TAP mempunyai satu INVENTORY Warehouse.
+3. Satu Sales dapat mempunyai banyak SALES Warehouse.
+4. Setiap warehouse mempunyai relasi ke TAP.
+5. SALES Warehouse juga mempunyai relasi ke Sales.
+6. Area dan Cluster diketahui melalui relasi TAP.
+7. Pembuatan TAP dapat menginisialisasi MAIN dan INVENTORY Warehouse.
+8. Pembuatan Sales tidak boleh membatasi Sales hanya memiliki satu Warehouse.
+
+Contoh:
+
+AREA JAKARTA
+- CLUSTER JAKARTA PUSAT
+  - TAP JAKARTA PUSAT 01
+    - Main Warehouse TAP 01
+    - Inventory Warehouse TAP 01
+    - Sales A
+      - Sales Warehouse A1
+      - Sales Warehouse A2
+    - Sales B
+      - Sales Warehouse B1
+
+## 2.3 Warehouse Selection
+
+Warehouse harus dipilih secara eksplisit pada proses transaksi yang memerlukan lokasi stok.
+
+Untuk transaksi Sales Order:
+
+- Sistem harus memvalidasi gudang yang dipilih.
+- Gudang harus sesuai dengan TAP Sales.
+- ICCID harus berada pada gudang yang dipilih.
+- Quantity harus tersedia pada gudang yang dipilih.
+- Sistem tidak boleh menganggap stok tersedia hanya berdasarkan total stok seluruh gudang.
+
+---
+
+# 3. USER ROLES
+
+Sediakan role berikut:
+
+| Role | Access |
+|---|---|
+| SUPER ADMIN | Semua modul |
+| ADMIN | Master data dan operasional |
+| FINANCE | Approval SO, AR, pembayaran |
+| WAREHOUSE | PO, GR, inventory, movement, GD |
+| SALES MANAGER | Monitoring sales dan laporan |
+| SALES | Penjualan dan monitoring sales sendiri |
+
+Untuk demo, implementasikan role-based access sederhana.
+
+Jangan membuat permission engine yang kompleks jika belum dibutuhkan.
+
+---
+
+# 4. MASTER DATA
+
+## 4.1 Users & Roles
+
+Mengelola akun pengguna dan role.
+
+Fitur:
+- Create.
+- Read.
+- Update.
+- Delete atau deactivate.
+- Assign role.
+- Status aktif/nonaktif.
+
+## 4.2 Organization Master
+
+Master:
+- Area.
+- Cluster.
+- TAP.
+- Sales.
+
+Setiap level memiliki relasi sesuai hierarki organisasi.
+
+Gunakan dropdown bertingkat:
+- Pilih Area.
+- Cluster otomatis mengikuti Area.
+- TAP otomatis mengikuti Cluster.
+- Sales otomatis mengikuti TAP.
+
+## 4.3 Product Master
+
+Produk mempunyai atribut:
+
+| Field | Description |
+|---|---|
+| SKU | Unique product code |
+| Name | Product name |
+| Category | Product category |
+| Type | SA / VOUCHER / MODEM |
+| Tracking Method | ICCID / QUANTITY |
+| Cost Price | Harga modal |
+| Selling Price | Harga jual |
+| Unit | Satuan |
+| Status | Active / Inactive |
+
+Tracking Method menentukan mekanisme inventory.
+
+ICCID:
+- Setiap unit harus memiliki ICCID unik.
+- Stok dihitung dari data unit ICCID.
+- Tidak boleh ada ICCID duplikat.
+
+QUANTITY:
+- Stok dikelola menggunakan jumlah kuantitas.
+- Tidak membutuhkan identitas unik per unit.
+
+Tracking Method tidak boleh berubah sembarangan ketika produk sudah memiliki histori transaksi.
+
+## 4.4 Customer Master
+
+Field:
+- Customer Code.
+- Customer Name.
+- Customer Type (Retail / Grosir).
+- Phone.
+- Address.
+- Area.
+- Status.
+
+Customer wajib dapat dipilih saat pembuatan Sales Order.
+
+## 4.5 Warehouse Master
+
+Field:
+- Warehouse Code.
+- Warehouse Name.
+- Warehouse Type.
+- TAP.
+- Sales (nullable).
+- Address.
+- Status.
+
+Validasi:
+- MAIN dan INVENTORY harus memiliki TAP.
+- SALES harus memiliki Sales dan TAP.
+- TAP pada SALES Warehouse harus sama dengan TAP Sales terkait.
+- Satu Sales dapat memiliki lebih dari satu SALES Warehouse.
+
+---
+
+# 5. INVENTORY TRACKING METHODS
+
+Sistem wajib mendukung dua jenis inventory dalam satu aplikasi.
+
+## 5.1 ICCID-Based Inventory
+
+Digunakan untuk produk yang memiliki ICCID.
+
+Setiap unit mempunyai identitas unik.
+
+Contoh:
+
+| ICCID | Product | Warehouse | Status |
+|---|---|---|---|
+| 896210000001 | SA 5GB | MAIN TAP 01 | AVAILABLE |
+| 896210000002 | SA 5GB | INVENTORY TAP 01 | AVAILABLE |
+| 896210000003 | SA 5GB | SALES A1 | AVAILABLE |
+| 896210000004 | SA 5GB | - | SOLD |
+
+ICCID harus mempunyai informasi:
+- ICCID Number.
+- Product.
+- Current Warehouse.
+- Status.
+- Customer (jika sudah terjual).
+- Reference transaksi.
+- Tanggal penerimaan.
+
+Status awal:
+- AVAILABLE.
+- RESERVED.
+- SOLD.
+- RETURNED.
+
+Lokasi fisik ditentukan melalui warehouse_id, bukan dengan membuat status berbeda untuk setiap gudang.
+
+## 5.2 Quantity-Based Inventory
+
+Digunakan untuk produk tanpa ICCID.
+
+Contoh:
+
+| Product | Warehouse | Quantity |
+|---|---|---:|
+| Modem 4G | MAIN TAP 01 | 100 |
+| Modem 4G | INVENTORY TAP 01 | 50 |
+| Modem 4G | SALES A1 | 20 |
+
+Stok dikelola menggunakan stock_balances berdasarkan kombinasi product_id dan warehouse_id.
+
+## 5.3 Inventory Consistency
+
+- ICCID tidak boleh masuk ke dua gudang sekaligus.
+- ICCID yang RESERVED tidak boleh dipindahkan.
+- ICCID yang SOLD tidak boleh dijual kembali tanpa proses retur.
+- Quantity tidak boleh negatif.
+- Stok hanya berubah ketika transaksi terkait dikonfirmasi.
+- Setiap perubahan stok harus memiliki histori.
+- Gunakan database transaction untuk proses mutasi stok.
+
+---
+
+# 6. PROCUREMENT MODULE
+
+## 6.1 Purchase Order (PO)
+
+Fitur:
+- Membuat PO.
+- Memilih TAP.
+- Memilih supplier.
+- Memilih produk.
+- Mengisi quantity.
+- Mengisi harga modal.
+- Menghitung subtotal dan total.
+- Melihat detail PO.
+- Status PO.
+
+PO belum menambah stok.
+
+Status:
+- DRAFT.
+- ORDERED.
+- PARTIAL.
+- RECEIVED.
+- CANCELLED.
+
+## 6.2 Goods Received (GR)
+
+GR dibuat berdasarkan PO.
+
+Tujuan penerimaan adalah MAIN Warehouse milik TAP yang terkait dengan PO.
+
+Quantity Tracking:
+- Input quantity diterima.
+
+ICCID Tracking:
+- Input ICCID manual satu per satu.
+- Upload Excel.
+- Preview data sebelum disimpan.
+- Validasi format.
+- Validasi duplikat.
+- Validasi jumlah ICCID dengan quantity diterima.
+
+Upload Excel wajib mempunyai minimal satu kolom:
+
+ICCID
+
+Ketika GR dikonfirmasi:
+- Quantity bertambah di MAIN Warehouse.
+- ICCID tercatat dengan warehouse_id MAIN.
+- Histori penerimaan dibuat.
+- Status PO diperbarui sesuai jumlah penerimaan.
+
+Jangan menambah stok ketika GR masih draft.
+
+---
+
+# 7. INVENTORY MODULE
+
+## 7.1 Stock Overview
+
+Menampilkan:
+- Product.
+- Product Type.
+- Tracking Method.
+- Warehouse.
+- Stock Quantity.
+- Stock Value.
+- Available Stock.
+
+Filter:
+- Area.
+- Cluster.
+- TAP.
+- Warehouse.
+- Product.
+- Tracking Method.
+
+Untuk ICCID, jumlah stok dihitung dari ICCID yang AVAILABLE pada gudang tersebut.
+
+Untuk Quantity, stok berasal dari stock_balances.
+
+## 7.2 Stock Movement
+
+Jenis movement:
+- MAIN → INVENTORY.
+- INVENTORY → SALES.
+- SALES → INVENTORY jika proses pengembalian stok diizinkan.
+
+Movement harus memiliki:
+- Movement Number.
+- Source Warehouse.
+- Destination Warehouse.
+- Product.
+- Quantity.
+- ICCID list (untuk produk ICCID).
+- Reference.
+- Date.
+- Status.
+
+ICCID:
+- Sistem menampilkan ICCID AVAILABLE pada gudang sumber.
+- User memilih ICCID yang akan dipindahkan.
+- Setelah dikonfirmasi, warehouse_id ICCID diperbarui.
+- Histori perpindahan dibuat.
+
+Quantity:
+- User mengisi jumlah barang.
+- Sistem memvalidasi stok sumber.
+- Stok sumber berkurang.
+- Stok tujuan bertambah.
+
+Gunakan database transaction agar kedua perubahan berhasil atau gagal bersama.
+
+## 7.3 ICCID Tracking
+
+Halaman khusus untuk mencari dan memantau ICCID.
+
+Fitur:
+- Search ICCID.
+- Filter status.
+- Filter produk.
+- Filter warehouse.
+- Filter TAP.
+- Menampilkan customer jika sudah terjual.
+- Menampilkan timeline perpindahan.
+
+Timeline minimal:
+- Received.
+- Stock Movement.
+- Reserved by SO.
+- Delivered by GD.
+- Returned (jika ada).
+
+---
+
+# 8. SALES MODULE
+
+## 8.1 Sales Order
+
+SO dapat dibuat melalui Web Dashboard.
+
+Field:
+- SO Number.
+- Order Date.
+- Customer.
+- Sales.
+- TAP.
+- Source Warehouse.
+- Product.
+- Quantity.
+- Selling Price.
+- Subtotal.
+- Grand Total.
+- Status.
+
+Customer wajib dipilih.
+
+Warehouse wajib dipilih.
+
+Sales Order menyimpan snapshot harga produk ketika transaksi dibuat.
+
+### ICCID-Based Sales Order
+
+Ketika produk ICCID dipilih:
+
+1. Sistem membaca gudang yang dipilih.
+2. Sistem mencari ICCID AVAILABLE milik produk tersebut pada gudang itu.
+3. Sistem hanya menampilkan ICCID yang benar-benar tersedia.
+4. User memilih ICCID.
+5. Quantity mengikuti jumlah ICCID yang dipilih.
+6. ICCID menjadi RESERVED setelah SO dikonfirmasi.
+7. ICCID tidak boleh digunakan pada SO lain selama masih RESERVED.
+
+### Quantity-Based Sales Order
+
+1. User memilih produk.
+2. Sistem membaca stok produk pada gudang yang dipilih.
+3. User memasukkan quantity.
+4. Sistem memvalidasi stok tersedia.
+5. Stok belum berkurang saat SO dibuat.
+6. Stok berkurang ketika GD dikonfirmasi.
+
+## 8.2 Sales Order Approval
+
+Fitur:
+- Daftar pending SO.
+- Detail SO.
+- Approve.
+- Reject.
+- Catatan approval.
+
+Untuk demo, approval cukup menggunakan status dan tombol interaktif.
+
+Status:
+- DRAFT.
+- PENDING_APPROVAL.
+- APPROVED.
+- REJECTED.
+- DELIVERED.
+- COMPLETED.
+- CANCELLED.
+
+## 8.3 Goods Delivery (GD)
+
+GD dibuat dari SO yang sudah APPROVED.
+
+Ketika GD dikonfirmasi:
+
+ICCID:
+- ICCID RESERVED berubah menjadi SOLD.
+- Customer dicatat.
+- Lokasi fisik tidak lagi dianggap sebagai stok gudang aktif.
+- Histori pengiriman dicatat.
+
+Quantity:
+- Stok pada source warehouse dikurangi.
+- Tidak boleh melebihi stok yang tersedia.
+
+GD tidak boleh diproses dua kali untuk transaksi yang sama.
+
+## 8.4 Account Receivable (AR)
+
+AR terbentuk berdasarkan SO/GD sesuai proses bisnis yang disepakati.
+
+Untuk demo:
+- Satu SO dapat menghasilkan satu AR.
+- Nilai AR berasal dari nilai transaksi.
+- Customer tersimpan.
+- Paid Amount diperbarui melalui pembayaran.
+- Outstanding dihitung dari Amount - Paid Amount.
+
+Status:
+- UNPAID.
+- PARTIAL.
+- PAID.
+
+---
+
+# 9. FINANCE MODULE
+
+## 9.1 TTK / Payment
+
+Metode pembayaran:
+- CASH.
+- TRANSFER.
+- DEPOSIT.
+- RETURN_DEDUCTION.
+
+Fitur:
+- Pilih customer.
+- Pilih AR.
+- Input nominal pembayaran.
+- Pilih metode.
+- Catatan.
+- Simpan transaksi.
+
+Pembayaran dapat dialokasikan ke AR.
+
+Validasi:
+- Pembayaran tidak boleh melebihi outstanding AR yang dialokasikan.
+- Paid Amount tidak boleh lebih besar dari Amount.
+- AR diperbarui otomatis.
+
+## 9.2 BBM / Bank Receipt
+
+Untuk demo:
+- Menampilkan pembayaran transfer.
+- Nomor bukti bank.
+- Nama bank.
+- Tanggal.
+- Nominal.
+- Status verifikasi.
+
+Proses dapat disederhanakan menjadi pencatatan dan konfirmasi.
+
+---
+
+# 10. REPORTS
+
+Sediakan laporan:
+1. Inventory Report.
+2. ICCID Report.
+3. Stock Movement Report.
+4. Purchase Report.
+5. Sales Report.
+6. Sales Performance.
+7. Receivable Report.
+8. Payment Report.
+
+Setiap laporan minimal memiliki:
+- Filter tanggal.
+- Filter Area.
+- Filter Cluster.
+- Filter TAP.
+- Filter Warehouse jika relevan.
+- Search.
+- Total.
+- Export jika memungkinkan.
+
+---
+
+# 11. DASHBOARD UI/UX
+
+Gunakan gaya Modern Enterprise SaaS Dashboard.
+
+Design guidelines:
+- Sidebar profesional.
+- White/Light content background.
+- Navy sidebar.
+- Blue primary.
+- Teal secondary.
+- Colorful KPI cards.
+- Responsive layout.
+- Lucide icons.
+- Chart.js.
+- Clean typography.
+- Konsisten pada semua halaman.
+
+Dashboard KPI:
+- Total Sales.
+- Total Inventory.
+- Inventory Value.
+- Pending SO.
+- Outstanding AR.
+- Available ICCID.
+
+Charts:
+- Sales Performance.
+- Sales by Area.
+- Inventory by Product Type.
+- Stock by Warehouse.
+- Payment Method.
+- Top Sales Performance.
+
+Widgets:
+- Recent Transactions.
+- Low Stock Alert.
+- Pending Approval.
+- Latest Stock Movement.
+- Top Selling Products.
+
+Gunakan data dummy realistis untuk demo jika data transaksi belum tersedia. Bedakan data dummy dengan transaksi aktual dan jangan mencampur angka dummy ke dalam laporan transaksi aktual.
+
+---
+
+# 12. INITIAL DATABASE TABLES
+
+Kelompokkan migration secara modular.
+
+Organization:
+- roles
+- users
+- areas
+- clusters
+- taps
+- sales
+
+Master:
+- product_categories
+- products
+- customers
+- warehouses
+
+Procurement:
+- purchase_orders
+- purchase_order_items
+- goods_receipts
+- goods_receipt_items
+
+Inventory:
+- iccid_units
+- stock_balances
+- stock_movements
+- stock_movement_items
+- iccid_histories
+
+Sales:
+- sales_orders
+- sales_order_items
+- sales_order_iccids
+- goods_deliveries
+- accounts_receivable
+- sales_returns
+
+Finance:
+- payments
+- payment_allocations
+- bank_receipts
+
+Tambahkan kolom standar:
+- created_at
+- updated_at
+- deleted_at hanya jika soft delete memang dibutuhkan.
+
+Gunakan foreign key, index, unique constraint, dan decimal untuk nilai uang.
+
+Jangan menghapus histori transaksi ketika master data dinonaktifkan.
+
+---
+
+# 13. DEVELOPMENT EXECUTION PLAN
+
+WAJIB mengikuti urutan berikut.
+
+Jangan langsung mengerjakan semua tahap.
+
+## PHASE 0 — PROJECT AUDIT
+
+Sebelum mengubah kode:
+
+1. Periksa struktur project Laravel.
+2. Periksa versi Laravel dan PHP.
+3. Periksa konfigurasi database.
+4. Periksa package yang sudah tersedia.
+5. Periksa frontend stack.
+6. Periksa migration, model, controller, dan routes yang sudah ada.
+7. Identifikasi potensi konflik.
+
+Jangan menghapus atau mengganti file existing tanpa alasan.
+
+Buat ringkasan hasil audit dan rekomendasi implementasi.
+
+STOP setelah audit dan tunggu persetujuan.
+
+## PHASE 1 — FOUNDATION
+
+Implementasikan:
+- Authentication.
+- Users.
+- Roles.
+- Main layout.
+- Sidebar.
+- Header.
+- Navigation.
+- Dashboard shell.
+
+Acceptance Criteria:
+- Login berhasil.
+- Role tersimpan dan dapat dibaca.
+- Sidebar berjalan.
+- Semua halaman mempunyai layout konsisten.
+- Tidak ada error route atau migration.
+
+STOP dan laporkan hasil.
+
+## PHASE 2 — ORGANIZATION MASTER
+
+Implementasikan:
+- Area CRUD.
+- Cluster CRUD.
+- TAP CRUD.
+- Sales CRUD.
+- Relasi organisasi.
+- Dropdown bertingkat.
+- Auto-create MAIN dan INVENTORY Warehouse saat TAP dibuat.
+
+Acceptance Criteria:
+- Relasi Area → Cluster → TAP → Sales benar.
+- Data tidak boleh mempunyai parent yang tidak valid.
+- TAP otomatis memiliki MAIN dan INVENTORY.
+- Sales dapat memiliki banyak warehouse.
+- Data dapat ditampilkan melalui relasi Eloquent.
+
+STOP dan laporkan hasil.
+
+## PHASE 3 — WAREHOUSE MANAGEMENT
+
+Implementasikan:
+- Warehouse CRUD.
+- MAIN.
+- INVENTORY.
+- SALES.
+- Multiple warehouses per Sales.
+- Warehouse assignment.
+
+Acceptance Criteria:
+- Warehouse selalu memiliki TAP.
+- SALES Warehouse harus mempunyai Sales.
+- TAP Sales dan TAP Warehouse harus sama.
+- Satu Sales dapat mempunyai beberapa gudang.
+- Gudang yang tidak aktif tidak dapat digunakan untuk transaksi baru.
+
+STOP dan laporkan hasil.
+
+## PHASE 4 — MASTER PRODUCT & CUSTOMER
+
+Implementasikan:
+- Product Category.
+- Product.
+- Customer.
+- Harga modal.
+- Harga jual.
+- Product Type.
+- Tracking Method.
+
+Acceptance Criteria:
+- Product ICCID dan Quantity dapat dibuat.
+- SKU unik.
+- Harga menggunakan decimal.
+- Customer dapat dipilih dalam transaksi.
+- Perubahan tracking method tidak merusak histori produk.
+
+STOP dan laporkan hasil.
+
+## PHASE 5 — PROCUREMENT
+
+Implementasikan:
+- Purchase Order.
+- Purchase Order Items.
+- Goods Received.
+- GR manual ICCID.
+- GR upload Excel.
+- Excel validation.
+- GR confirmation.
+
+Acceptance Criteria:
+- PO tidak menambah stok.
+- GR draft tidak menambah stok.
+- GR confirmed menambah stok Main Warehouse.
+- ICCID wajib unik.
+- Quantity penerimaan valid.
+- Excel yang invalid tidak menyebabkan data tersimpan sebagian.
+- PO dapat menerima barang secara parsial.
+
+STOP dan laporkan hasil.
+
+## PHASE 6 — INVENTORY ENGINE
+
+Implementasikan:
+- Stock Balance.
+- ICCID Unit.
+- Stock Movement.
+- ICCID History.
+- Stock Overview.
+- ICCID Tracking.
+
+Acceptance Criteria:
+- ICCID hanya memiliki satu lokasi gudang aktif.
+- Quantity tidak negatif.
+- Movement mengurangi sumber dan menambah tujuan.
+- Movement ICCID mengubah lokasi ICCID.
+- Histori tersimpan.
+- Movement tidak boleh memindahkan stok antar-TAP secara tidak sah.
+- Semua mutasi menggunakan database transaction.
+
+STOP dan laporkan hasil.
+
+## PHASE 7 — SALES ORDER
+
+Implementasikan:
+- SO header.
+- SO detail.
+- Customer selection.
+- Warehouse selection.
+- ICCID selection.
+- Quantity validation.
+- Price snapshot.
+- Approval.
+
+Acceptance Criteria:
+- Customer wajib dipilih.
+- Warehouse wajib dipilih.
+- SO ICCID hanya bisa memilih ICCID AVAILABLE pada warehouse terpilih.
+- SO Quantity hanya bisa menjual stok yang tersedia pada warehouse terpilih.
+- ICCID menjadi RESERVED setelah SO dikonfirmasi.
+- Quantity belum berkurang saat SO dibuat.
+- SO tidak boleh memesan stok yang sama dua kali.
+- Sales hanya dapat mengakses gudang yang diizinkan.
+
+STOP dan laporkan hasil.
+
+## PHASE 8 — GOODS DELIVERY & AR
+
+Implementasikan:
+- Approval workflow.
+- GD.
+- AR.
+- Transaction linking.
+
+Acceptance Criteria:
+- GD hanya dapat dibuat dari SO APPROVED.
+- GD tidak bisa diproses dua kali.
+- Quantity berkurang saat GD dikonfirmasi.
+- ICCID menjadi SOLD saat GD dikonfirmasi.
+- Customer terhubung dengan ICCID terjual.
+- AR terbentuk sesuai nilai transaksi.
+- Histori transaksi lengkap.
+
+STOP dan laporkan hasil.
+
+## PHASE 9 — FINANCE
+
+Implementasikan:
+- TTK.
+- Payment.
+- Payment Allocation.
+- BBM.
+- AR outstanding.
+
+Acceptance Criteria:
+- Pembayaran terhubung dengan AR.
+- Pembayaran tidak melebihi outstanding.
+- Partial payment berfungsi.
+- Status AR berubah otomatis.
+- Transfer dapat menghasilkan pencatatan BBM.
+
+STOP dan laporkan hasil.
+
+## PHASE 10 — DASHBOARD & REPORTS
+
+Implementasikan:
+- KPI.
+- Charts.
+- Sales analytics.
+- Inventory analytics.
+- ICCID analytics.
+- Reports.
+- Filters.
+
+Acceptance Criteria:
+- Angka transaksi aktual diambil dari database.
+- Data dummy dashboard tidak dicampur dengan transaksi aktual.
+- Filter Area, Cluster, TAP berfungsi.
+- Total dan grafik konsisten.
+- Dashboard responsif.
+
+STOP dan laporkan hasil.
+
+## PHASE 11 — DEMO DATA & FINAL TESTING
+
+Buat seeder untuk:
+- Users dan roles.
+- Area.
+- Cluster.
+- TAP.
+- Sales.
+- Warehouse.
+- Products.
+- Customers.
+- Sample PO.
+- Sample GR.
+- Sample ICCID.
+- Sample stock movements.
+- Sample SO.
+- Sample GD.
+- Sample AR.
+- Sample payments.
+
+Sediakan dua skenario demo:
+
+**Scenario A — ICCID**
+PO → GR ICCID → Main → Inventory → Sales Warehouse → SO ICCID → Approval → GD → AR → Payment → ICCID Tracking.
+
+**Scenario B — Quantity**
+PO → GR Quantity → Main → Inventory → Sales Warehouse → SO Quantity → Approval → GD → AR → Payment.
+
+Acceptance Criteria:
+- Kedua skenario berhasil.
+- Tidak ada stok negatif.
+- Tidak ada ICCID duplikat.
+- Lokasi ICCID konsisten.
+- AR dan pembayaran konsisten.
+- Dashboard dapat menampilkan data.
+- Tidak ada error kritis.
+
+---
+
+# 14. GENERAL DEVELOPMENT RULES FOR AI CODING AGENT
+
+WAJIB mengikuti instruksi berikut:
+
+1. Kerjakan satu PHASE dalam satu waktu.
+2. Jangan melanjutkan PHASE berikutnya tanpa persetujuan user.
+3. Sebelum coding, periksa implementasi existing.
+4. Jangan menghapus fitur existing yang tidak berhubungan.
+5. Jangan membuat migration duplikat.
+6. Gunakan Eloquent Relationships.
+7. Pisahkan business logic ke Service Class jika diperlukan.
+8. Gunakan Form Request untuk validasi.
+9. Gunakan database transaction untuk mutasi stok dan transaksi penting.
+10. Gunakan eager loading untuk menghindari N+1 query.
+11. Gunakan authorization untuk membatasi akses role.
+12. Jangan menggunakan hardcode untuk relasi organisasi dan perhitungan stok.
+13. Dummy data diperbolehkan untuk dashboard dan demonstrasi, tetapi harus konsisten dan diberi pemisahan yang jelas.
+14. Jangan membuat data transaksi palsu yang tercampur dengan laporan transaksi aktual.
+15. Gunakan UI yang konsisten, modern, dan profesional.
+16. Jangan mengimplementasikan semua modul sekaligus.
+17. Setelah setiap PHASE, lakukan testing dan laporkan hasilnya.
+18. Jika terdapat keputusan bisnis yang belum jelas, tanyakan sebelum mengimplementasikannya.
+19. Jangan menjalankan destructive command, menghapus database, atau melakukan reset data tanpa persetujuan eksplisit.
+20. Pertahankan kompatibilitas backend agar dapat diintegrasikan dengan Android Native Java melalui REST API di tahap berikutnya.
+
+# 15. FINAL EXPECTATION
+
+Hasil akhir berupa Web Dashboard POS & Inventory yang mampu memperlihatkan:
+
+- Pengelolaan organisasi Area, Cluster, TAP, Sales.
+- Pengelolaan banyak warehouse per Sales.
+- Pengadaan barang.
+- Penerimaan barang.
+- ICCID Tracking.
+- Quantity Inventory.
+- Distribusi antar-gudang.
+- Sales Order.
+- Approval.
+- Good Delivery.
+- Account Receivable.
+- Payment.
+- Dashboard analytics.
+- Laporan operasional.
+
+Prioritas utama adalah stabilitas alur bisnis, konsistensi data, tampilan profesional, dan kemudahan demonstrasi kepada calon client.
+
+**START INSTRUCTION:**
+
+Mulai dari PHASE 0 — PROJECT AUDIT.
+
+Jangan langsung membuat migration atau mengubah file project sebelum menyelesaikan audit dan melaporkan kondisi project existing.
+
+Setelah audit, berikan:
+1. Ringkasan kondisi project.
+2. Struktur folder yang ditemukan.
+3. Package yang tersedia.
+4. Potensi konflik.
+5. Rekomendasi implementasi.
+6. Daftar file yang akan dibuat atau diubah pada PHASE 1.
+
+Tunggu persetujuan sebelum melanjutkan.
