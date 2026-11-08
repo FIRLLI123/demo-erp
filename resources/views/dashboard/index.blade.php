@@ -45,7 +45,9 @@
                 </select>
             </div>
 
-            <button class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm transition-all">
+            <button 
+                @click="window.showLoading('Memfilter Data Hierarki...', 'Menghitung metrik & visual chart untuk Area, Cluster & TAP terpilih...', 'FILTER'); setTimeout(() => { window.hideLoading(); window.showToast('Data dashboard berhasil diperbarui!', 'success', 'Filter Aktif'); }, 900)"
+                class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm transition-all active:scale-95">
                 <i data-lucide="filter" class="w-3.5 h-3.5"></i>
                 <span>Terapkan</span>
             </button>

@@ -94,9 +94,12 @@
                                 </td>
                                 <td class="py-4 px-4 text-center">
                                     @if($ar->status !== 'PAID')
-                                        <form method="POST" action="{{ route('finance.pay', $ar->id) }}">
+                                        <form method="POST" action="{{ route('finance.pay', $ar->id) }}"
+                                              data-loading-title="Pencatatan Pelunasan Piutang"
+                                              data-loading-sub="Menerbitkan Tanda Terima Kasir (FP) & Bukti Bank Masuk (BBM)..."
+                                              data-doctype="FP-BBM">
                                             @csrf
-                                            <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 mx-auto">
+                                            <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 mx-auto active:scale-95">
                                                 <i data-lucide="banknote" class="w-3.5 h-3.5"></i>
                                                 <span>Bayar Lunas (TTK)</span>
                                             </button>

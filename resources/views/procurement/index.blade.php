@@ -22,9 +22,12 @@
             <h2 class="text-base font-bold text-slate-900 mt-1">Purchase Order ke Supplier & Goods Received ke Gudang Utama</h2>
             <p class="text-xs text-slate-500 mt-0.5">PO belum menambah stok. Stok baru tercatat resmi di Gudang MAIN setelah dokumen GR dikonfirmasi.</p>
         </div>
-        <form method="POST" action="{{ route('procurement.quick-po') }}">
+        <form method="POST" action="{{ route('procurement.quick-po') }}" 
+              data-loading-title="Menerbitkan Purchase Order" 
+              data-loading-sub="Menghubungkan ke server supplier Telkomsel & menerbitkan nomor PO baru..."
+              data-doctype="PO">
             @csrf
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all">
+            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95">
                 <i data-lucide="plus" class="w-4 h-4 text-emerald-400"></i>
                 <span>+ Buat PO Cepat (Demo)</span>
             </button>
@@ -83,9 +86,12 @@
                                 </td>
                                 <td class="py-4 px-4 text-center">
                                     @if($po->status !== 'RECEIVED')
-                                        <form method="POST" action="{{ route('procurement.confirm-gr', $po->id) }}">
+                                        <form method="POST" action="{{ route('procurement.confirm-gr', $po->id) }}"
+                                              data-loading-title="Penerimaan Fisik Barang"
+                                              data-loading-sub="Memverifikasi item PO, mencatat penerimaan ke Gudang MAIN & mengupdate stok..."
+                                              data-doctype="GR">
                                             @csrf
-                                            <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 mx-auto">
+                                            <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 mx-auto active:scale-95">
                                                 <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                                 <span>Terima Fisik (GR)</span>
                                             </button>

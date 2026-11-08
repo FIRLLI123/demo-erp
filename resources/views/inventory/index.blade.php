@@ -21,9 +21,12 @@
             <h2 class="text-base font-bold text-slate-900 mt-1">Pemindahan Stok Antar Gudang & Monitoring Unit</h2>
             <p class="text-xs text-slate-500 mt-0.5">Setiap perpindahan fisik dicatat dalam dokumen ber-DocType SM (Stock Movement).</p>
         </div>
-        <form method="POST" action="{{ route('inventory.quick-sm') }}">
+        <form method="POST" action="{{ route('inventory.quick-sm') }}"
+              data-loading-title="Memproses Mutasi Stok (SM)"
+              data-loading-sub="Mengurangi saldo Gudang MAIN dan menambah saldo Gudang Kanvas Sales..."
+              data-doctype="SM">
             @csrf
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all">
+            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95">
                 <i data-lucide="arrow-right-left" class="w-4 h-4 text-cyan-400"></i>
                 <span>+ Mutasi Stok Cepat (MAIN &rarr; SALES)</span>
             </button>

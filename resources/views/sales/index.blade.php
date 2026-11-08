@@ -105,17 +105,23 @@
                                 </td>
                                 <td class="py-4 px-4 text-center">
                                     @if($so->status === 'PENDING_APPROVAL')
-                                        <form method="POST" action="{{ route('sales.approve', $so->id) }}">
+                                        <form method="POST" action="{{ route('sales.approve', $so->id) }}"
+                                              data-loading-title="Approval Sales Order"
+                                              data-loading-sub="Finance memvalidasi piutang outlet & menyetujui pesanan..."
+                                              data-doctype="SO-APPR">
                                             @csrf
-                                            <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 mx-auto">
+                                            <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 mx-auto active:scale-95">
                                                 <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                                 <span>Setujui (Finance)</span>
                                             </button>
                                         </form>
                                     @elseif($so->status === 'APPROVED')
-                                        <form method="POST" action="{{ route('sales.deliver', $so->id) }}">
+                                        <form method="POST" action="{{ route('sales.deliver', $so->id) }}"
+                                              data-loading-title="Penerbitan GD & Faktur AR"
+                                              data-loading-sub="Gudang menerbitkan Surat Jalan (GD) & sistem otomatis membentuk Piutang (AR)..."
+                                              data-doctype="GD-AR">
                                             @csrf
-                                            <button type="submit" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 mx-auto">
+                                            <button type="submit" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 mx-auto active:scale-95">
                                                 <i data-lucide="truck" class="w-3.5 h-3.5"></i>
                                                 <span>Kirim Barang (GD)</span>
                                             </button>

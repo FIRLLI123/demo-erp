@@ -66,10 +66,136 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Modern Loading Bar Shimmer */
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+        .animate-shimmer {
+            animation: shimmer 1.6s infinite ease-in-out;
+        }
+
+        /* Modern Conic Spinner */
+        @keyframes spinSlow {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-smooth {
+            animation: spinSlow 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
     </style>
     @stack('styles')
 </head>
-<body class="h-full text-slate-800 antialiased font-sans" x-data="{ sidebarOpen: false, activeRole: 'Super Admin' }">
+<body class="h-full text-slate-800 antialiased font-sans" x-data="globalApp()" x-init="initApp()"
+      @show-global-loading.window="showLoading($event.detail.title, $event.detail.subtitle, $event.detail.docType)"
+      @hide-global-loading.window="hideLoading()"
+      @show-global-toast.window="showToast($event.detail.message, $event.detail.type, $event.detail.title)">
+
+    <!-- ========================================== -->
+    <!-- GLOBAL LOADING MODAL (MODERN & ULTRA FAST) -->
+    <!-- ========================================== -->
+    <div x-show="isLoading" 
+         x-cloak 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+        
+        <div class="relative bg-white/95 rounded-3xl max-w-sm w-full p-7 shadow-2xl border border-slate-100/80 overflow-hidden transform transition-all text-center"
+             x-transition:enter="transition ease-out duration-250"
+             x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95">
+            
+            <!-- Shimmer Top Accent Bar -->
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 overflow-hidden">
+                <div class="h-full w-1/2 bg-gradient-to-r from-rose-500 via-amber-400 to-rose-600 rounded-full animate-shimmer"></div>
+            </div>
+
+            <!-- Double-Ring Modern Spinner with Icon Center -->
+            <div class="relative w-20 h-20 mx-auto mb-5 flex items-center justify-center">
+                <!-- Outer Pulse Ring -->
+                <div class="absolute inset-0 rounded-full bg-rose-500/10 animate-ping opacity-75"></div>
+                
+                <!-- Rotating Gradient Border Ring 1 -->
+                <div class="absolute inset-0 rounded-full border-3 border-transparent border-t-rose-600 border-r-amber-500 animate-spin-smooth"></div>
+                
+                <!-- Counter-Rotating Border Ring 2 -->
+                <div class="absolute inset-2 rounded-full border-2 border-transparent border-b-cyan-500 border-l-slate-900 animate-spin" style="animation-duration: 1.8s; animation-direction: reverse;"></div>
+                
+                <!-- Center Core Badge -->
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 text-white flex items-center justify-center shadow-lg shadow-slate-900/30">
+                    <template x-if="loadingDocType">
+                        <span class="text-[10px] font-mono font-extrabold text-rose-400" x-text="loadingDocType"></span>
+                    </template>
+                    <template x-if="!loadingDocType">
+                        <i data-lucide="cpu" class="w-5 h-5 text-rose-500 animate-pulse"></i>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Text Information -->
+            <div class="space-y-1.5">
+                <div class="flex items-center justify-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <h4 class="text-base font-extrabold text-slate-900 tracking-tight" x-text="loadingTitle"></h4>
+                </div>
+                <p class="text-xs text-slate-500 font-medium leading-relaxed px-2" x-text="loadingSubtitle"></p>
+            </div>
+
+            <!-- Micro Steps Pill -->
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] font-semibold text-slate-400">
+                <span class="flex items-center gap-1">
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-cyan-500"></i> Mutasi DB
+                </span>
+                <span>&bull;</span>
+                <span class="flex items-center gap-1">
+                    <i data-lucide="file-check-2" class="w-3.5 h-3.5 text-emerald-500"></i> Trace Audit
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- GLOBAL TOAST NOTIFICATION (AUTO DISMISS)   -->
+    <!-- ========================================== -->
+    <div x-show="toast.show" 
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-3 sm:translate-y-0 sm:translate-x-4"
+         x-transition:enter-end="opacity-100 translate-y-0 sm:translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 sm:translate-x-0"
+         x-transition:leave-end="opacity-0 sm:translate-x-4"
+         class="fixed top-6 right-6 z-[9998] max-w-sm w-full bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 flex items-start gap-3.5 overflow-hidden">
+        
+        <!-- Toast Icon -->
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+             :class="toast.type === 'error' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'">
+            <template x-if="toast.type === 'error'">
+                <i data-lucide="alert-circle" class="w-5 h-5"></i>
+            </template>
+            <template x-if="toast.type !== 'error'">
+                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            </template>
+        </div>
+
+        <!-- Toast Text Content -->
+        <div class="flex-1 min-w-0 pt-0.5">
+            <h5 class="text-xs font-bold text-slate-900" x-text="toast.title"></h5>
+            <p class="text-xs text-slate-500 mt-0.5 leading-relaxed" x-text="toast.message"></p>
+        </div>
+
+        <!-- Close Button -->
+        <button @click="toast.show = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    </div>
 
     <div class="min-h-full flex">
         <!-- Sidebar for Desktop & Mobile Overlay -->
@@ -263,8 +389,89 @@
         </div>
     </div>
 
-    <!-- Initialize Lucide Icons -->
+    <!-- Initialize Lucide Icons & Global App State -->
     <script>
+        function globalApp() {
+            return {
+                sidebarOpen: false,
+                activeRole: 'Super Admin',
+                isLoading: false,
+                loadingTitle: 'Memproses Transaksi...',
+                loadingSubtitle: 'Sedang memvalidasi stok & menerbitkan dokumen...',
+                loadingDocType: '',
+                toast: {
+                    show: false,
+                    message: '',
+                    type: 'success',
+                    title: 'Berhasil'
+                },
+
+                showLoading(title = 'Memproses Permintaan...', subtitle = 'Sedang sinkronisasi database ERP...', docType = '') {
+                    this.loadingTitle = title;
+                    this.loadingSubtitle = subtitle;
+                    this.loadingDocType = docType;
+                    this.isLoading = true;
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                },
+
+                hideLoading() {
+                    this.isLoading = false;
+                },
+
+                showToast(message, type = 'success', title = 'Berhasil') {
+                    this.toast.message = message;
+                    this.toast.type = type;
+                    this.toast.title = title;
+                    this.toast.show = true;
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                    setTimeout(() => {
+                        this.toast.show = false;
+                    }, 4000);
+                },
+
+                initApp() {
+                    @if(session('success'))
+                        this.showToast(@json(session('success')), 'success', 'Operasi Berhasil');
+                    @endif
+                    @if(session('error'))
+                        this.showToast(@json(session('error')), 'error', 'Perhatian');
+                    @endif
+
+                    // Otomatis intercept semua form submit untuk menampilkan loading modern
+                    document.addEventListener('submit', (e) => {
+                        const form = e.target;
+                        if (form.tagName.toLowerCase() === 'form') {
+                            const customTitle = form.getAttribute('data-loading-title') || 'Memproses Transaksi...';
+                            const customSub = form.getAttribute('data-loading-sub') || 'Menyimpan perubahan ke database ERP & menerbitkan dokumen...';
+                            const docType = form.getAttribute('data-doctype') || '';
+                            this.showLoading(customTitle, customSub, docType);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Window Helper Functions
+        window.showLoading = function(title, subtitle, docType) {
+            window.dispatchEvent(new CustomEvent('show-global-loading', { 
+                detail: { title, subtitle, docType } 
+            }));
+        };
+
+        window.hideLoading = function() {
+            window.dispatchEvent(new CustomEvent('hide-global-loading'));
+        };
+
+        window.showToast = function(message, type = 'success', title = 'Berhasil') {
+            window.dispatchEvent(new CustomEvent('show-global-toast', { 
+                detail: { message, type, title } 
+            }));
+        };
+
         document.addEventListener("DOMContentLoaded", function() {
             lucide.createIcons();
         });
