@@ -10,7 +10,6 @@ class ProcurementController extends Controller
 {
     public function index()
     {
-        // 1. Fetch Purchase Orders with their items
         $ordersRaw = DB::table('purchase_orders')
             ->join('taps', 'purchase_orders.tap_id', '=', 'taps.id')
             ->select('purchase_orders.*', 'taps.name as tap_name')
@@ -38,7 +37,6 @@ class ProcurementController extends Controller
             }
         }
 
-        // Attach items array and total item count to each PO
         $orders = $ordersRaw->map(function ($po) use ($itemsByPo) {
             $po->items = $itemsByPo[$po->id] ?? [];
             $po->total_qty = collect($po->items)->sum('quantity');
@@ -46,7 +44,6 @@ class ProcurementController extends Controller
             return $po;
         });
 
-        // 2. Fetch Goods Receipts with items
         $receipts = DB::table('goods_receipts')
             ->join('taps', 'goods_receipts.tap_id', '=', 'taps.id')
             ->join('warehouses', 'goods_receipts.warehouse_id', '=', 'warehouses.id')
@@ -54,7 +51,6 @@ class ProcurementController extends Controller
             ->orderBy('goods_receipts.id', 'desc')
             ->get();
 
-        // 3. Master data for creating new PO
         $products = DB::table('products')->where('status', 'ACTIVE')->get();
         $taps = DB::table('taps')->where('status', 'ACTIVE')->get();
 
@@ -64,7 +60,7 @@ class ProcurementController extends Controller
     public function storePo(Request $request)
     {
         $tapId = $request->input('tap_id');
-        $supplierName = $request->input('supplier_name', 'PT TELKOMSEL LOGISTIK PUSAT');
+        $supplierName = $request->input('supplier_name', 'PT TELKOMSEL DISTRIBUSI PUSAT');
         $orderDate = $request->input('order_date', date('Y-m-d'));
         $notes = $request->input('notes', 'PO Pengadaan Rutin');
         $itemsData = $request->input('items', []);
@@ -88,7 +84,7 @@ class ProcurementController extends Controller
                 if (!$prod) continue;
 
                 $qty = max(1, (int)$row['quantity']);
-                $costPrice = (float)($row['cost_price'] ?? $prod->cost_price);
+                $costPrice = (float)$prod->cost_price; // Harga modal terkunci resmi dari Master Produk
                 $subtotal = $qty * $costPrice;
                 $totalAmount += $subtotal;
 
@@ -127,32 +123,92 @@ class ProcurementController extends Controller
             }
 
             DB::commit();
-            return redirect()->back()->with('success', "PO Baru [{$docNumber}] berhasil diterbitkan dengan " . count($preparedItems) . " item barang!");
+            return redirect()->route('procurement.index')->with('success', "PO Baru [{$docNumber}] berhasil diterbitkan!");
         } catch (\Throwable $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Gagal membuat PO: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Dedicated Screen: Form Penerimaan Barang (GR)
+     */
+    public function createGr($id)
+    {
+        $po = DB::table('purchase_orders')
+            ->join('taps', 'purchase_orders.tap_id', '=', 'taps.id')
+            ->where('purchase_orders.id', $id)
+            ->select('purchase_orders.*', 'taps.name as tap_name')
+            ->first();
+
+        if (!$po) {
+            return redirect()->route('procurement.index')->with('error', 'PO tidak ditemukan!');
+        }
+
+        if ($po->status === 'RECEIVED') {
+            return redirect()->route('procurement.index')->with('error', 'PO ini sudah pernah diterima lengkap (RECEIVED)!');
+        }
+
+        $items = DB::table('purchase_order_items')
+            ->join('products', 'purchase_order_items.product_id', '=', 'products.id')
+            ->where('purchase_order_items.purchase_order_id', $po->id)
+            ->select(
+                'purchase_order_items.*',
+                'products.name as product_name',
+                'products.sku',
+                'products.type as product_type',
+                'products.tracking_method'
+            )
+            ->get();
+
+        $mainWh = DB::table('warehouses')
+            ->where('tap_id', $po->tap_id)
+            ->where('type', 'MAIN')
+            ->first() ?? DB::table('warehouses')->where('type', 'MAIN')->first();
+
+        $nextGrNum = DB::table('goods_receipts')->count() + 1;
+        $predictedGrNumber = 'GR/' . date('Ym') . '/' . str_pad($nextGrNum, 4, '0', STR_PAD_LEFT);
+
+        return view('procurement.gr-form', compact('po', 'items', 'mainWh', 'predictedGrNumber'));
+    }
+
+    /**
+     * Download template CSV for ICCID upload
+     */
+    public function downloadIccidTemplate()
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="template_upload_iccid.csv"',
+        ];
+
+        $callback = function () {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['iccid']);
+            fputcsv($handle, ['8962100026110800001']);
+            fputcsv($handle, ['8962100026110800002']);
+            fputcsv($handle, ['8962100026110800003']);
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function processGr(Request $request, $id)
     {
         $po = DB::table('purchase_orders')->where('id', $id)->first();
         if (!$po) {
-            return redirect()->back()->with('error', 'Data PO tidak ditemukan!');
+            return redirect()->route('procurement.index')->with('error', 'Data PO tidak ditemukan!');
         }
 
         if ($po->status === 'RECEIVED') {
-            return redirect()->back()->with('error', 'PO ini sudah pernah diterima (RECEIVED)!');
+            return redirect()->route('procurement.index')->with('error', 'PO ini sudah pernah diterima (RECEIVED)!');
         }
 
         $mainWh = DB::table('warehouses')
             ->where('tap_id', $po->tap_id)
             ->where('type', 'MAIN')
-            ->first();
-
-        if (!$mainWh) {
-            $mainWh = DB::table('warehouses')->where('type', 'MAIN')->first();
-        }
+            ->first() ?? DB::table('warehouses')->where('type', 'MAIN')->first();
 
         $poItems = DB::table('purchase_order_items')
             ->join('products', 'purchase_order_items.product_id', '=', 'products.id')
@@ -174,14 +230,13 @@ class ProcurementController extends Controller
                 'purchase_order_id' => $po->id,
                 'tap_id' => $po->tap_id,
                 'warehouse_id' => $mainWh->id,
-                'received_date' => date('Y-m-d'),
+                'received_date' => $request->input('received_date', date('Y-m-d')),
                 'status' => 'CONFIRMED',
                 'notes' => $request->input('notes', 'Penerimaan fisik barang lengkap ke Gudang MAIN'),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            // 2. Process each item (Stock Balances & ICCID Generation/Insertion)
             $totalIccidCreated = 0;
 
             foreach ($poItems as $item) {
@@ -195,11 +250,24 @@ class ProcurementController extends Controller
                 ]);
 
                 if ($item->tracking_method === 'ICCID') {
-                    // Collect ICCIDs from input: either auto-range or pasted list
                     $customIccids = [];
-                    $pastedText = $request->input("iccids_{$item->product_id}_paste");
-                    $rangeStart = $request->input("iccids_{$item->product_id}_range_start");
 
+                    // Check file upload first (CSV)
+                    if ($request->hasFile("iccids_{$item->product_id}_file")) {
+                        $file = $request->file("iccids_{$item->product_id}_file");
+                        if (($handle = fopen($file->getRealPath(), 'r')) !== false) {
+                            $header = fgetcsv($handle);
+                            while (($data = fgetcsv($handle)) !== false) {
+                                if (!empty($data[0])) {
+                                    $customIccids[] = trim($data[0]);
+                                }
+                            }
+                            fclose($handle);
+                        }
+                    }
+
+                    // Check pasted textarea
+                    $pastedText = $request->input("iccids_{$item->product_id}_paste");
                     if (!empty($pastedText)) {
                         $lines = preg_split('/[\r\n,]+/', trim($pastedText));
                         foreach ($lines as $line) {
@@ -208,9 +276,10 @@ class ProcurementController extends Controller
                         }
                     }
 
-                    // If insufficient or using range start, generate sequentially
+                    // Fallback to auto-range start
                     $needed = $item->quantity;
                     if (count($customIccids) < $needed) {
+                        $rangeStart = $request->input("iccids_{$item->product_id}_range_start");
                         $basePrefix = !empty($rangeStart) && is_numeric($rangeStart) 
                             ? (string)$rangeStart 
                             : '89621000' . date('ymd') . str_pad($item->product_id, 2, '0', STR_PAD_LEFT);
@@ -242,6 +311,21 @@ class ProcurementController extends Controller
                         );
                         $totalIccidCreated++;
                     }
+
+                    // Record in Stock Mutation Ledger
+                    DB::table('stock_mutations')->insert([
+                        'date' => date('Y-m-d'),
+                        'warehouse_id' => $mainWh->id,
+                        'product_id' => $item->product_id,
+                        'doc_type' => 'GR',
+                        'doc_number' => $grNumber,
+                        'mutation_type' => 'IN',
+                        'quantity' => $needed,
+                        'balance_after' => DB::table('iccid_units')->where('warehouse_id', $mainWh->id)->where('product_id', $item->product_id)->where('status', 'AVAILABLE')->count(),
+                        'notes' => "Penerimaan fisik serial ICCID (Ref: {$po->doc_number})",
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 } else {
                     // Quantity-based product: update stock_balances in MAIN Warehouse
                     $existing = DB::table('stock_balances')
@@ -250,10 +334,12 @@ class ProcurementController extends Controller
                         ->first();
 
                     if ($existing) {
+                        $newQty = $existing->quantity + $item->quantity;
                         DB::table('stock_balances')
                             ->where('id', $existing->id)
-                            ->increment('quantity', $item->quantity);
+                            ->update(['quantity' => $newQty, 'updated_at' => now()]);
                     } else {
+                        $newQty = $item->quantity;
                         DB::table('stock_balances')->insert([
                             'warehouse_id' => $mainWh->id,
                             'product_id' => $item->product_id,
@@ -263,6 +349,21 @@ class ProcurementController extends Controller
                             'updated_at' => now(),
                         ]);
                     }
+
+                    // Record in Stock Mutation Ledger
+                    DB::table('stock_mutations')->insert([
+                        'date' => date('Y-m-d'),
+                        'warehouse_id' => $mainWh->id,
+                        'product_id' => $item->product_id,
+                        'doc_type' => 'GR',
+                        'doc_number' => $grNumber,
+                        'mutation_type' => 'IN',
+                        'quantity' => $item->quantity,
+                        'balance_after' => $newQty,
+                        'notes' => "Penerimaan fisik barang non-serial (Ref: {$po->doc_number})",
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 }
             }
 
@@ -273,11 +374,7 @@ class ProcurementController extends Controller
             ]);
 
             DB::commit();
-            $msg = "Dokumen [{$grNumber}] terbit! Stok resmi masuk ke {$mainWh->name}";
-            if ($totalIccidCreated > 0) {
-                $msg .= " ({$totalIccidCreated} serial ICCID terdaftar).";
-            }
-            return redirect()->back()->with('success', $msg);
+            return redirect()->route('procurement.index')->with('success', "Dokumen [{$grNumber}] terbit! Stok resmi tercatat di {$mainWh->name} & buku mutasi diperbarui.");
         } catch (\Throwable $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Gagal memproses GR: ' . $e->getMessage());

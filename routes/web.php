@@ -22,6 +22,8 @@ Route::prefix('master')->name('master.')->group(function () {
 Route::prefix('procurement')->name('procurement.')->group(function () {
     Route::get('/', [ProcurementController::class, 'index'])->name('index');
     Route::post('/store-po', [ProcurementController::class, 'storePo'])->name('store-po');
+    Route::get('/gr/{id}', [ProcurementController::class, 'createGr'])->name('create-gr');
+    Route::get('/download-iccid-template', [ProcurementController::class, 'downloadIccidTemplate'])->name('download-iccid-template');
     Route::post('/process-gr/{id}', [ProcurementController::class, 'processGr'])->name('process-gr');
 });
 

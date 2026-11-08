@@ -30,7 +30,8 @@ class InventoryController extends Controller
             ->join('products', 'iccid_units.product_id', '=', 'products.id')
             ->leftJoin('warehouses', 'iccid_units.warehouse_id', '=', 'warehouses.id')
             ->select('iccid_units.*', 'products.name as product_name', 'warehouses.name as warehouse_name')
-            ->take(30)
+            ->orderBy('iccid_units.id', 'desc')
+            ->take(50)
             ->get();
 
         // 3. Stock Movements (SM)
@@ -41,7 +42,21 @@ class InventoryController extends Controller
             ->orderBy('stock_movements.created_at', 'desc')
             ->get();
 
-        return view('inventory.index', compact('stockBalances', 'iccids', 'movements'));
+        // 4. Stock Mutations Ledger (Buku Kartu Stok In - Out)
+        $mutations = DB::table('stock_mutations')
+            ->join('warehouses', 'stock_mutations.warehouse_id', '=', 'warehouses.id')
+            ->join('products', 'stock_mutations.product_id', '=', 'products.id')
+            ->select(
+                'stock_mutations.*',
+                'warehouses.name as warehouse_name',
+                'products.name as product_name',
+                'products.sku',
+                'products.tracking_method'
+            )
+            ->orderBy('stock_mutations.id', 'desc')
+            ->get();
+
+        return view('inventory.index', compact('stockBalances', 'iccids', 'movements', 'mutations'));
     }
 
     public function repack()
@@ -64,31 +79,69 @@ class InventoryController extends Controller
         $nextNum = DB::table('stock_movements')->count() + 1;
         $docNum = 'SM/' . date('Ym') . '/' . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
 
-        $smId = DB::table('stock_movements')->insertGetId([
-            'doc_type' => 'SM',
-            'doc_number' => $docNum,
-            'source_warehouse_id' => $mainWh->id,
-            'destination_warehouse_id' => $slsWh->id,
-            'movement_date' => date('Y-m-d'),
-            'status' => 'COMPLETED',
-            'notes' => 'Alokasi stok kanvas harian ke sales motor',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        DB::beginTransaction();
+        try {
+            $smId = DB::table('stock_movements')->insertGetId([
+                'doc_type' => 'SM',
+                'doc_number' => $docNum,
+                'source_warehouse_id' => $mainWh->id,
+                'destination_warehouse_id' => $slsWh->id,
+                'movement_date' => date('Y-m-d'),
+                'status' => 'COMPLETED',
+                'notes' => 'Alokasi stok kanvas harian ke sales motor',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        DB::table('stock_movement_items')->insert([
-            'stock_movement_id' => $smId,
-            'product_id' => $prod->id,
-            'quantity' => 50,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            DB::table('stock_movement_items')->insert([
+                'stock_movement_id' => $smId,
+                'product_id' => $prod->id,
+                'quantity' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        // Deduct source and add to destination
-        DB::table('stock_balances')->where('warehouse_id', $mainWh->id)->where('product_id', $prod->id)->decrement('quantity', 50);
-        DB::table('stock_balances')->where('warehouse_id', $slsWh->id)->where('product_id', $prod->id)->increment('quantity', 50);
+            // Deduct source and add to destination
+            DB::table('stock_balances')->where('warehouse_id', $mainWh->id)->where('product_id', $prod->id)->decrement('quantity', 50);
+            DB::table('stock_balances')->where('warehouse_id', $slsWh->id)->where('product_id', $prod->id)->increment('quantity', 50);
 
-        return redirect()->back()->with('success', "Mutasi Stok [{$docNum}] berhasil! 50 pcs dipindahkan ke Gudang Kanvas.");
+            // Record in Stock Mutations Ledger (OUT from MAIN)
+            $balMain = DB::table('stock_balances')->where('warehouse_id', $mainWh->id)->where('product_id', $prod->id)->value('quantity') ?? 0;
+            DB::table('stock_mutations')->insert([
+                'date' => date('Y-m-d'),
+                'warehouse_id' => $mainWh->id,
+                'product_id' => $prod->id,
+                'doc_type' => 'SM',
+                'doc_number' => $docNum,
+                'mutation_type' => 'OUT',
+                'quantity' => 50,
+                'balance_after' => $balMain,
+                'notes' => "Mutasi keluar ke {$slsWh->name}",
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Record in Stock Mutations Ledger (IN to SALES)
+            $balSls = DB::table('stock_balances')->where('warehouse_id', $slsWh->id)->where('product_id', $prod->id)->value('quantity') ?? 0;
+            DB::table('stock_mutations')->insert([
+                'date' => date('Y-m-d'),
+                'warehouse_id' => $slsWh->id,
+                'product_id' => $prod->id,
+                'doc_type' => 'SM',
+                'doc_number' => $docNum,
+                'mutation_type' => 'IN',
+                'quantity' => 50,
+                'balance_after' => $balSls,
+                'notes' => "Penerimaan mutasi dari {$mainWh->name}",
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', "Mutasi Stok [{$docNum}] berhasil! 50 pcs dipindahkan & kartu stok dicatat.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal mutasi: ' . $e->getMessage());
+        }
     }
 }
-

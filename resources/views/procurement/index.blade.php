@@ -3,22 +3,23 @@
     <x-slot name="headerTitle">Purchase Order & Goods Received</x-slot>
     <x-slot name="badge">PO &rarr; GR</x-slot>
 
-    <!-- Top Action Bar -->
-    <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Purchase Order & Penerimaan Barang</h2>
-            <p class="text-xs text-slate-500">Pencatatan pengadaan ke supplier dan penerimaan fisik ke Gudang MAIN</p>
-        </div>
-
-        <button @click="createPoOpen = !createPoOpen" 
-                class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
-            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-            <span x-text="createPoOpen ? 'Tutup Form' : '+ Buat PO Baru'"></span>
-        </button>
-    </div>
-
     <div x-data="procurementMasterDetail()" x-init="initData()">
         
+        <!-- Top Action Bar -->
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Purchase Order & Penerimaan Barang</h2>
+                <p class="text-xs text-slate-500">Pencatatan pengadaan ke supplier dan penerimaan fisik ke Gudang MAIN</p>
+            </div>
+
+            <button type="button" 
+                    @click="createPoOpen = !createPoOpen" 
+                    class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+                <span x-text="createPoOpen ? 'Tutup Form' : '+ Buat PO Baru'"></span>
+            </button>
+        </div>
+
         <!-- ============================================== -->
         <!-- FORM PEMBUATAN PO MULTI-ITEM (INLINE CARD)    -->
         <!-- ============================================== -->
@@ -74,12 +75,10 @@
                         <table class="w-full text-left text-xs">
                             <thead class="bg-slate-100/70 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200/80">
                                 <tr>
-                                    <th class="py-2.5 px-4 w-5/12">Produk</th>
-                                    <th class="py-2.5 px-4 w-2/12">Tracking</th>
-                                    <th class="py-2.5 px-4 w-2/12 text-right">Harga Modal</th>
-                                    <th class="py-2.5 px-4 w-1/12 text-center">Qty</th>
-                                    <th class="py-2.5 px-4 w-2/12 text-right">Subtotal</th>
-                                    <th class="py-2.5 px-4 w-10 text-center"></th>
+                                    <th class="py-2.5 px-4 w-6/12">Produk</th>
+                                    <th class="py-2.5 px-4 w-3/12">Tracking Method</th>
+                                    <th class="py-2.5 px-4 w-2/12 text-center">Kuantitas (Qty)</th>
+                                    <th class="py-2.5 px-4 w-1/12 text-center"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-200/70 bg-white">
@@ -111,26 +110,17 @@
                                             </span>
                                         </td>
 
-                                        <td class="py-2.5 px-4 text-right">
-                                            <input type="number" 
-                                                   :name="`items[${index}][cost_price]`" 
-                                                   x-model.number="row.cost_price" 
-                                                   @input="calculateTotal()"
-                                                   class="w-28 text-xs font-mono text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none">
-                                        </td>
-
                                         <td class="py-2.5 px-4 text-center">
-                                            <input type="number" 
-                                                   :name="`items[${index}][quantity]`" 
-                                                   x-model.number="row.quantity" 
-                                                   @input="calculateTotal()"
-                                                   min="1" 
-                                                   required 
-                                                   class="w-20 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none">
-                                        </td>
-
-                                        <td class="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
-                                            Rp <span x-text="(row.cost_price * row.quantity).toLocaleString('id-ID')"></span>
+                                            <div class="flex items-center justify-center gap-1.5">
+                                                <input type="number" 
+                                                       :name="`items[${index}][quantity]`" 
+                                                       x-model.number="row.quantity" 
+                                                       @input="calculateTotal()"
+                                                       min="1" 
+                                                       required 
+                                                       class="w-24 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                                                <span class="text-[11px] text-slate-400 font-medium">pcs</span>
+                                            </div>
                                         </td>
 
                                         <td class="py-2.5 px-4 text-center">
@@ -147,10 +137,11 @@
 
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
                     <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-slate-500 uppercase">Total:</span>
-                        <span class="text-base font-extrabold text-slate-900 font-mono">
-                            Rp <span x-text="grandTotal.toLocaleString('id-ID')"></span>
+                        <span class="text-xs font-bold text-slate-500 uppercase">Total Pesanan:</span>
+                        <span class="text-sm font-extrabold text-slate-900 font-mono">
+                            <span x-text="totalQty.toLocaleString('id-ID')"></span> pcs
                         </span>
+                        <span class="text-xs text-slate-400 font-medium">(<span x-text="items.length"></span> produk)</span>
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -188,27 +179,32 @@
                             <th class="py-3 px-4 text-center">Item</th>
                             <th class="py-3 px-4 text-right">Total Nilai</th>
                             <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 font-medium">
                         @foreach($orders as $idx => $po)
                             <tr @click="selectPo({{ json_encode($po) }})"
-                                :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'bg-rose-50/70 border-l-4 border-rose-600' : 'hover:bg-slate-50/60 cursor-pointer'"
+                                :class="selectedPo && selectedPo.id === {{ $po->id }} 
+                                    ? 'bg-rose-50/90 border-l-4 border-rose-600 shadow-sm' 
+                                    : 'hover:bg-slate-50/70 cursor-pointer'"
                                 class="transition-all cursor-pointer">
                                 
                                 <td class="py-3.5 px-5 font-mono font-bold text-slate-900">
                                     <div class="flex items-center gap-2">
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-white font-mono">
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-white"
+                                              :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'bg-rose-600 font-extrabold' : 'bg-slate-900'">
                                             {{ $po->doc_type }}
                                         </span>
-                                        <span>{{ $po->doc_number }}</span>
+                                        <span :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'text-rose-950 font-extrabold' : ''">{{ $po->doc_number }}</span>
                                     </div>
                                 </td>
 
                                 <td class="py-3.5 px-4 font-bold text-slate-800">{{ $po->supplier_name }}</td>
                                 
                                 <td class="py-3.5 px-4">
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[11px]">
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-semibold"
+                                          :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-slate-100 text-slate-700'">
                                         {{ $po->tap_name }}
                                     </span>
                                 </td>
@@ -216,7 +212,8 @@
                                 <td class="py-3.5 px-4 text-slate-500">{{ date('d M Y', strtotime($po->order_date)) }}</td>
 
                                 <td class="py-3.5 px-4 text-center font-bold text-slate-800">
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[11px]">
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-mono"
+                                          :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'bg-rose-200/70 text-rose-900 font-bold' : 'bg-slate-100 text-slate-700'">
                                         {{ count($po->items) }} item ({{ $po->total_qty }} pcs)
                                     </span>
                                 </td>
@@ -236,6 +233,28 @@
                                         </span>
                                     @endif
                                 </td>
+
+                                <td class="py-3.5 px-4 text-center">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        @if($po->status === 'ORDERED')
+                                            <a href="{{ route('procurement.create-gr', $po->id) }}" 
+                                               @click.stop
+                                               class="px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1 transition-all shadow-xs">
+                                                <span>Terima GR</span>
+                                                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                            </a>
+                                        @endif
+                                        <button type="button" 
+                                                class="px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                                                :class="selectedPo && selectedPo.id === {{ $po->id }} 
+                                                    ? 'bg-rose-600 text-white' 
+                                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'">
+                                            <span x-text="selectedPo && selectedPo.id === {{ $po->id }} ? 'Aktif' : 'Detail'"></span>
+                                            <i data-lucide="chevron-down" class="w-3 h-3 transition-transform" 
+                                               :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'rotate-180 text-white' : 'text-slate-400'"></i>
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -247,148 +266,107 @@
         <!-- BAGIAN 2: DETAIL PANEL INLINE (DI BAWAH TABEL) -->
         <!-- ============================================== -->
         <div x-show="selectedPo" x-cloak class="scroll-mt-4" id="detailSection">
-            <div class="bg-white rounded-2xl border-2 border-slate-200/80 shadow-sm p-6">
+            <div class="rounded-2xl border-2 border-slate-300 shadow-lg overflow-hidden bg-white">
                 
-                <!-- Detail Header -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-100 gap-3">
+                <!-- Distinct Dark Header Strip for Detail Panel -->
+                <div class="bg-slate-900 text-white px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800">
                     <div class="flex items-center gap-3">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-900 text-white">
-                            DETAIL
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-rose-500 text-white shadow-sm">
+                            RINCIAN PO
                         </span>
-                        <h4 class="text-base font-extrabold text-slate-900" x-text="selectedPo ? selectedPo.doc_number : ''"></h4>
+                        <h4 class="text-base font-extrabold text-white tracking-tight" x-text="selectedPo ? selectedPo.doc_number : ''"></h4>
                     </div>
 
-                    <div class="flex items-center gap-2 text-xs">
-                        <span class="text-slate-400">TAP:</span>
-                        <span class="font-bold text-slate-800" x-text="selectedPo ? selectedPo.tap_name : ''"></span>
-                        <span class="text-slate-300">&bull;</span>
-                        <span class="text-slate-400">Status:</span>
-                        <span class="font-bold px-2 py-0.5 rounded text-[10px]" 
-                              :class="selectedPo && selectedPo.status === 'RECEIVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
-                              x-text="selectedPo ? selectedPo.status : ''"></span>
+                    <div class="flex items-center gap-3 text-xs">
+                        <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                            <span class="text-slate-400">TAP:</span>
+                            <span class="font-bold text-white" x-text="selectedPo ? selectedPo.tap_name : ''"></span>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                            <span class="text-slate-400">Status:</span>
+                            <span class="font-bold px-1.5 py-0.5 rounded text-[10px]" 
+                                  :class="selectedPo && selectedPo.status === 'RECEIVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'"
+                                  x-text="selectedPo ? selectedPo.status : ''"></span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Detail Line Items Table -->
-                <div class="mb-5">
-                    <div class="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
-                                <tr>
-                                    <th class="py-2.5 px-4">Produk</th>
-                                    <th class="py-2.5 px-4">Tipe</th>
-                                    <th class="py-2.5 px-4">Tracking</th>
-                                    <th class="py-2.5 px-4 text-center">Qty</th>
-                                    <th class="py-2.5 px-4 text-right">Harga Modal</th>
-                                    <th class="py-2.5 px-4 text-right">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100 font-medium">
-                                <template x-for="(item, idx) in (selectedPo ? selectedPo.items : [])" :key="idx">
+                <div class="p-6">
+                    <!-- Detail Line Items Table -->
+                    <div class="mb-5">
+                        <div class="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
                                     <tr>
-                                        <td class="py-3 px-4 font-bold text-slate-900">
-                                            <span class="font-mono text-[10px] text-slate-400 block" x-text="item.sku"></span>
-                                            <span x-text="item.product_name"></span>
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold"
-                                                  :class="item.product_type === 'SA' ? 'bg-rose-100 text-rose-700' : (item.product_type === 'VOUCHER' ? 'bg-indigo-100 text-indigo-700' : 'bg-cyan-100 text-cyan-700')"
-                                                  x-text="item.product_type">
-                                            </span>
-                                        </td>
-                                        <td class="py-3 px-4 font-mono text-[11px] font-bold"
-                                            :class="item.tracking_method === 'ICCID' ? 'text-purple-700' : 'text-blue-700'"
-                                            x-text="item.tracking_method">
-                                        </td>
-                                        <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">
-                                            <span x-text="item.quantity.toLocaleString('id-ID')"></span> pcs
-                                        </td>
-                                        <td class="py-3 px-4 text-right font-mono text-slate-600">
-                                            Rp <span x-text="Number(item.cost_price).toLocaleString('id-ID')"></span>
-                                        </td>
-                                        <td class="py-3 px-4 text-right font-mono font-extrabold text-slate-900">
-                                            Rp <span x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
-                                        </td>
+                                        <th class="py-2.5 px-4">Produk</th>
+                                        <th class="py-2.5 px-4">Tipe</th>
+                                        <th class="py-2.5 px-4">Tracking</th>
+                                        <th class="py-2.5 px-4 text-center">Qty</th>
+                                        <th class="py-2.5 px-4 text-right">Harga Modal</th>
+                                        <th class="py-2.5 px-4 text-right">Subtotal</th>
                                     </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- ============================================== -->
-                <!-- PROSES FISIK GR (GOODS RECEIVED)              -->
-                <!-- ============================================== -->
-                <template x-if="selectedPo && selectedPo.status !== 'RECEIVED'">
-                    <div class="mt-4 bg-slate-50 rounded-2xl border border-slate-200 p-5">
-                        <div class="flex items-center justify-between mb-3">
-                            <h5 class="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                                <i data-lucide="boxes" class="w-4 h-4 text-emerald-600"></i>
-                                <span>Penerimaan Fisik Barang (GR)</span>
-                            </h5>
-                            <span class="text-[11px] text-slate-500 font-semibold">Tujuan: Gudang MAIN</span>
-                        </div>
-
-                        <form :action="`{{ url('procurement/process-gr') }}/${selectedPo.id}`" method="POST"
-                              data-loading-title="Penerimaan Fisik (GR)"
-                              data-loading-sub="Menerbitkan dokumen GR & mencatat stok ke Gudang MAIN..."
-                              data-doctype="GR">
-                            @csrf
-
-                            <!-- Section Input Serial ICCID jika ada produk SA -->
-                            <template x-if="selectedPo.has_iccid">
-                                <div class="mb-4 space-y-3">
-                                    <template x-for="item in selectedPo.items.filter(i => i.tracking_method === 'ICCID')" :key="item.id">
-                                        <div class="p-3 bg-white rounded-xl border border-slate-200">
-                                            <div class="flex items-center justify-between mb-2">
-                                                <span class="text-xs font-bold text-slate-800" x-text="item.product_name"></span>
-                                                <span class="text-xs font-mono font-bold text-purple-700" x-text="`${item.quantity} Unit ICCID`"></span>
-                                            </div>
-                                            
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Nomor Awal ICCID (Rentang Otomatis):</label>
-                                                    <input type="text" 
-                                                           :name="`iccids_${item.product_id}_range_start`" 
-                                                           :value="`89621000${String(new Date().getFullYear()).slice(-2)}000001`" 
-                                                           class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-purple-900 focus:outline-none">
-                                                </div>
-
-                                                <div>
-                                                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Paste Serial (Opsional):</label>
-                                                    <textarea :name="`iccids_${item.product_id}_paste`" 
-                                                              rows="1" 
-                                                              placeholder="Paste serial jika ada..."
-                                                              class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:outline-none"></textarea>
-                                                </div>
-                                            </div>
-                                        </div>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 font-medium">
+                                    <template x-for="(item, idx) in (selectedPo ? selectedPo.items : [])" :key="idx">
+                                        <tr class="hover:bg-slate-50/70">
+                                            <td class="py-3 px-4 font-bold text-slate-900">
+                                                <span class="font-mono text-[10px] text-slate-400 block" x-text="item.sku"></span>
+                                                <span x-text="item.product_name"></span>
+                                            </td>
+                                            <td class="py-3 px-4">
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold"
+                                                      :class="item.product_type === 'SA' ? 'bg-rose-100 text-rose-700' : (item.product_type === 'VOUCHER' ? 'bg-indigo-100 text-indigo-700' : 'bg-cyan-100 text-cyan-700')"
+                                                      x-text="item.product_type">
+                                                </span>
+                                            </td>
+                                            <td class="py-3 px-4 font-mono text-[11px] font-bold"
+                                                :class="item.tracking_method === 'ICCID' ? 'text-purple-700' : 'text-blue-700'"
+                                                x-text="item.tracking_method">
+                                            </td>
+                                            <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">
+                                                <span x-text="item.quantity.toLocaleString('id-ID')"></span> pcs
+                                            </td>
+                                            <td class="py-3 px-4 text-right font-mono text-slate-600">
+                                                Rp <span x-text="Number(item.cost_price).toLocaleString('id-ID')"></span>
+                                            </td>
+                                            <td class="py-3 px-4 text-right font-mono font-extrabold text-slate-900">
+                                                Rp <span x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
+                                            </td>
+                                        </tr>
                                     </template>
-                                </div>
-                            </template>
-
-                            <div class="flex justify-end pt-2">
-                                <button type="submit" 
-                                        class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95">
-                                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-                                    <span>Terima Fisik & Terbitkan GR</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </template>
-
-                <!-- Feedback jika PO sudah RECEIVED -->
-                <template x-if="selectedPo && selectedPo.status === 'RECEIVED'">
-                    <div class="mt-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs text-emerald-800 font-bold">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
-                            <span>Barang Fisik Sudah Diterima (GR Selesai)</span>
+                                </tbody>
+                            </table>
                         </div>
-                        <span class="font-mono text-[11px] text-emerald-700">Tercatat di Gudang MAIN</span>
                     </div>
-                </template>
 
+                    <!-- Action jika status ORDERED: Tombol Buka Layar GR -->
+                    <template x-if="selectedPo && selectedPo.status !== 'RECEIVED'">
+                        <div class="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 text-xs text-slate-700 font-semibold">
+                                <i data-lucide="package-search" class="w-4 h-4 text-amber-600"></i>
+                                <span>Barang fisik dari supplier sudah tiba di gudang?</span>
+                            </div>
+                            <a :href="'{{ url('procurement/gr') }}/' + selectedPo.id" 
+                               class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95">
+                                <i data-lucide="boxes" class="w-4 h-4"></i>
+                                <span>Buka Formulir Penerimaan Fisik (GR) & Registrasi ICCID</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </template>
+
+                    <!-- Feedback jika PO sudah RECEIVED -->
+                    <template x-if="selectedPo && selectedPo.status === 'RECEIVED'">
+                        <div class="mt-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs text-emerald-800 font-bold">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                                <span>Barang Fisik Sudah Diterima Lengkap (GR Selesai)</span>
+                            </div>
+                            <span class="font-mono text-[11px] text-emerald-700">Tercatat di Gudang MAIN</span>
+                        </div>
+                    </template>
+
+                </div>
             </div>
         </div>
     </div>
@@ -403,6 +381,10 @@
                     { product_id: '', tracking_method: '', cost_price: 0, quantity: 100 }
                 ],
                 grandTotal: 0,
+
+                get totalQty() {
+                    return this.items.reduce((acc, row) => acc + (parseInt(row.quantity) || 0), 0);
+                },
 
                 initData() {
                     const firstPo = @json($orders->first());

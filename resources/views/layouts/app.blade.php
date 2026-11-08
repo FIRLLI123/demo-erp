@@ -269,26 +269,26 @@
                     </div>
                 </div>
 
-                <!-- Group: PENGADAAN & STOK -->
+                <!-- Group: PENGADAAN & INVENTORY -->
                 <div>
                     <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
-                        <span>Pengadaan & Stok</span>
+                        <span>Pengadaan & Inventory</span>
                         <span class="text-[9px] font-mono text-slate-400">PO • GR • SM</span>
                     </div>
                     <div class="space-y-1">
                         <a href="{{ route('procurement.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('procurement*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="shopping-cart" class="w-4 h-4 text-emerald-400"></i>
-                                <span>PO & Goods Received (GR)</span>
+                                <span>PO & Penerimaan (GR)</span>
                             </div>
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">PO-GR</span>
                         </a>
                         <a href="{{ route('inventory.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('inventory*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="boxes" class="w-4 h-4 text-cyan-400"></i>
-                                <span>Stok Gudang & Mutasi (SM)</span>
+                                <span>Inventory & Kartu Stok</span>
                             </div>
-                            <span class="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono font-bold">SM</span>
+                            <span class="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono font-bold">INVENTORY</span>
                         </a>
                         <a href="{{ route('inventory.repack') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('inventory.repack*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
                             <div class="flex items-center gap-3">
