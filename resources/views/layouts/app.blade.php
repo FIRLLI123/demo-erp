@@ -359,7 +359,7 @@
                                 </span>
                             @endif
                         </h1>
-                        <p class="text-xs text-slate-500 hidden sm:block">Sistem Pengelolaan Stok & Penjualan Distributor Telkomsel</p>
+                        <!-- <p class="text-xs text-slate-500 hidden sm:block">Sistem Pengelolaan Stok & Penjualan Distributor Telkomsel</p> -->
                     </div>
                 </div>
 
