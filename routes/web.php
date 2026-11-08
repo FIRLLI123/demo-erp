@@ -21,8 +21,8 @@ Route::prefix('master')->name('master.')->group(function () {
 // Procurement (PO & GR)
 Route::prefix('procurement')->name('procurement.')->group(function () {
     Route::get('/', [ProcurementController::class, 'index'])->name('index');
-    Route::post('/quick-po', [ProcurementController::class, 'createQuickPo'])->name('quick-po');
-    Route::post('/confirm-gr/{id}', [ProcurementController::class, 'confirmGr'])->name('confirm-gr');
+    Route::post('/store-po', [ProcurementController::class, 'storePo'])->name('store-po');
+    Route::post('/process-gr/{id}', [ProcurementController::class, 'processGr'])->name('process-gr');
 });
 
 // Inventory (Stock, ICCID, SM, Repack)

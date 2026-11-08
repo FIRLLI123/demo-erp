@@ -1013,3 +1013,36 @@ Setelah audit, berikan:
 6. Daftar file yang akan dibuat atau diubah pada PHASE 1.
 
 Tunggu persetujuan sebelum melanjutkan.
+
+
+
+
+
+flow dari atasan langsung
+Alur Proses  :
+Secara umum, proses aplikasi ini dibagi menjadi 3 tahapan utama:
+1. Stock Awal (Pengadaan dan Persediaan Barang)
+1.	Admin membuat Purchase Order (PO).
+2.	Admin Gudang melakukan Goods Received (GR) untuk menerima barang.
+3.	Upload data ICCID.
+4.	Stok masuk dan tercatat di gudang.
+5.	Proses distribusi atau penyesuaian stok melalui Repack Out/In, Stock Adjustment, dan Stock Movement.
+6.	Admin melakukan pengecekan stok melalui laporan Inventory.
+2. Sales Order (Proses Penjualan)
+A. Penjualan Manual
+1.	Admin CS membuat Sales Order (SO).
+2.	Finance melakukan Approval SO.
+3.	Gudang memproses pengeluaran barang melalui Sending Good.
+4.	Sistem membentuk dokumen Good Delivery (GD) dan Account Receivable (AR).
+5.	Jika ada retur, Admin Gudang memproses Sales Retur.
+B. Penjualan melalui Sales
+1.	Sales membuat Sales Order (SO) .
+2.	Sistem membentuk dokumen SO, GD, dan AR.
+3.	Print Nota
+3. Pelunasan (Pembayaran)
+1.	Kasir atau Finance menerima pembayaran melalui Tanda Terima Kasir (TTK).
+2.	Pembayaran dapat dilakukan secara tunai, transfer, uang titipan, atau pengurangan melalui retur.
+3.	Setelah TTK disimpan, transaksi dilanjutkan ke proses BBM.
+4.	Pembayaran tunai diproses melalui BBM Tunai.
+5.	Pembayaran transfer diproses melalui BBM Non Tunai.
+6.	Transaksi pembayaran tercatat sebagai Bukti Bank Masuk.
