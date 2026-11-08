@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\ProcurementController;
+use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\FinanceController;
@@ -25,6 +26,13 @@ Route::prefix('procurement')->name('procurement.')->group(function () {
     Route::get('/gr/{id}', [ProcurementController::class, 'createGr'])->name('create-gr');
     Route::get('/download-iccid-template', [ProcurementController::class, 'downloadIccidTemplate'])->name('download-iccid-template');
     Route::post('/process-gr/{id}', [ProcurementController::class, 'processGr'])->name('process-gr');
+});
+
+// Stock Movement (SM - Transfer Antar Gudang)
+Route::prefix('stock-movement')->name('stock-movement.')->group(function () {
+    Route::get('/', [StockMovementController::class, 'index'])->name('index');
+    Route::post('/store', [StockMovementController::class, 'store'])->name('store');
+    Route::get('/download-template', [StockMovementController::class, 'downloadTemplate'])->name('download-template');
 });
 
 // Inventory (Stock, ICCID, SM, Repack)
