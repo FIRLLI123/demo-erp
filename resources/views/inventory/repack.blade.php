@@ -8,8 +8,11 @@
         <!-- Top Action & Navigation Tabs -->
         <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Konversi & Pengemasan Ulang (Repack)</h2>
-                <p class="text-xs text-slate-500">Penggabungan 2 komponen bahan (Fisik 0K + Saldo Bulk) menjadi 1 produk baru bernilai setara</p>
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Konversi & Pengemasan Ulang (Repack)</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">PT WAHANA PUTRA YUDHA</span>
+                </h2>
+                <p class="text-xs text-slate-500">Operasional Repack Resmi PT Wahana Putra Yudha: Penggabungan 2 komponen bahan (Fisik 0K + Saldo Bulk) menjadi 1 produk baru bernilai setara</p>
             </div>
 
             <!-- Tab Switcher with Distinct Active Colors -->

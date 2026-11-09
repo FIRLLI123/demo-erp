@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Dashboard' }} | DISTRI-ERP - Telco Distribution Management</title>
+    <title>{{ $title ?? 'Dashboard' }} | PT Wahana Putra Yudha - Telco Distribution Management</title>
 
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -211,10 +211,9 @@
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="font-extrabold text-lg text-white tracking-tight">DISTRI<span class="text-rose-500">POS</span></span>
-                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">ERP v1.0</span>
+                            <span class="font-extrabold text-sm text-white tracking-tight truncate max-w-[155px]">PT WAHANA PUTRA YUDHA</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 font-medium">Telco Distribution System</p>
+                        <p class="text-[10px] text-rose-400 font-bold tracking-wide">TELKOMSEL AUTHORIZED PARTNER</p>
                     </div>
                 </div>
                 <button @click="sidebarOpen = false" class="lg:hidden text-slate-400 hover:text-white">
@@ -223,13 +222,13 @@
             </div>
 
             <!-- Organization Context Badge -->
-            <div class="px-5 py-3 border-b border-slate-800/60 bg-slate-900/40">
+            <div class="px-5 py-2.5 border-b border-slate-800/60 bg-slate-900/40">
                 <div class="flex items-center justify-between text-xs">
-                    <span class="text-slate-400 flex items-center gap-1.5">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-rose-400"></i> Area Aktif
+                    <span class="text-slate-400 flex items-center gap-1.5 text-[11px]">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-rose-400"></i> Distributor Resmi
                     </span>
-                    <span class="font-semibold text-white bg-slate-800 px-2 py-0.5 rounded text-[11px] border border-slate-700/60">
-                        Jabodetabek
+                    <span class="font-extrabold text-white bg-slate-800 px-2 py-0.5 rounded text-[10px] border border-slate-700/60">
+                        TAP JABODETABEK
                     </span>
                 </div>
             </div>
@@ -358,7 +357,7 @@
                         <i data-lucide="menu" class="w-6 h-6"></i>
                     </button>
                     <div>
-                        <h1 class="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <h1 class="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                             {{ $headerTitle ?? 'Dashboard Operasional' }}
                             @if(isset($badge))
                                 <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200">
@@ -366,7 +365,7 @@
                                 </span>
                             @endif
                         </h1>
-                        <!-- <p class="text-xs text-slate-500 hidden sm:block">Sistem Pengelolaan Stok & Penjualan Distributor Telkomsel</p> -->
+                        <p class="text-[11px] text-slate-500 font-medium hidden sm:block">PT Wahana Putra Yudha &bull; Telkomsel Distribution Management System</p>
                     </div>
                 </div>
 

@@ -312,6 +312,30 @@ class ProcurementController extends Controller
                         $totalIccidCreated++;
                     }
 
+                    // Update stock_balances for ICCID-based products in MAIN Warehouse
+                    $existingSb = DB::table('stock_balances')
+                        ->where('warehouse_id', $mainWh->id)
+                        ->where('product_id', $item->product_id)
+                        ->first();
+
+                    if ($existingSb) {
+                        DB::table('stock_balances')
+                            ->where('id', $existingSb->id)
+                            ->update([
+                                'quantity' => $existingSb->quantity + $needed,
+                                'updated_at' => now(),
+                            ]);
+                    } else {
+                        DB::table('stock_balances')->insert([
+                            'warehouse_id' => $mainWh->id,
+                            'product_id' => $item->product_id,
+                            'quantity' => $needed,
+                            'reserved_quantity' => 0,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+
                     // Record in Stock Mutation Ledger
                     DB::table('stock_mutations')->insert([
                         'date' => date('Y-m-d'),

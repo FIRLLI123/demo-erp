@@ -8,8 +8,11 @@
         <!-- Top Action Bar -->
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Transfer Fisik Antar Gudang (SM)</h2>
-                <p class="text-xs text-slate-500">Mutasi barang: MAIN &rarr; INVENTORY, INVENTORY &rarr; SALES, atau retur kanvas</p>
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Transfer Fisik Antar Gudang (SM)</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-200">PT WAHANA PUTRA YUDHA</span>
+                </h2>
+                <p class="text-xs text-slate-500">Mutasi resmi PT Wahana Putra Yudha: MAIN &rarr; INVENTORY, INVENTORY &rarr; SALES, atau retur kanvas</p>
             </div>
 
             <button type="button" 

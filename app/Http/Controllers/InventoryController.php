@@ -9,29 +9,35 @@ class InventoryController extends Controller
 {
     public function index()
     {
-        // 1. Stock Balances grouped by Warehouse
+        // 1. Stock Balances grouped by Warehouse with product details and tap info
         $stockBalances = DB::table('stock_balances')
             ->join('warehouses', 'stock_balances.warehouse_id', '=', 'warehouses.id')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('products', 'stock_balances.product_id', '=', 'products.id')
             ->select(
                 'stock_balances.*',
                 'warehouses.name as warehouse_name',
                 'warehouses.code as warehouse_code',
                 'warehouses.type as warehouse_type',
+                'taps.name as tap_name',
                 'products.name as product_name',
                 'products.sku',
-                'products.tracking_method'
+                'products.type as product_type',
+                'products.tracking_method',
+                'products.cost_price'
             )
-            ->orderBy('warehouses.id')
+            ->orderBy('warehouses.type')
+            ->orderBy('warehouses.name')
+            ->orderBy('products.name')
             ->get();
 
-        // 2. ICCID Units
+        // 2. ICCID Units with warehouse & product info
         $iccids = DB::table('iccid_units')
             ->join('products', 'iccid_units.product_id', '=', 'products.id')
             ->leftJoin('warehouses', 'iccid_units.warehouse_id', '=', 'warehouses.id')
-            ->select('iccid_units.*', 'products.name as product_name', 'warehouses.name as warehouse_name')
+            ->select('iccid_units.*', 'products.name as product_name', 'products.sku', 'warehouses.name as warehouse_name')
             ->orderBy('iccid_units.id', 'desc')
-            ->take(50)
+            ->take(100)
             ->get();
 
         // 3. Stock Movements (SM)
@@ -49,25 +55,40 @@ class InventoryController extends Controller
             ->select(
                 'stock_mutations.*',
                 'warehouses.name as warehouse_name',
+                'warehouses.type as warehouse_type',
                 'products.name as product_name',
                 'products.sku',
+                'products.type as product_type',
                 'products.tracking_method'
             )
             ->orderBy('stock_mutations.id', 'desc')
+            ->take(150)
             ->get();
 
-        return view('inventory.index', compact('stockBalances', 'iccids', 'movements', 'mutations'));
+        // 5. Master data untuk filter
+        $warehouses = DB::table('warehouses')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->where('warehouses.status', 'ACTIVE')
+            ->select('warehouses.*', 'taps.name as tap_name')
+            ->orderBy('warehouses.type')
+            ->orderBy('warehouses.name')
+            ->get();
+
+        $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+
+        return view('inventory.index', compact(
+            'stockBalances', 
+            'iccids', 
+            'movements', 
+            'mutations',
+            'warehouses',
+            'taps'
+        ));
     }
 
     public function repack()
     {
-        $repacks = DB::table('repacks')
-            ->join('warehouses', 'repacks.warehouse_id', '=', 'warehouses.id')
-            ->select('repacks.*', 'warehouses.name as warehouse_name')
-            ->orderBy('repacks.created_at', 'desc')
-            ->get();
-
-        return view('inventory.repack', compact('repacks'));
+        return redirect()->route('inventory.repack');
     }
 
     public function quickSm(Request $request)

@@ -8,8 +8,11 @@
         <!-- Top Action & Navigation Tabs -->
         <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Pelunasan Piutang & Penerimaan Kas/Bank</h2>
-                <p class="text-xs text-slate-500">Alur: Tagihan Faktur (AR) &rarr; Tanda Terima Kasir (TTK Multi-AR) &rarr; Bukti Bank Masuk (BBM Tunai & Non Tunai)</p>
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Pelunasan Piutang & Penerimaan Kas/Bank</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">PT WAHANA PUTRA YUDHA</span>
+                </h2>
+                <p class="text-xs text-slate-500">Divisi Keuangan PT Wahana Putra Yudha: Tagihan Faktur (AR) &rarr; Tanda Terima Kasir (TTK Multi-AR) &rarr; Bukti Bank Masuk (BBM Tunai & Non Tunai)</p>
             </div>
 
             <div class="flex items-center gap-3">

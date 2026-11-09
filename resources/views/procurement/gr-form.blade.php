@@ -29,8 +29,9 @@
                         GOODS RECEIVED
                     </span>
                     <span class="font-mono text-sm font-bold text-slate-300">Penerimaan dari {{ $po->doc_number }}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-emerald-400 border border-slate-700">PT WAHANA PUTRA YUDHA</span>
                 </div>
-                <h3 class="text-lg font-extrabold text-white mt-1">Penerimaan Fisik Barang ke Gudang MAIN</h3>
+                <h3 class="text-lg font-extrabold text-white mt-1">Penerimaan Fisik Barang ke Gudang Utama TAP</h3>
             </div>
 
             <div class="flex flex-wrap items-center gap-2 text-xs">

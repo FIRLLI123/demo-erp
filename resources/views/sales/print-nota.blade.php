@@ -31,11 +31,11 @@
         <div class="flex items-start justify-between pb-6 mb-6 border-b-2 border-slate-900">
             <div>
                 <div class="flex items-center gap-2">
-                    <span class="text-xl font-extrabold tracking-tight text-slate-900">DISTRI<span class="text-red-600">POS</span></span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">TELKOMSEL AUTHORIZED</span>
+                    <span class="text-xl font-extrabold tracking-tight text-slate-900">WAHANA<span class="text-red-600">POS</span></span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">TELKOMSEL AUTHORIZED PARTNER</span>
                 </div>
-                <p class="text-[11px] text-slate-500 font-medium mt-1">PT DISTRIBUSI TELEKOMUNIKASI NUSANTARA</p>
-                <p class="text-[11px] text-slate-400">Gedung Graha Distribusi Lt. 3, Jakarta Selatan</p>
+                <p class="text-sm font-extrabold text-slate-900 mt-1">PT WAHANA PUTRA YUDHA</p>
+                <p class="text-[11px] text-slate-500">Distributor Resmi Telkomsel &bull; Operasional TAP</p>
             </div>
 
             <div class="text-right">
@@ -139,7 +139,7 @@
         </div>
 
         <div class="mt-8 pt-4 border-t border-slate-100 text-center text-[10px] text-slate-400">
-            Dokumen sah dicetak secara otomatis oleh sistem DISTRIPOS ERP. Harap simpan sebagai bukti transaksi penjualan.
+            Dokumen sah dicetak secara otomatis oleh sistem ERP PT WAHANA PUTRA YUDHA. Harap simpan sebagai bukti transaksi penjualan resmi.
         </div>
     </div>
 

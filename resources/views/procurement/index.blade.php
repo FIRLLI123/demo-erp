@@ -8,8 +8,11 @@
         <!-- Top Action Bar -->
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Purchase Order & Penerimaan Barang</h2>
-                <p class="text-xs text-slate-500">Pencatatan pengadaan ke supplier dan penerimaan fisik ke Gudang MAIN</p>
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Purchase Order & Penerimaan Barang</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">PT WAHANA PUTRA YUDHA</span>
+                </h2>
+                <p class="text-xs text-slate-500">Pengadaan Resmi PT Wahana Putra Yudha: Pemesanan ke Supplier Pusat & Penerimaan Fisik ke Gudang Utama TAP</p>
             </div>
 
             <button type="button" 
@@ -91,15 +94,28 @@
                                                     required 
                                                     class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
                                                 <option value="">-- Pilih Produk --</option>
-                                                @foreach($products as $p)
-                                                    <option value="{{ $p->id }}" 
-                                                            data-cost="{{ $p->cost_price }}" 
-                                                            data-sku="{{ $p->sku }}" 
-                                                            data-tracking="{{ $p->tracking_method }}" 
-                                                            data-type="{{ $p->type }}">
-                                                        [{{ $p->type }}] {{ $p->name }}
-                                                    </option>
-                                                @endforeach
+                                                <optgroup label="🏷️ BAHAN BAKU REPACK (0K & SALDO INJEKSI NGRS)">
+                                                    @foreach($products->filter(fn($p) => str_starts_with($p->sku, 'RAW-') || str_starts_with($p->sku, 'BULK-')) as $p)
+                                                        <option value="{{ $p->id }}" 
+                                                                data-cost="{{ $p->cost_price }}" 
+                                                                data-sku="{{ $p->sku }}" 
+                                                                data-tracking="{{ $p->tracking_method }}" 
+                                                                data-type="{{ $p->type }}">
+                                                            [{{ $p->sku }}] {{ $p->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </optgroup>
+                                                <optgroup label="📦 PRODUK JADI / SIAP JUAL (KARTU PERDANA, VOUCHER, MODEM)">
+                                                    @foreach($products->filter(fn($p) => !str_starts_with($p->sku, 'RAW-') && !str_starts_with($p->sku, 'BULK-')) as $p)
+                                                        <option value="{{ $p->id }}" 
+                                                                data-cost="{{ $p->cost_price }}" 
+                                                                data-sku="{{ $p->sku }}" 
+                                                                data-tracking="{{ $p->tracking_method }}" 
+                                                                data-type="{{ $p->type }}">
+                                                            [{{ $p->type }}] {{ $p->name }} ({{ $p->sku }})
+                                                        </option>
+                                                    @endforeach
+                                                </optgroup>
                                             </select>
                                         </td>
 

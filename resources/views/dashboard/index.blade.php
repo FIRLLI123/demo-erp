@@ -8,9 +8,10 @@
         <div>
             <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                <h2 class="text-base font-bold text-slate-800">Filter Hierarki Organisasi</h2>
+                <h2 class="text-base font-extrabold text-slate-800">PT WAHANA PUTRA YUDHA</h2>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">TELKOMSEL AUTHORIZED PARTNER</span>
             </div>
-            <p class="text-xs text-slate-500 mt-0.5">Pilih Area, Cluster, dan TAP untuk filtering data dashboard secara instan</p>
+            <p class="text-xs text-slate-500 mt-0.5">Executive Dashboard Operasional & Monitoring Distribusi Wilayah Jabodetabek</p>
         </div>
 
         <!-- Cascading Filter Controls -->

@@ -8,8 +8,11 @@
         <!-- Top Action Bar -->
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Pesanan Penjualan & Pengiriman Barang</h2>
-                <p class="text-xs text-slate-500">Alur: Pembuatan SO &rarr; Approval Finance &rarr; Sending Good (GD & AR) &rarr; Sales Retur</p>
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Pesanan Penjualan & Pengiriman Barang</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">PT WAHANA PUTRA YUDHA</span>
+                </h2>
+                <p class="text-xs text-slate-500">Operasional Resmi PT Wahana Putra Yudha: Pembuatan SO &rarr; Approval Finance &rarr; Sending Good (GD & AR) &rarr; Sales Retur</p>
             </div>
 
             <button type="button" 
