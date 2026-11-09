@@ -40,7 +40,8 @@
         }
     </script>
 
-    <!-- Alpine.js -->
+    <!-- Alpine.js & Plugins -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 
     <!-- ApexCharts CDN -->
@@ -228,85 +229,88 @@
                         <i data-lucide="shield-check" class="w-3.5 h-3.5 text-rose-400"></i> Distributor Resmi
                     </span>
                     <span class="font-extrabold text-white bg-slate-800 px-2 py-0.5 rounded text-[10px] border border-slate-700/60">
-                        TAP JABODETABEK
+                        AREA JABODETABEK
                     </span>
                 </div>
             </div>
 
-            <!-- Navigation Links -->
-            <nav class="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+            <!-- Navigation Links with Smooth Collapsible Dropdowns -->
+            <nav class="flex-1 overflow-y-auto px-4 py-4 space-y-5">
                 <!-- Group: CORE -->
                 <div>
-                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase">Core System</div>
+                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase select-none">Core System</div>
                     <div class="space-y-1">
-                        <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg shadow-red-600/30' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white font-extrabold shadow-lg shadow-red-600/30 ring-1 ring-white/20' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <i data-lucide="layout-dashboard" class="w-4 h-4 {{ request()->routeIs('dashboard') ? 'text-white' : 'text-slate-400' }}"></i>
                             <span>Dashboard Visual</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- Group: MASTER HIERARKI -->
-                <div>
-                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase">Master & Organisasi</div>
-                    <div class="space-y-1">
-                        <a href="{{ route('master.organization') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('master.organization*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                <!-- Group: MASTER HIERARKI (Collapsible Dropdown) -->
+                <div x-data="{ open: {{ request()->routeIs('master.*') ? 'true' : 'true' }} }" class="space-y-1">
+                    <button type="button" @click="open = !open" class="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-bold tracking-wider text-slate-400 hover:text-white uppercase transition-colors select-none text-left focus:outline-none">
+                        <span>Master & Organisasi</span>
+                        <span class="text-[10px] bg-slate-800/80 px-1.5 py-0.5 rounded text-slate-400 border border-slate-700/60 font-mono">5 Master</span>
+                    </button>
+                    <div x-show="open" x-collapse.duration.300ms class="space-y-1 pt-0.5">
+                        <a href="{{ route('master.organization') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('master.organization*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="network" class="w-4 h-4 text-slate-400"></i>
+                                <i data-lucide="network" class="w-4 h-4 {{ request()->routeIs('master.organization*') ? 'text-rose-400' : 'text-slate-400' }}"></i>
                                 <span>Area, Cluster, TAP</span>
                             </div>
                             <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 border border-slate-700">4 Level</span>
                         </a>
-                        <a href="{{ route('master.products') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('master.products*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
-                            <i data-lucide="package" class="w-4 h-4 text-slate-400"></i>
+                        <a href="{{ route('master.products') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('master.products*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <i data-lucide="package" class="w-4 h-4 {{ request()->routeIs('master.products*') ? 'text-rose-400' : 'text-slate-400' }}"></i>
                             <span>Katalog Produk (SA/Voucher)</span>
                         </a>
-                        <a href="{{ route('master.warehouses') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('master.warehouses*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
-                            <i data-lucide="warehouse" class="w-4 h-4 text-slate-400"></i>
+                        <a href="{{ route('master.warehouses') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('master.warehouses*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <i data-lucide="warehouse" class="w-4 h-4 {{ request()->routeIs('master.warehouses*') ? 'text-rose-400' : 'text-slate-400' }}"></i>
                             <span>Gudang (Main, Inv, Sales)</span>
                         </a>
-                        <a href="{{ route('master.sales-team') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('master.sales-team*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
-                            <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+                        <a href="{{ route('master.sales-team') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('master.sales-team*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <i data-lucide="users" class="w-4 h-4 {{ request()->routeIs('master.sales-team*') ? 'text-rose-400' : 'text-slate-400' }}"></i>
                             <span>Tim Sales Force (Kanvas)</span>
                         </a>
-                        <a href="{{ route('master.customers') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('master.customers*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
-                            <i data-lucide="store" class="w-4 h-4 text-slate-400"></i>
+                        <a href="{{ route('master.customers') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('master.customers*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <i data-lucide="store" class="w-4 h-4 {{ request()->routeIs('master.customers*') ? 'text-rose-400' : 'text-slate-400' }}"></i>
                             <span>Master Toko / Outlet</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- Group: PENGADAAN & DISTRIBUSI -->
-                <div>
-                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                <!-- Group: PENGADAAN & DISTRIBUSI (Collapsible Dropdown) -->
+                <div x-data="{ open: {{ (request()->routeIs('procurement*') || request()->routeIs('stock-movement*') || request()->routeIs('inventory.*')) ? 'true' : 'true' }} }" class="space-y-1">
+                    <button type="button" @click="open = !open" class="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-bold tracking-wider text-slate-400 hover:text-white uppercase transition-colors select-none text-left focus:outline-none">
                         <span>Pengadaan & Distribusi</span>
-                        <span class="text-[9px] font-mono text-slate-400">PO • GR • SM • RO</span>
-                    </div>
-                    <div class="space-y-1">
-                        <a href="{{ route('procurement.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('procurement*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <span class="text-[9px] font-mono text-slate-500">PO • GR • SM • RO</span>
+                    </button>
+                    <div x-show="open" x-collapse.duration.300ms class="space-y-1 pt-0.5">
+                        <a href="{{ route('procurement.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('procurement*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="shopping-cart" class="w-4 h-4 text-emerald-400"></i>
+                                <i data-lucide="shopping-cart" class="w-4 h-4 {{ request()->routeIs('procurement*') ? 'text-emerald-400 font-bold' : 'text-emerald-400/80' }}"></i>
                                 <span>PO & Penerimaan (GR)</span>
                             </div>
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">PO-GR</span>
                         </a>
-                        <a href="{{ route('stock-movement.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('stock-movement*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <a href="{{ route('stock-movement.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('stock-movement*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="arrow-right-left" class="w-4 h-4 text-cyan-400"></i>
+                                <i data-lucide="arrow-right-left" class="w-4 h-4 {{ request()->routeIs('stock-movement*') ? 'text-cyan-400 font-bold' : 'text-cyan-400/80' }}"></i>
                                 <span>Stock Movement (SM)</span>
                             </div>
                             <span class="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono font-bold">SM</span>
                         </a>
-                        <a href="{{ route('inventory.repack') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('inventory.repack*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <a href="{{ route('inventory.repack') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('inventory.repack*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="refresh-cw" class="w-4 h-4 text-indigo-400"></i>
+                                <i data-lucide="refresh-cw" class="w-4 h-4 {{ request()->routeIs('inventory.repack*') ? 'text-indigo-400 font-bold' : 'text-indigo-400/80' }}"></i>
                                 <span>Repack In & Out</span>
                             </div>
                             <span class="text-[10px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold">RO-RI</span>
                         </a>
-                        <a href="{{ route('inventory.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('inventory.index') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <a href="{{ route('inventory.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('inventory.index') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="boxes" class="w-4 h-4 text-amber-400"></i>
+                                <i data-lucide="boxes" class="w-4 h-4 {{ request()->routeIs('inventory.index') ? 'text-amber-400 font-bold' : 'text-amber-400/80' }}"></i>
                                 <span>Laporan Inventory & Stok</span>
                             </div>
                             <span class="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">STOK</span>
@@ -314,16 +318,16 @@
                     </div>
                 </div>
 
-                <!-- Group: PENJUALAN -->
-                <div>
-                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                <!-- Group: PENJUALAN (Collapsible Dropdown) -->
+                <div x-data="{ open: {{ request()->routeIs('sales*') ? 'true' : 'true' }} }" class="space-y-1">
+                    <button type="button" @click="open = !open" class="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-bold tracking-wider text-slate-400 hover:text-white uppercase transition-colors select-none text-left focus:outline-none">
                         <span>Penjualan</span>
-                        <span class="text-[9px] font-mono text-slate-400">SO • GD • SR</span>
-                    </div>
-                    <div class="space-y-1">
-                        <a href="{{ route('sales.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('sales*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <span class="text-[9px] font-mono text-slate-500">SO • GD • SR</span>
+                    </button>
+                    <div x-show="open" x-collapse.duration.300ms class="space-y-1 pt-0.5">
+                        <a href="{{ route('sales.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('sales*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="badge-dollar-sign" class="w-4 h-4 text-amber-400"></i>
+                                <i data-lucide="badge-dollar-sign" class="w-4 h-4 {{ request()->routeIs('sales*') ? 'text-amber-400 font-bold' : 'text-amber-400/80' }}"></i>
                                 <span>Sales Order & Delivery</span>
                             </div>
                             <span class="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">SO-GD</span>
@@ -331,16 +335,16 @@
                     </div>
                 </div>
 
-                <!-- Group: KEUANGAN & KAS/BANK -->
-                <div>
-                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                <!-- Group: KEUANGAN & KAS/BANK (Collapsible Dropdown) -->
+                <div x-data="{ open: {{ request()->routeIs('finance*') ? 'true' : 'true' }} }" class="space-y-1">
+                    <button type="button" @click="open = !open" class="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-bold tracking-wider text-slate-400 hover:text-white uppercase transition-colors select-none text-left focus:outline-none">
                         <span>Keuangan & Kas/Bank</span>
-                        <span class="text-[9px] font-mono text-slate-400">AR • TTK • BBM</span>
-                    </div>
-                    <div class="space-y-1">
-                        <a href="{{ route('finance.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('finance*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <span class="text-[9px] font-mono text-slate-500">AR • TTK • BBM</span>
+                    </button>
+                    <div x-show="open" x-collapse.duration.300ms class="space-y-1 pt-0.5">
+                        <a href="{{ route('finance.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('finance*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="receipt" class="w-4 h-4 text-rose-400"></i>
+                                <i data-lucide="receipt" class="w-4 h-4 {{ request()->routeIs('finance*') ? 'text-rose-400 font-bold' : 'text-rose-400/80' }}"></i>
                                 <span>Piutang & Kasir (TTK/BBM)</span>
                             </div>
                             <span class="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">FINANCE</span>
@@ -348,16 +352,16 @@
                     </div>
                 </div>
 
-                <!-- Group: PUSAT LAPORAN & EKSPOR -->
-                <div>
-                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                <!-- Group: PUSAT LAPORAN & EKSPOR (Collapsible Dropdown) -->
+                <div x-data="{ open: {{ request()->routeIs('reports*') ? 'true' : 'true' }} }" class="space-y-1">
+                    <button type="button" @click="open = !open" class="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-bold tracking-wider text-slate-400 hover:text-white uppercase transition-colors select-none text-left focus:outline-none">
                         <span>Pusat Laporan & Ekspor</span>
-                        <span class="text-[9px] font-mono text-slate-400">EXCEL • PDF</span>
-                    </div>
-                    <div class="space-y-1">
-                        <a href="{{ route('reports.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('reports*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <span class="text-[9px] font-mono text-slate-500">EXCEL • PDF</span>
+                    </button>
+                    <div x-show="open" x-collapse.duration.300ms class="space-y-1 pt-0.5">
+                        <a href="{{ route('reports.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all {{ request()->routeIs('reports*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4 {{ request()->routeIs('reports*') ? 'text-emerald-400 font-bold' : 'text-emerald-400/80' }}"></i>
                                 <span>Pusat Laporan Terpadu</span>
                             </div>
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">REPORT</span>
