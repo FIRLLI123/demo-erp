@@ -255,7 +255,9 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">5 Menu</span>
-                            <i data-lucide="chevron-down" :class="open ? 'rotate-180 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'" class="w-4 h-4 transition-transform duration-300 ease-in-out"></i>
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
@@ -297,7 +299,9 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-mono text-slate-400">PO • GR • SM</span>
-                            <i data-lucide="chevron-down" :class="open ? 'rotate-180 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'" class="w-4 h-4 transition-transform duration-300 ease-in-out"></i>
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
@@ -344,7 +348,9 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-mono text-slate-400">SO • GD</span>
-                            <i data-lucide="chevron-down" :class="open ? 'rotate-180 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'" class="w-4 h-4 transition-transform duration-300 ease-in-out"></i>
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
@@ -370,7 +376,9 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-mono text-slate-400">AR • BBM</span>
-                            <i data-lucide="chevron-down" :class="open ? 'rotate-180 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'" class="w-4 h-4 transition-transform duration-300 ease-in-out"></i>
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
@@ -396,7 +404,9 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-mono text-slate-400">PDF • XLS</span>
-                            <i data-lucide="chevron-down" :class="open ? 'rotate-180 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'" class="w-4 h-4 transition-transform duration-300 ease-in-out"></i>
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
