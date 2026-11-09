@@ -10,6 +10,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TrackingController;
 
 // Dashboard
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -79,4 +80,10 @@ Route::prefix('reports')->name('reports.')->group(function () {
     Route::get('/', [ReportController::class, 'index'])->name('index');
     Route::get('/export-excel', [ReportController::class, 'exportExcel'])->name('export-excel');
     Route::get('/print-pdf', [ReportController::class, 'printPdf'])->name('print-pdf');
+});
+
+// Tracking & Informasi Sales Force
+Route::prefix('tracking')->name('tracking.')->group(function () {
+    Route::get('/locations', [TrackingController::class, 'locations'])->name('locations');
+    Route::get('/devices', [TrackingController::class, 'devices'])->name('devices');
 });

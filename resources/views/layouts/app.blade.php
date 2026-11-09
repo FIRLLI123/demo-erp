@@ -424,6 +424,41 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- Group: TRACKING & INFORMASI (Collapsible Dropdown) -->
+                <div x-data="{ open: {{ request()->routeIs('tracking*') ? 'true' : 'true' }} }" class="space-y-1">
+                    <button type="button" @click="open = !open" 
+                            :class="open ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all select-none text-left focus:outline-none group">
+                        <div class="flex items-center gap-2.5">
+                            <i data-lucide="map-pin" :class="open ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
+                            <span class="font-bold">Tracking & Informasi</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">2 Menu</span>
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </span>
+                        </div>
+                    </button>
+                    <!-- Sub-Menu (Tree View Indented) -->
+                    <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
+                        <a href="{{ route('tracking.locations') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('tracking.locations*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('tracking.locations*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Tracking Lokasi Sales (GPS)</span>
+                            </div>
+                            <span class="text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">LIVE MAP</span>
+                        </a>
+                        <a href="{{ route('tracking.devices') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('tracking.devices*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('tracking.devices*') ? 'bg-indigo-400 ring-2 ring-indigo-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Informasi Device Mobile</span>
+                            </div>
+                            <span class="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold">MDM</span>
+                        </a>
+                    </div>
+                </div>
             </nav>
 
             <!-- Bottom User & Role Profile -->
