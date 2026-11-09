@@ -15,12 +15,19 @@
                 <p class="text-xs text-slate-500">Operasional Resmi PT Wahana Putra Yudha: Pembuatan SO &rarr; Approval Finance &rarr; Sending Good (GD & AR) &rarr; Sales Retur</p>
             </div>
 
-            <button type="button" 
-                    @click="createSoOpen = !createSoOpen" 
-                    class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
-                <i data-lucide="plus-circle" class="w-4 h-4 text-amber-400"></i>
-                <span x-text="createSoOpen ? 'Tutup Form' : '+ Buat SO Baru'"></span>
-            </button>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('reports.index', ['type' => 'SALES']) }}" 
+                   class="px-3.5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-rose-600"></i>
+                    <span>Rekap Penjualan (Excel/PDF)</span>
+                </a>
+                <button type="button" 
+                        @click="createSoOpen = !createSoOpen" 
+                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
+                    <i data-lucide="plus-circle" class="w-4 h-4 text-amber-400"></i>
+                    <span x-text="createSoOpen ? 'Tutup Form' : '+ Buat SO Baru'"></span>
+                </button>
+            </div>
         </div>
 
         <!-- ============================================== -->

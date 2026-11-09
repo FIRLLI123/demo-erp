@@ -306,26 +306,53 @@
                     </div>
                 </div>
 
-                <!-- Group: PENJUALAN & KEUANGAN -->
+                <!-- Group: PENJUALAN -->
                 <div>
                     <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
-                        <span>Penjualan & Keuangan</span>
-                        <span class="text-[9px] font-mono text-slate-400">SO • GD • AR • TTK • BBM</span>
+                        <span>Penjualan</span>
+                        <span class="text-[9px] font-mono text-slate-400">SO • GD • SR</span>
                     </div>
                     <div class="space-y-1">
                         <a href="{{ route('sales.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('sales*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="badge-dollar-sign" class="w-4 h-4 text-amber-400"></i>
-                                <span>Sales Order & GD</span>
+                                <span>Sales Order & Delivery</span>
                             </div>
                             <span class="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">SO-GD</span>
                         </a>
+                    </div>
+                </div>
+
+                <!-- Group: KEUANGAN & KAS/BANK -->
+                <div>
+                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                        <span>Keuangan & Kas/Bank</span>
+                        <span class="text-[9px] font-mono text-slate-400">AR • TTK • BBM</span>
+                    </div>
+                    <div class="space-y-1">
                         <a href="{{ route('finance.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('finance*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="receipt" class="w-4 h-4 text-rose-400"></i>
-                                <span>Piutang & Pelunasan (TTK/BBM)</span>
+                                <span>Piutang & Kasir (TTK/BBM)</span>
                             </div>
-                            <span class="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">TTK-BBM</span>
+                            <span class="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">FINANCE</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Group: PUSAT LAPORAN & EKSPOR -->
+                <div>
+                    <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                        <span>Pusat Laporan & Ekspor</span>
+                        <span class="text-[9px] font-mono text-slate-400">EXCEL • PDF</span>
+                    </div>
+                    <div class="space-y-1">
+                        <a href="{{ route('reports.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('reports*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
+                                <span>Pusat Laporan Terpadu</span>
+                            </div>
+                            <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">REPORT</span>
                         </a>
                     </div>
                 </div>

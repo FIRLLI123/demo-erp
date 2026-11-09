@@ -9,6 +9,7 @@ use App\Http\Controllers\RepackController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\FinanceController;
+use App\Http\Controllers\ReportController;
 
 // Dashboard
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -62,4 +63,11 @@ Route::prefix('finance')->name('finance.')->group(function () {
     Route::get('/', [FinanceController::class, 'index'])->name('index');
     Route::post('/store-ttk', [FinanceController::class, 'storeTtk'])->name('store-ttk');
     Route::get('/print-kwitansi/{id}', [FinanceController::class, 'printKwitansi'])->name('print-kwitansi');
+});
+
+// Reports & Export Center (Excel & PDF)
+Route::prefix('reports')->name('reports.')->group(function () {
+    Route::get('/', [ReportController::class, 'index'])->name('index');
+    Route::get('/export-excel', [ReportController::class, 'exportExcel'])->name('export-excel');
+    Route::get('/print-pdf', [ReportController::class, 'printPdf'])->name('print-pdf');
 });

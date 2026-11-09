@@ -15,25 +15,33 @@
                 <p class="text-xs text-slate-500">Operasional Repack Resmi PT Wahana Putra Yudha: Penggabungan 2 komponen bahan (Fisik 0K + Saldo Bulk) menjadi 1 produk baru bernilai setara</p>
             </div>
 
-            <!-- Tab Switcher with Distinct Active Colors -->
-            <div class="flex items-center gap-2 bg-slate-200/70 p-1 rounded-2xl shrink-0">
-                <button type="button" 
-                        @click="activeTab = 'RO'"
-                        class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all shadow-xs"
-                        :class="activeTab === 'RO' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
-                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
-                    <span>1. Repack Out (RO)</span>
-                    <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($roList) }}</span>
-                </button>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('reports.index', ['type' => 'REPACK']) }}" 
+                   class="px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-amber-600"></i>
+                    <span>Rekap Repack (Excel/PDF)</span>
+                </a>
 
-                <button type="button" 
-                        @click="activeTab = 'RI'"
-                        class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all shadow-xs"
-                        :class="activeTab === 'RI' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
-                    <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
-                    <span>2. Repack In (RI)</span>
-                    <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($riList) }}</span>
-                </button>
+                <!-- Tab Switcher with Distinct Active Colors -->
+                <div class="flex items-center gap-2 bg-slate-200/70 p-1 rounded-2xl shrink-0">
+                    <button type="button" 
+                            @click="activeTab = 'RO'"
+                            class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all shadow-xs"
+                            :class="activeTab === 'RO' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
+                        <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                        <span>1. Repack Out (RO)</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($roList) }}</span>
+                    </button>
+
+                    <button type="button" 
+                            @click="activeTab = 'RI'"
+                            class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all shadow-xs"
+                            :class="activeTab === 'RI' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
+                        <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+                        <span>2. Repack In (RI)</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($riList) }}</span>
+                    </button>
+                </div>
             </div>
         </div>
 

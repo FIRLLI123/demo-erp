@@ -15,12 +15,19 @@
                 <p class="text-xs text-slate-500">Pengadaan Resmi PT Wahana Putra Yudha: Pemesanan ke Supplier Pusat & Penerimaan Fisik ke Gudang Utama TAP</p>
             </div>
 
-            <button type="button" 
-                    @click="createPoOpen = !createPoOpen" 
-                    class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
-                <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-                <span x-text="createPoOpen ? 'Tutup Form' : '+ Buat PO Baru'"></span>
-            </button>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('reports.index', ['type' => 'PO_GR']) }}" 
+                   class="px-3.5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+                    <span>Rekap Laporan PO (Excel/PDF)</span>
+                </a>
+                <button type="button" 
+                        @click="createPoOpen = !createPoOpen" 
+                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
+                    <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+                    <span x-text="createPoOpen ? 'Tutup Form' : '+ Buat PO Baru'"></span>
+                </button>
+            </div>
         </div>
 
         <!-- ============================================== -->

@@ -15,7 +15,13 @@
                 <p class="text-xs text-slate-500">Divisi Keuangan PT Wahana Putra Yudha: Tagihan Faktur (AR) &rarr; Tanda Terima Kasir (TTK Multi-AR) &rarr; Bukti Bank Masuk (BBM Tunai & Non Tunai)</p>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+                <a href="{{ route('reports.index', ['type' => 'AR']) }}" 
+                   class="px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-purple-600"></i>
+                    <span>Rekap Piutang/Kas (Excel/PDF)</span>
+                </a>
+
                 <button type="button" 
                         @click="openTtkModal()"
                         class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all">
