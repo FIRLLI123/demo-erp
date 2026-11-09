@@ -177,6 +177,8 @@ class MasterController extends Controller
             'name' => 'required|string|max:150',
             'tap_id' => 'required|exists:taps,id',
             'type' => 'required|in:RETAIL,GROSIR',
+            'digipos_id' => 'nullable|string|max:50',
+            'nomor_rs' => 'nullable|string|max:30',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'credit_limit' => 'nullable|numeric|min:0',
@@ -188,6 +190,8 @@ class MasterController extends Controller
         DB::table('customers')->insert([
             'tap_id' => $request->tap_id,
             'code' => $customerCode,
+            'digipos_id' => $request->digipos_id ?? ('DGP-' . rand(100000, 999999)),
+            'nomor_rs' => $request->nomor_rs ?? ($request->phone ?? '0812' . rand(10000000, 99999999)),
             'name' => $request->name,
             'type' => $request->type,
             'phone' => $request->phone ?? '0812' . rand(10000000, 99999999),
@@ -207,6 +211,8 @@ class MasterController extends Controller
             'name' => 'required|string|max:150',
             'tap_id' => 'required|exists:taps,id',
             'type' => 'required|in:RETAIL,GROSIR',
+            'digipos_id' => 'nullable|string|max:50',
+            'nomor_rs' => 'nullable|string|max:30',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'credit_limit' => 'nullable|numeric|min:0',
@@ -217,6 +223,8 @@ class MasterController extends Controller
             'name' => $request->name,
             'tap_id' => $request->tap_id,
             'type' => $request->type,
+            'digipos_id' => $request->digipos_id,
+            'nomor_rs' => $request->nomor_rs,
             'phone' => $request->phone,
             'address' => $request->address,
             'credit_limit' => $request->credit_limit ?? 0,
@@ -225,5 +233,103 @@ class MasterController extends Controller
         ]);
 
         return redirect()->route('master.customers')->with('success', "Data Outlet / Toko [{$request->name}] berhasil diperbarui.");
+    }
+
+    public function users(Request $request)
+    {
+        $users = DB::table('users')
+            ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+            ->leftJoin('sales', 'users.sales_id', '=', 'sales.id')
+            ->leftJoin('taps', 'sales.tap_id', '=', 'taps.id')
+            ->select(
+                'users.*',
+                'roles.name as role_name',
+                'roles.slug as role_slug',
+                'sales.code as sales_code',
+                'sales.name as sales_name',
+                'sales.phone as sales_phone',
+                'taps.name as sales_tap'
+            )
+            ->orderBy('users.id')
+            ->get();
+
+        $roles = DB::table('roles')->orderBy('id')->get();
+        $salesList = DB::table('sales')
+            ->where('status', 'ACTIVE')
+            ->orderBy('name')
+            ->get();
+
+        return view('master.users', compact('users', 'roles', 'salesList'));
+    }
+
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:150',
+            'email' => 'required|email|unique:users,email|max:150',
+            'password' => 'required|string|min:6',
+            'role_id' => 'required|exists:roles,id',
+            'phone' => 'nullable|string|max:20',
+            'sales_id' => 'nullable|exists:sales,id',
+        ]);
+
+        $userId = DB::table('users')->insertGetId([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'role_id' => $request->role_id,
+            'sales_id' => $request->sales_id,
+            'phone' => $request->phone,
+            'is_active' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if ($request->sales_id) {
+            DB::table('sales')->where('id', $request->sales_id)->update([
+                'user_id' => $userId,
+                'updated_at' => now()
+            ]);
+        }
+
+        return redirect()->route('master.users')->with('success', "Akun pengguna [{$request->name}] berhasil dibuat dan dipetakan.");
+    }
+
+    public function updateUser(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:150',
+            'email' => 'required|email|max:150|unique:users,email,' . $id,
+            'role_id' => 'required|exists:roles,id',
+            'phone' => 'nullable|string|max:20',
+            'sales_id' => 'nullable|exists:sales,id',
+            'is_active' => 'required|in:0,1',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $updateData = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'role_id' => $request->role_id,
+            'sales_id' => $request->sales_id,
+            'phone' => $request->phone,
+            'is_active' => $request->is_active,
+            'updated_at' => now(),
+        ];
+
+        if ($request->filled('password')) {
+            $updateData['password'] = bcrypt($request->password);
+        }
+
+        DB::table('users')->where('id', $id)->update($updateData);
+
+        if ($request->sales_id) {
+            DB::table('sales')->where('id', $request->sales_id)->update([
+                'user_id' => $id,
+                'updated_at' => now()
+            ]);
+        }
+
+        return redirect()->route('master.users')->with('success', "Data akun pengguna [{$request->name}] berhasil diperbarui.");
     }
 }

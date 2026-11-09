@@ -25,6 +25,9 @@ Route::prefix('master')->name('master.')->group(function () {
     Route::get('/customers', [MasterController::class, 'customers'])->name('customers');
     Route::post('/customers', [MasterController::class, 'storeCustomer'])->name('customers.store');
     Route::post('/customers/update/{id}', [MasterController::class, 'updateCustomer'])->name('customers.update');
+    Route::get('/users', [MasterController::class, 'users'])->name('users');
+    Route::post('/users', [MasterController::class, 'storeUser'])->name('users.store');
+    Route::post('/users/update/{id}', [MasterController::class, 'updateUser'])->name('users.update');
 });
 
 // Procurement (PO & GR)

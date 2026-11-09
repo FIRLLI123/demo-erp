@@ -254,7 +254,7 @@
                             <span class="font-bold">Master & Organisasi</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">5 Menu</span>
+                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">6 Menu</span>
                             <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
@@ -284,6 +284,10 @@
                         <a href="{{ route('master.customers') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.customers*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.customers*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
                             <span>Master Toko / Outlet</span>
+                        </a>
+                        <a href="{{ route('master.users') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.users*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.users*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
+                            <span>Master Pengguna & Akun</span>
                         </a>
                     </div>
                 </div>

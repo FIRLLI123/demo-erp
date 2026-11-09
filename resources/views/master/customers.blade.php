@@ -51,10 +51,20 @@
 
             <form method="POST" action="{{ route('master.customers.store') }}">
                 @csrf
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet <span class="text-rose-500">*</span></label>
                         <input type="text" name="name" required placeholder="Contoh: Toko Berkah Cell" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">ID DigiPOS Toko <span class="text-rose-500">*</span></label>
+                        <input type="text" name="digipos_id" placeholder="Contoh: DGP-100234" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios <span class="text-rose-500">*</span></label>
+                        <input type="text" name="nomor_rs" placeholder="Contoh: 081288990011" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                     </div>
 
                     <div>
@@ -119,6 +129,17 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet</label>
                                 <input type="text" name="name" x-model="editData.name" required class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">ID DigiPOS Toko</label>
+                                    <input type="text" name="digipos_id" x-model="editData.digipos_id" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios</label>
+                                    <input type="text" name="nomor_rs" x-model="editData.nomor_rs" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                </div>
                             </div>
 
                             <div class="grid grid-cols-2 gap-3">
@@ -227,6 +248,7 @@
                         <tr>
                             <th class="py-3 px-4">Kode Toko</th>
                             <th class="py-3 px-4">Nama Toko & Alamat</th>
+                            <th class="py-3 px-4">ID DigiPOS & No. RS</th>
                             <th class="py-3 px-4 text-center">Tipe Outlet</th>
                             <th class="py-3 px-4">Wilayah TAP</th>
                             <th class="py-3 px-4">No. Telepon / WA</th>
@@ -245,6 +267,15 @@
                                 <td class="py-3.5 px-4">
                                     <span class="font-extrabold text-slate-900 block text-xs">{{ $c->name }}</span>
                                     <span class="text-[11px] text-slate-500 block truncate max-w-xs">{{ $c->address }}</span>
+                                </td>
+                                <td class="py-3.5 px-4 font-mono text-xs">
+                                    <div class="flex items-center gap-1.5 text-slate-900 font-bold">
+                                        <i data-lucide="smartphone" class="w-3.5 h-3.5 text-rose-500"></i>
+                                        <span>{{ $c->digipos_id ?? '-' }}</span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 pl-5">
+                                        RS: {{ $c->nomor_rs ?? '-' }}
+                                    </div>
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
                                     <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold 
