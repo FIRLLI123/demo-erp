@@ -19,6 +19,12 @@ Route::prefix('master')->name('master.')->group(function () {
     Route::get('/organization', [MasterController::class, 'organization'])->name('organization');
     Route::get('/products', [MasterController::class, 'products'])->name('products');
     Route::get('/warehouses', [MasterController::class, 'warehouses'])->name('warehouses');
+    Route::get('/sales-team', [MasterController::class, 'sales'])->name('sales-team');
+    Route::post('/sales-team', [MasterController::class, 'storeSales'])->name('sales-team.store');
+    Route::post('/sales-team/update/{id}', [MasterController::class, 'updateSales'])->name('sales-team.update');
+    Route::get('/customers', [MasterController::class, 'customers'])->name('customers');
+    Route::post('/customers', [MasterController::class, 'storeCustomer'])->name('customers.store');
+    Route::post('/customers/update/{id}', [MasterController::class, 'updateCustomer'])->name('customers.update');
 });
 
 // Procurement (PO & GR)

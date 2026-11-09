@@ -265,6 +265,14 @@
                             <i data-lucide="warehouse" class="w-4 h-4 text-slate-400"></i>
                             <span>Gudang (Main, Inv, Sales)</span>
                         </a>
+                        <a href="{{ route('master.sales-team') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('master.sales-team*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                            <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+                            <span>Tim Sales Force (Kanvas)</span>
+                        </a>
+                        <a href="{{ route('master.customers') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('master.customers*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                            <i data-lucide="store" class="w-4 h-4 text-slate-400"></i>
+                            <span>Master Toko / Outlet</span>
+                        </a>
                     </div>
                 </div>
 

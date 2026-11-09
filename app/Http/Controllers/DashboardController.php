@@ -48,6 +48,7 @@ class DashboardController extends Controller
 
         // 4. Sales Leaderboard
         $salesLeaderboard = DB::table('sales')
+            ->where('sales.status', 'ACTIVE')
             ->join('taps', 'sales.tap_id', '=', 'taps.id')
             ->leftJoin('sales_orders', 'sales.id', '=', 'sales_orders.sales_id')
             ->select(
