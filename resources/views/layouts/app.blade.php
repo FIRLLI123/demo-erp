@@ -310,8 +310,8 @@
                 <!-- Group: PENJUALAN & KEUANGAN -->
                 <div>
                     <div class="px-3 mb-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
-                        <span>Penjualan & Piutang</span>
-                        <span class="text-[9px] font-mono text-slate-400">SO • GD • AR • FP</span>
+                        <span>Penjualan & Keuangan</span>
+                        <span class="text-[9px] font-mono text-slate-400">SO • GD • AR • TTK • BBM</span>
                     </div>
                     <div class="space-y-1">
                         <a href="{{ route('sales.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('sales*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
@@ -324,9 +324,9 @@
                         <a href="{{ route('finance.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('finance*') ? 'bg-slate-800 text-white border-l-4 border-rose-500' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="receipt" class="w-4 h-4 text-rose-400"></i>
-                                <span>Piutang (AR) & Pelunasan</span>
+                                <span>Piutang & Pelunasan (TTK/BBM)</span>
                             </div>
-                            <span class="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">AR-FP</span>
+                            <span class="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">TTK-BBM</span>
                         </a>
                     </div>
                 </div>

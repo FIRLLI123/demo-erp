@@ -9,74 +9,91 @@
         <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Pelunasan Piutang & Penerimaan Kas/Bank</h2>
-                <p class="text-xs text-slate-500">Alur: Tagihan Faktur (AR) &rarr; Tanda Terima Kasir (TTK) &rarr; Bukti Bank Masuk (BBM Tunai & Non Tunai)</p>
+                <p class="text-xs text-slate-500">Alur: Tagihan Faktur (AR) &rarr; Tanda Terima Kasir (TTK Multi-AR) &rarr; Bukti Bank Masuk (BBM Tunai & Non Tunai)</p>
             </div>
 
-            <!-- Tab Switcher with Distinct Colors -->
-            <div class="flex items-center gap-2 bg-slate-200/70 p-1 rounded-2xl shrink-0">
+            <div class="flex items-center gap-3">
                 <button type="button" 
-                        @click="activeTab = 'AR'"
-                        class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
-                        :class="activeTab === 'AR' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
-                    <i data-lucide="receipt" class="w-4 h-4"></i>
-                    <span>1. Piutang (AR)</span>
-                    <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($receivables) }}</span>
+                        @click="openTtkModal()"
+                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>Buat TTK Baru</span>
                 </button>
 
-                <button type="button" 
-                        @click="activeTab = 'TTK'"
-                        class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
-                        :class="activeTab === 'TTK' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
-                    <i data-lucide="badge-check" class="w-4 h-4"></i>
-                    <span>2. Tanda Terima Kasir (TTK)</span>
-                    <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($payments) }}</span>
-                </button>
+                <!-- Tab Switcher with Distinct Colors -->
+                <div class="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-2xl shrink-0">
+                    <button type="button" 
+                            @click="activeTab = 'AR'"
+                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
+                            :class="activeTab === 'AR' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
+                        <i data-lucide="receipt" class="w-4 h-4"></i>
+                        <span>1. Piutang (AR)</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($receivables) }}</span>
+                    </button>
 
-                <button type="button" 
-                        @click="activeTab = 'BBM'"
-                        class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
-                        :class="activeTab === 'BBM' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
-                    <i data-lucide="landmark" class="w-4 h-4"></i>
-                    <span>3. Bukti Bank Masuk (BBM)</span>
-                    <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($bankReceipts) }}</span>
-                </button>
+                    <button type="button" 
+                            @click="activeTab = 'TTK'"
+                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
+                            :class="activeTab === 'TTK' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
+                        <i data-lucide="badge-check" class="w-4 h-4"></i>
+                        <span>2. Tanda Terima Kasir (TTK)</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($payments) }}</span>
+                    </button>
+
+                    <button type="button" 
+                            @click="activeTab = 'BBM'"
+                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
+                            :class="activeTab === 'BBM' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
+                        <i data-lucide="landmark" class="w-4 h-4"></i>
+                        <span>3. Bukti Bank Masuk (BBM)</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($bankReceipts) }}</span>
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- ============================================== -->
-        <!-- FORM PELUNASAN TTK (INLINE CARD)               -->
+        <!-- FORM PELUNASAN TTK (MULTI-AR SELECTION)        -->
         <!-- ============================================== -->
-        <div x-show="createTtkOpen" x-cloak x-transition class="mb-6 bg-white rounded-2xl border-2 border-emerald-500/40 p-5 shadow-lg">
+        <div x-show="createTtkOpen" x-cloak x-transition class="mb-6 bg-white rounded-2xl border-2 border-emerald-500/40 p-5 shadow-xl">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
-                    <i data-lucide="badge-check" class="w-4 h-4 text-emerald-600"></i>
-                    <span>Formulir Tanda Terima Kasir (TTK) & Pencatatan BBM</span>
-                </h3>
-                <button @click="createTtkOpen = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
-                    <i data-lucide="x" class="w-4 h-4"></i>
+                <div class="flex items-center gap-2">
+                    <span class="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                        <i data-lucide="badge-check" class="w-5 h-5"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-extrabold text-slate-900 text-sm">Formulir Tanda Terima Kasir (TTK Multi-AR) & Penerbitan BBM</h3>
+                        <p class="text-[11px] text-slate-500">Pilih Toko/Pelanggan, tentukan faktur-faktur AR yang dilunasi, lalu pilih metode pembayaran.</p>
+                    </div>
+                </div>
+                <button @click="createTtkOpen = false" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
             <form method="POST" action="{{ route('finance.store-ttk') }}" 
-                  data-loading-title="Memproses Pembayaran"
-                  data-loading-sub="Menerbitkan TTK & mencatat Bukti Bank Masuk (BBM)..."
+                  data-loading-title="Memproses Pembayaran Kasir"
+                  data-loading-sub="Menerbitkan TTK, mengalokasikan saldo AR, dan mencatat Bukti Bank Masuk (BBM)..."
                   data-doctype="TTK">
                 @csrf
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <!-- Grid Baris 1: Pelanggan & Info Transaksi -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     
-                    <!-- Pilih Faktur AR -->
+                    <!-- Pilih Pelanggan (Hanya yang punya outstanding AR) -->
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Faktur Piutang (AR) yang Belum Lunas</label>
-                        <select name="accounts_receivable_id" 
-                                x-model="selectedArId" 
-                                @change="onSelectedArChange()"
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Pilih Pelanggan / Toko <span class="text-rose-500">*</span>
+                        </label>
+                        <select name="customer_id" 
+                                x-model="selectedCustomerId" 
+                                @change="onCustomerChange()"
                                 required 
                                 class="w-full text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-                            <option value="">-- Pilih Faktur Tagihan Pelanggan --</option>
-                            @foreach($unpaidReceivables as $uar)
-                                <option value="{{ $uar->id }}">
-                                    [{{ $uar->doc_number }}] {{ $uar->customer_name }} &bull; Sisa Piutang: Rp {{ number_format($uar->balance_amount, 0, ',', '.') }}
+                            <option value="">-- Pilih Toko yang Memiliki Piutang --</option>
+                            @foreach($customersWithUnpaidAr as $c)
+                                <option value="{{ $c->id }}">
+                                    [{{ $c->code }}] {{ $c->name }} ({{ $c->phone ?? '-' }})
                                 </option>
                             @endforeach
                         </select>
@@ -84,217 +101,262 @@
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Pembayaran</label>
-                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Kasir / Penerima</label>
+                        <input type="text" name="cashier_name" value="Kasir Finance TAP" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                     </div>
                 </div>
 
-                <!-- PREVIEW INFO PIUTANG JIKA AR DIPILIH -->
-                <template x-if="currentArObj">
-                    <div class="mb-4 p-4 rounded-xl bg-amber-50/70 border border-amber-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                        <div>
-                            <span class="text-slate-500 block">Toko / Customer:</span>
-                            <span class="font-extrabold text-slate-900 text-sm" x-text="currentArObj.customer_name"></span>
+                <!-- DAFTAR FAKTUR AR TOKO TERPILIH (MULTI-AR) -->
+                <div x-show="selectedCustomerId" class="mb-5">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-extrabold text-slate-800">Daftar Faktur Piutang (AR) Outstanding Milik Toko:</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800" x-text="customerArList.length + ' Faktur Belum Lunas'"></span>
                         </div>
-                        <div>
-                            <span class="text-slate-500 block">Total Tagihan Awal:</span>
-                            <span class="font-bold text-slate-800 font-mono" x-text="'Rp ' + Number(currentArObj.total_amount).toLocaleString('id-ID')"></span>
-                        </div>
-                        <div>
-                            <span class="text-slate-500 block">Sisa Piutang yang Harus Dibayar:</span>
-                            <span class="font-extrabold text-rose-700 font-mono text-sm" x-text="'Rp ' + Number(currentArObj.balance_amount).toLocaleString('id-ID')"></span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="selectAllAr()" class="px-2.5 py-1 text-[11px] font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all">
+                                Pilih Semua & Lunasi
+                            </button>
+                            <button type="button" @click="deselectAllAr()" class="px-2.5 py-1 text-[11px] font-bold bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-all">
+                                Reset Pilihan
+                            </button>
                         </div>
                     </div>
-                </template>
 
-                <!-- METODE PEMBAYARAN & NOMINAL -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                    <div class="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-2.5 px-3 w-10 text-center">Pilih</th>
+                                    <th class="py-2.5 px-3">No. Faktur AR</th>
+                                    <th class="py-2.5 px-3">Ref SO & Channel</th>
+                                    <th class="py-2.5 px-3">Sales Penanggung Jawab</th>
+                                    <th class="py-2.5 px-3 text-right">Total Tagihan</th>
+                                    <th class="py-2.5 px-3 text-right">Sisa Piutang</th>
+                                    <th class="py-2.5 px-3 text-right w-44">Nominal Bayar (Rp)</th>
+                                    <th class="py-2.5 px-3 text-center w-20">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="ar in customerArList" :key="ar.id">
+                                    <tr :class="selectedAllocations[ar.id]?.selected ? 'bg-emerald-50/40 font-medium' : 'hover:bg-slate-50'">
+                                        <td class="py-2.5 px-3 text-center">
+                                            <input type="checkbox" 
+                                                   :checked="selectedAllocations[ar.id]?.selected" 
+                                                   @change="toggleArSelection(ar)"
+                                                   class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer">
+                                        </td>
+                                        <td class="py-2.5 px-3 font-mono font-bold text-amber-900" x-text="ar.doc_number"></td>
+                                        <td class="py-2.5 px-3">
+                                            <span class="font-mono text-slate-700" x-text="ar.so_number || '-'"></span>
+                                            <template x-if="ar.so_channel === 'MOBILE_SALES'">
+                                                <span class="ml-1 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-purple-100 text-purple-700 border border-purple-200">
+                                                    MOBILE SALES
+                                                </span>
+                                            </template>
+                                            <template x-if="ar.so_channel === 'WEB_ADMIN'">
+                                                <span class="ml-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                                    OFFICE
+                                                </span>
+                                            </template>
+                                        </td>
+                                        <td class="py-2.5 px-3 font-semibold text-slate-800" x-text="ar.sales_name || '-'"></td>
+                                        <td class="py-2.5 px-3 text-right font-mono text-slate-600" x-text="'Rp ' + Number(ar.total_amount).toLocaleString('id-ID')"></td>
+                                        <td class="py-2.5 px-3 text-right font-mono font-bold text-rose-600" x-text="'Rp ' + Number(ar.balance_amount).toLocaleString('id-ID')"></td>
+                                        <td class="py-2.5 px-3 text-right">
+                                            <input type="number" 
+                                                   :name="'allocations[' + ar.id + '][amount]'" 
+                                                   x-model.number="selectedAllocations[ar.id].amount"
+                                                   @input="onAmountInput(ar)"
+                                                   :disabled="!selectedAllocations[ar.id]?.selected"
+                                                   :max="ar.balance_amount"
+                                                   min="0"
+                                                   class="w-full text-right font-mono text-xs font-bold px-2 py-1.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                                   :class="selectedAllocations[ar.id]?.selected ? 'bg-white border-emerald-400 text-emerald-900' : 'bg-slate-100 border-slate-200 text-slate-400'">
+                                        </td>
+                                        <td class="py-2.5 px-3 text-center">
+                                            <button type="button" 
+                                                    @click="payFullAr(ar)"
+                                                    class="px-2 py-1 text-[10px] font-bold rounded bg-slate-200 hover:bg-emerald-600 hover:text-white transition-all">
+                                                Lunas
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot class="bg-slate-50 font-bold border-t border-slate-200">
+                                <tr>
+                                    <td colspan="5" class="py-3 px-3 text-right text-slate-700">
+                                        Total Pembayaran yang Diterima Kasir:
+                                    </td>
+                                    <td colspan="2" class="py-3 px-3 text-right font-mono text-sm font-extrabold text-emerald-700" x-text="'Rp ' + calculatedTotalPay.toLocaleString('id-ID')"></td>
+                                    <td class="py-3 px-3 text-center text-[11px] text-slate-500" x-text="selectedCount + ' Faktur'"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Grid Baris 2: Metode Pembayaran & Detail BBM -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Metode Pembayaran</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Metode Pembayaran <span class="text-rose-500">*</span>
+                        </label>
                         <select name="payment_method" 
                                 x-model="paymentMethod" 
                                 required 
-                                class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                            <option value="TRANSFER">1. Transfer Bank (BBM Non Tunai)</option>
-                            <option value="CASH">2. Tunai (BBM Tunai)</option>
-                            <option value="DEPOSIT">3. Uang Titipan (Saldo Deposit)</option>
-                            <option value="RETURN_DEDUCTION">4. Pengurangan Retur (Potong Nota)</option>
+                                class="w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="CASH">Uang Tunai (BBM Tunai / Kas)</option>
+                            <option value="TRANSFER">Transfer Bank (BBM Non Tunai)</option>
+                            <option value="DEPOSIT">Saldo Titipan Pelanggan (BBM Non Tunai)</option>
+                            <option value="RETURN_DEDUCTION">Potongan Nota Retur (BBM Non Tunai)</option>
                         </select>
+                        <span class="block text-[10px] text-slate-500 mt-1" x-text="paymentMethod === 'CASH' ? 'Otomatis diterbitkan sebagai BBM TUNAI' : 'Otomatis diterbitkan sebagai BBM NON TUNAI'"></span>
                     </div>
 
-                    <!-- Nominal Pembayaran -->
                     <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="block text-xs font-bold text-slate-700">Nominal Pembayaran (Rp)</label>
-                            <template x-if="currentArObj">
-                                <button type="button" @click="payFull()" class="text-[10px] font-bold text-emerald-700 hover:underline">Bayar Lunas Penuh</button>
-                            </template>
-                        </div>
-                        <input type="number" 
-                               name="amount" 
-                               x-model.number="payAmount" 
-                               min="1" 
-                               :max="currentArObj ? currentArObj.balance_amount : 999999999" 
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kas / Bank Penerima</label>
+                        <input type="text" 
+                               name="bank_name" 
+                               :value="paymentMethod === 'CASH' ? 'KAS TUNAI TAP (BBM TUNAI)' : 'BCA Operasional TAP'" 
                                required 
-                               placeholder="Masukkan nominal bayar..."
-                               class="w-full text-xs font-mono font-bold text-emerald-800 bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                               class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2 focus:outline-none">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Kasir / Petugas Penerima</label>
-                        <input type="text" name="cashier_name" value="Kasir TAP Pasar Minggu" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Rekening / Akun Kas</label>
+                        <input type="text" 
+                               name="account_number" 
+                               :value="paymentMethod === 'CASH' ? 'KAS-OPERASIONAL-01' : '711-0988-234'" 
+                               class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2 focus:outline-none font-mono">
+                    </div>
+
+                    <div class="md:col-span-3">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Tambahan</label>
+                        <input type="text" name="notes" placeholder="e.g. Pembayaran pelunasan gabungan faktur SA & Voucher" class="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl px-3 py-2 focus:outline-none">
                     </div>
                 </div>
 
-                <!-- SUB-INFO SESUAI METODE (BBM TUNAI VS NON TUNAI) -->
-                <div class="mb-5 p-3.5 rounded-xl border border-slate-200 bg-slate-50/70">
-                    <template x-if="paymentMethod === 'TRANSFER'">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Bank Tujuan (BBM Non Tunai)</label>
-                                <select name="bank_name" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
-                                    <option value="BCA Operasional TAP">BCA - PT Telkomsel Distribusi</option>
-                                    <option value="Mandiri Rekening Pusat">Mandiri - Rekening Operasional</option>
-                                    <option value="BRI Setoran Kasir">BRI - Setoran Toko Retail</option>
-                                    <option value="BNI Giro Distribusi">BNI - Giro Kliring</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Nomor Rekening / Referensi Transfer</label>
-                                <input type="text" name="account_number" value="711-0988-234" class="w-full text-xs font-mono font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
-                            </div>
-                        </div>
-                    </template>
-
-                    <template x-if="paymentMethod === 'CASH'">
-                        <div class="flex items-center gap-2 text-xs text-slate-700 font-medium">
-                            <i data-lucide="wallet" class="w-4 h-4 text-emerald-600"></i>
-                            <span>Pembayaran tunai fisik akan otomatis dicatat sebagai <strong>BBM Tunai</strong> ke brankas operasional kasir TAP.</span>
-                        </div>
-                    </template>
-
-                    <template x-if="paymentMethod === 'DEPOSIT'">
-                        <div class="flex items-center gap-2 text-xs text-slate-700 font-medium">
-                            <i data-lucide="piggy-bank" class="w-4 h-4 text-cyan-600"></i>
-                            <span>Pembayaran dipotong dari saldo uang titipan customer yang tersimpan di sistem.</span>
-                        </div>
-                    </template>
-
-                    <template x-if="paymentMethod === 'RETURN_DEDUCTION'">
-                        <div class="flex items-center gap-2 text-xs text-slate-700 font-medium">
-                            <i data-lucide="undo-2" class="w-4 h-4 text-rose-600"></i>
-                            <span>Pengurangan tagihan piutang melalui kompensasi nota retur barang (Sales Retur).</span>
-                        </div>
-                    </template>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" @click="createTtkOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" @click="createTtkOpen = false" class="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800">
                         Batal
                     </button>
-                    <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
-                        <i data-lucide="check" class="w-4 h-4"></i>
-                        <span>Simpan TTK & Rilis BBM</span>
+                    <button type="submit" 
+                            :disabled="calculatedTotalPay <= 0"
+                            class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-md transition-all">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        <span x-text="'Simpan TTK & Terbitkan BBM (' + (paymentMethod === 'CASH' ? 'Tunai' : 'Non Tunai') + ')'"></span>
                     </button>
                 </div>
-
             </form>
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB 1: PIUTANG USAHA (AR)                      -->
+        <!-- TAB 1: DAFTAR PIUTANG USAHA (AR)               -->
         <!-- ============================================== -->
         <div x-show="activeTab === 'AR'" x-cloak>
-            <div class="mb-4 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                        DocType: AR
-                    </span>
-                    <span class="text-xs text-slate-500">Daftar invoice tagihan piutang toko pelanggan</span>
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+                    <div>
+                        <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                            <i data-lucide="receipt" class="w-4 h-4 text-amber-600"></i>
+                            <span>Daftar Faktur Piutang Usaha (Account Receivable - AR)</span>
+                        </h3>
+                        <p class="text-xs text-slate-500">Tagihan penjualan ke toko/outlet hasil pengiriman barang (Sending Good - GD).</p>
+                    </div>
                 </div>
 
-                <button type="button" 
-                        @click="openTtkFromTab()"
-                        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
-                    <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-                    <span>+ Terima Pembayaran (TTK)</span>
-                </button>
-            </div>
-
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+                        <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                             <tr>
-                                <th class="py-3 px-4">No. Faktur AR</th>
-                                <th class="py-3 px-4">Ref. Nomor SO</th>
-                                <th class="py-3 px-4">Customer / Outlet</th>
+                                <th class="py-3 px-4">No. Dokumen AR</th>
+                                <th class="py-3 px-4">Ref SO & Channel</th>
+                                <th class="py-3 px-4">Toko / Pelanggan</th>
+                                <th class="py-3 px-4">Sales Penanggung Jawab</th>
                                 <th class="py-3 px-4">Jatuh Tempo</th>
                                 <th class="py-3 px-4 text-right">Total Tagihan</th>
-                                <th class="py-3 px-4 text-right">Sudah Dibayar</th>
+                                <th class="py-3 px-4 text-right">Terbayar</th>
                                 <th class="py-3 px-4 text-right">Sisa Piutang</th>
-                                <th class="py-3 px-4 text-center">Status AR</th>
+                                <th class="py-3 px-4 text-center">Status</th>
                                 <th class="py-3 px-4 text-center w-28">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-medium">
                             @forelse($receivables as $ar)
-                                <tr @click="selectAr({{ json_encode($ar) }})" 
-                                    class="cursor-pointer transition-colors"
-                                    :class="selectedAr && selectedAr.id === {{ $ar->id }} ? 'bg-amber-50/80 border-l-4 border-amber-500' : 'hover:bg-slate-50/70'">
-                                    
-                                    <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="px-1.5 py-0.5 rounded text-[10px] bg-amber-600 text-white font-mono font-bold">AR</span>
-                                            <span>{{ $ar->doc_number }}</span>
-                                        </div>
+                                <tr class="hover:bg-amber-50/40 transition-colors cursor-pointer"
+                                    :class="selectedAr?.id === {{ $ar->id }} ? 'bg-amber-50/70 border-l-4 border-amber-600' : ''"
+                                    @click="selectAr({{ json_encode($ar) }})">
+                                    <td class="py-3.5 px-4 font-mono font-bold text-amber-800">
+                                        {{ $ar->doc_number }}
                                     </td>
-
-                                    <td class="py-3.5 px-4 font-mono font-semibold text-slate-600">{{ $ar->ref_doc_number }}</td>
-
                                     <td class="py-3.5 px-4">
-                                        <span class="font-bold text-slate-900 block">{{ $ar->customer_name }}</span>
-                                        <span class="text-[10px] text-slate-400 font-mono">{{ $ar->customer_code }}</span>
+                                        <div class="font-mono text-slate-700 font-bold">{{ $ar->so_number ?? '-' }}</div>
+                                        @if($ar->so_channel === 'MOBILE_SALES')
+                                            <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-purple-100 text-purple-700 border border-purple-200">
+                                                MOBILE SALES
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                                OFFICE
+                                            </span>
+                                        @endif
                                     </td>
-
-                                    <td class="py-3.5 px-4 text-slate-500">{{ date('d M Y', strtotime($ar->due_date)) }}</td>
-
-                                    <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                                    <td class="py-3.5 px-4 font-bold text-slate-900">
+                                        {{ $ar->customer_name }}
+                                        <span class="block text-[11px] font-normal text-slate-400">Code: {{ $ar->customer_code }}</span>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-semibold text-slate-800">
+                                        {{ $ar->sales_name ?? 'TAP Admin' }}
+                                    </td>
+                                    <td class="py-3.5 px-4 text-slate-600">
+                                        {{ date('d M Y', strtotime($ar->due_date)) }}
+                                    </td>
+                                    <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-800">
                                         Rp {{ number_format($ar->total_amount, 0, ',', '.') }}
                                     </td>
-
-                                    <td class="py-3.5 px-4 text-right font-mono font-semibold text-emerald-700">
+                                    <td class="py-3.5 px-4 text-right font-mono text-emerald-600">
                                         Rp {{ number_format($ar->paid_amount, 0, ',', '.') }}
                                     </td>
-
-                                    <td class="py-3.5 px-4 text-right font-mono font-extrabold text-rose-700">
+                                    <td class="py-3.5 px-4 text-right font-mono font-extrabold text-rose-600">
                                         Rp {{ number_format($ar->balance_amount, 0, ',', '.') }}
                                     </td>
-
                                     <td class="py-3.5 px-4 text-center">
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
-                                            {{ $ar->status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : ($ar->status === 'PARTIAL' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800') }}">
-                                            {{ $ar->status }}
-                                        </span>
+                                        @if($ar->status === 'PAID')
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                LUNAS (PAID)
+                                            </span>
+                                        @elseif($ar->status === 'PARTIAL')
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                                                PARTIAL
+                                            </span>
+                                        @else
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300">
+                                                UNPAID
+                                            </span>
+                                        @endif
                                     </td>
-
-                                    <td class="py-3.5 px-4 text-center">
-                                        @if($ar->status !== 'PAID')
+                                    <td class="py-3.5 px-4 text-center" @click.stop>
+                                        @if($ar->status !== 'PAID' && $ar->balance_amount > 0)
                                             <button type="button" 
-                                                    @click.stop="quickPayAr({{ json_encode($ar) }})"
-                                                    class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs">
+                                                    @click="quickPaySingleAr({{ json_encode($ar) }})" 
+                                                    class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-xs transition-all">
                                                 Bayar TTK
                                             </button>
                                         @else
-                                            <span class="text-[11px] font-bold text-emerald-700 flex items-center justify-center gap-1">
-                                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Lunas
-                                            </span>
+                                            <span class="text-slate-400 text-xs italic">Selesai</span>
                                         @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="py-8 text-center text-slate-400">
-                                        Belum ada tagihan Piutang (AR).
+                                    <td colspan="10" class="py-8 text-center text-slate-400">
+                                        Belum ada data Piutang (AR).
                                     </td>
                                 </tr>
                             @endforelse
@@ -303,142 +365,137 @@
                 </div>
             </div>
 
-            <!-- DETAIL AR INLINE -->
-            <div x-show="selectedAr" x-cloak class="scroll-mt-4" id="arDetailSection">
-                <div class="rounded-2xl border-2 border-slate-300 shadow-lg overflow-hidden bg-white mb-8">
-                    <div class="bg-slate-900 text-white px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div class="flex items-center gap-3">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-amber-500 text-slate-950">
-                                DETAIL PIUTANG
-                            </span>
-                            <h4 class="text-base font-extrabold text-white tracking-tight" x-text="selectedAr ? selectedAr.doc_number : ''"></h4>
-                            <span class="text-xs text-slate-400">&bull;</span>
-                            <span class="text-xs font-bold text-amber-400" x-text="selectedAr ? selectedAr.customer_name : ''"></span>
+            <!-- INLINE DETAIL PIUTANG DI BAWAH TABEL -->
+            <template x-if="selectedAr">
+                <div id="arDetailSection" class="mt-4 bg-white rounded-2xl border border-amber-500/30 p-5 shadow-sm">
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-800">DETAIL AR</span>
+                            <h4 class="font-bold text-slate-900 text-xs font-mono" x-text="selectedAr.doc_number"></h4>
                         </div>
-                        <div class="flex items-center gap-3 text-xs">
-                            <span class="text-slate-400">Sisa Tagihan:</span>
-                            <span class="font-mono font-extrabold text-rose-400 text-sm">
-                                Rp <span x-text="selectedAr ? Number(selectedAr.balance_amount).toLocaleString('id-ID') : '0'"></span>
-                            </span>
-                        </div>
+                        <span class="text-xs text-slate-400">Klik baris lain pada tabel untuk mengganti preview</span>
                     </div>
 
-                    <div class="p-6">
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                                <span class="text-slate-500 block">Total Faktur Awal:</span>
-                                <span class="font-bold text-slate-900 text-sm font-mono">Rp <span x-text="selectedAr ? Number(selectedAr.total_amount).toLocaleString('id-ID') : '0'"></span></span>
-                            </div>
-                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                                <span class="text-slate-500 block">Sudah Dibayar:</span>
-                                <span class="font-bold text-emerald-700 text-sm font-mono">Rp <span x-text="selectedAr ? Number(selectedAr.paid_amount).toLocaleString('id-ID') : '0'"></span></span>
-                            </div>
-                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                                <span class="text-slate-500 block">Sisa Piutang:</span>
-                                <span class="font-bold text-rose-700 text-sm font-mono">Rp <span x-text="selectedAr ? Number(selectedAr.balance_amount).toLocaleString('id-ID') : '0'"></span></span>
-                            </div>
-                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                                <div>
-                                    <span class="text-slate-500 block">Status Pelunasan:</span>
-                                    <span class="font-bold text-sm" x-text="selectedAr ? selectedAr.status : ''"></span>
-                                </div>
-                                <template x-if="selectedAr && selectedAr.status !== 'PAID'">
-                                    <button type="button" @click="quickPayAr(selectedAr)" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold">
-                                        Bayar TTK
-                                    </button>
-                                </template>
-                            </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        <div class="p-3 bg-slate-50 rounded-xl">
+                            <span class="text-slate-400 block text-[10px]">Toko / Pelanggan:</span>
+                            <span class="font-extrabold text-slate-800" x-text="selectedAr.customer_name"></span>
+                            <span class="block text-[11px] text-slate-500" x-text="'Telp: ' + (selectedAr.customer_phone || '-')"></span>
+                        </div>
+                        <div class="p-3 bg-slate-50 rounded-xl">
+                            <span class="text-slate-400 block text-[10px]">Sales Penanggung Jawab:</span>
+                            <span class="font-extrabold text-slate-800" x-text="selectedAr.sales_name || 'TAP Admin'"></span>
+                            <span class="block text-[11px] font-bold text-purple-600" x-text="selectedAr.so_channel"></span>
+                        </div>
+                        <div class="p-3 bg-slate-50 rounded-xl">
+                            <span class="text-slate-400 block text-[10px]">Ref Sales Order:</span>
+                            <span class="font-mono font-bold text-slate-800" x-text="selectedAr.so_number || '-'"></span>
+                        </div>
+                        <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
+                            <span class="text-amber-800 block text-[10px] font-bold">Sisa Piutang Saat Ini:</span>
+                            <span class="font-mono text-sm font-extrabold text-rose-600" x-text="'Rp ' + Number(selectedAr.balance_amount).toLocaleString('id-ID')"></span>
                         </div>
                     </div>
                 </div>
-            </div>
-
+            </template>
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB 2: TANDA TERIMA KASIR (TTK)                -->
+        <!-- TAB 2: DAFTAR TANDA TERIMA KASIR (TTK)         -->
         <!-- ============================================== -->
         <div x-show="activeTab === 'TTK'" x-cloak>
-            <div class="mb-4 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        DocType: TTK
-                    </span>
-                    <span class="text-xs text-slate-500">Bukti resmi penerimaan pembayaran kasir untuk toko pelanggan</span>
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+                    <div>
+                        <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                            <i data-lucide="badge-check" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Daftar Tanda Terima Kasir (TTK Multi-AR)</span>
+                        </h3>
+                        <p class="text-xs text-slate-500">Bukti pembayaran resmi kasir dari toko/outlet atas pelunasan satu atau beberapa faktur AR.</p>
+                    </div>
                 </div>
 
-                <button type="button" 
-                        @click="openTtkFromTab()"
-                        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
-                    <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-                    <span>+ Buat TTK Baru</span>
-                </button>
-            </div>
-
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+                        <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                             <tr>
                                 <th class="py-3 px-4">No. Dokumen TTK</th>
-                                <th class="py-3 px-4">Ref. Nomor AR</th>
-                                <th class="py-3 px-4">Tanggal Bayar</th>
-                                <th class="py-3 px-4">Customer</th>
-                                <th class="py-3 px-4">Metode Bayar</th>
-                                <th class="py-3 px-4 text-right">Nominal Diterima</th>
-                                <th class="py-3 px-4">Kasir Penerima</th>
+                                <th class="py-3 px-4">Tanggal TTK</th>
+                                <th class="py-3 px-4">Toko / Pelanggan</th>
+                                <th class="py-3 px-4">Sales Terkait</th>
+                                <th class="py-3 px-4">Metode Pembayaran</th>
+                                <th class="py-3 px-4 text-center">Faktur Dilunasi</th>
+                                <th class="py-3 px-4 text-right">Total Pembayaran</th>
+                                <th class="py-3 px-4">Ref Dokumen BBM</th>
                                 <th class="py-3 px-4 text-center w-28">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-medium">
-                            @forelse($payments as $pm)
-                                <tr class="hover:bg-slate-50/70 transition-colors">
-                                    <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-700 text-white font-mono font-bold">TTK</span>
-                                            <span>{{ $pm->doc_number }}</span>
-                                        </div>
+                            @forelse($payments as $p)
+                                <tr class="hover:bg-emerald-50/40 transition-colors cursor-pointer"
+                                    :class="selectedPayment?.id === {{ $p->id }} ? 'bg-emerald-50/70 border-l-4 border-emerald-600' : ''"
+                                    @click="selectPayment({{ json_encode($p) }})">
+                                    <td class="py-3.5 px-4 font-mono font-bold text-emerald-800">
+                                        {{ $p->doc_number }}
                                     </td>
-
-                                    <td class="py-3.5 px-4 font-mono font-bold text-amber-700">
-                                        {{ $pm->ref_doc_number }}
-                                    </td>
-
                                     <td class="py-3.5 px-4 text-slate-600">
-                                        {{ date('d M Y', strtotime($pm->payment_date)) }}
+                                        {{ date('d M Y', strtotime($p->payment_date)) }}
                                     </td>
-
-                                    <td class="py-3.5 px-4">
-                                        <span class="font-bold text-slate-900 block">{{ $pm->customer_name }}</span>
+                                    <td class="py-3.5 px-4 font-bold text-slate-900">
+                                        {{ $p->customer_name }}
+                                        <span class="block text-[11px] font-normal text-slate-400">Kasir: {{ $p->cashier_name }}</span>
                                     </td>
-
+                                    <td class="py-3.5 px-4 text-slate-700 font-semibold">
+                                        {{ $p->sales_summary }}
+                                    </td>
                                     <td class="py-3.5 px-4">
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono
-                                            {{ $pm->payment_method === 'CASH' ? 'bg-emerald-100 text-emerald-800' : ($pm->payment_method === 'TRANSFER' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700') }}">
-                                            {{ $pm->payment_method }}
+                                        @if($p->payment_method === 'CASH')
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                TUNAI (CASH)
+                                            </span>
+                                        @elseif($p->payment_method === 'TRANSFER')
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                                TRANSFER BANK
+                                            </span>
+                                        @elseif($p->payment_method === 'DEPOSIT')
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                                SALDO TITIPAN
+                                            </span>
+                                        @else
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                                POTONGAN RETUR
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3.5 px-4 text-center">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
+                                            {{ $p->ar_count }} Faktur
                                         </span>
                                     </td>
-
-                                    <td class="py-3.5 px-4 text-right font-mono font-extrabold text-slate-900">
-                                        Rp {{ number_format($pm->amount, 0, ',', '.') }}
+                                    <td class="py-3.5 px-4 text-right font-mono font-extrabold text-emerald-700">
+                                        Rp {{ number_format($p->amount, 0, ',', '.') }}
                                     </td>
-
-                                    <td class="py-3.5 px-4 text-slate-600">
-                                        {{ $pm->cashier_name }}
+                                    <td class="py-3.5 px-4">
+                                        <div class="font-mono text-indigo-700 font-bold">{{ $p->bbm_number ?? '-' }}</div>
+                                        @if($p->bbm_type === 'TUNAI')
+                                            <span class="text-[9px] font-extrabold text-emerald-700">BBM TUNAI</span>
+                                        @elseif($p->bbm_type === 'NON_TUNAI')
+                                            <span class="text-[9px] font-extrabold text-indigo-700">BBM NON TUNAI</span>
+                                        @endif
                                     </td>
-
-                                    <td class="py-3.5 px-4 text-center">
-                                        <a href="{{ route('finance.print-kwitansi', $pm->id) }}" target="_blank"
-                                           class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white inline-flex items-center gap-1 shadow-xs">
-                                            <i data-lucide="printer" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                    <td class="py-3.5 px-4 text-center" @click.stop>
+                                        <a href="{{ route('finance.print-kwitansi', $p->id) }}" 
+                                           target="_blank"
+                                           class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 transition-all">
+                                            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                                             <span>Kwitansi</span>
                                         </a>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="py-8 text-center text-slate-400">
-                                        Belum ada data Tanda Terima Kasir (TTK).
+                                    <td colspan="9" class="py-8 text-center text-slate-400">
+                                        Belum ada transaksi Tanda Terima Kasir (TTK).
                                     </td>
                                 </tr>
                             @endforelse
@@ -446,90 +503,225 @@
                     </table>
                 </div>
             </div>
+
+            <!-- INLINE DETAIL TTK DI BAWAH TABEL -->
+            <template x-if="selectedPayment">
+                <div class="mt-4 bg-white rounded-2xl border border-emerald-500/30 p-5 shadow-sm">
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800">DETAIL TTK</span>
+                            <h4 class="font-bold text-slate-900 text-xs font-mono" x-text="selectedPayment.doc_number"></h4>
+                            <span class="text-xs text-slate-500" x-text="'&bull; Toko: ' + selectedPayment.customer_name"></span>
+                        </div>
+                        <a :href="'/finance/print-kwitansi/' + selectedPayment.id" target="_blank" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all">
+                            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                            <span>Cetak Kwitansi TTK</span>
+                        </a>
+                    </div>
+
+                    <div class="mb-3">
+                        <span class="text-xs font-bold text-slate-700 block mb-2">Rincian Alokasi Faktur AR yang Dilunasi:</span>
+                        <div class="border border-slate-200 rounded-xl overflow-hidden">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-2 px-3">No. AR</th>
+                                        <th class="py-2 px-3">Ref SO & Channel</th>
+                                        <th class="py-2 px-3">Sales Penanggung Jawab</th>
+                                        <th class="py-2 px-3 text-right">Saldo Sebelum</th>
+                                        <th class="py-2 px-3 text-right">Nominal Bayar</th>
+                                        <th class="py-2 px-3 text-right">Sisa Saldo</th>
+                                        <th class="py-2 px-3 text-center">Status AR</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="alloc in selectedPayment.allocations" :key="alloc.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="py-2 px-3 font-mono font-bold text-amber-900" x-text="alloc.ar_number"></td>
+                                            <td class="py-2 px-3">
+                                                <span class="font-mono text-slate-700" x-text="alloc.so_number || '-'"></span>
+                                                <template x-if="alloc.so_channel === 'MOBILE_SALES'">
+                                                    <span class="ml-1 px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-700">MOBILE</span>
+                                                </template>
+                                            </td>
+                                            <td class="py-2 px-3 font-medium text-slate-800" x-text="alloc.sales_name || '-'"></td>
+                                            <td class="py-2 px-3 text-right font-mono text-slate-500" x-text="'Rp ' + Number(alloc.balance_before).toLocaleString('id-ID')"></td>
+                                            <td class="py-2 px-3 text-right font-mono font-extrabold text-emerald-700" x-text="'Rp ' + Number(alloc.amount).toLocaleString('id-ID')"></td>
+                                            <td class="py-2 px-3 text-right font-mono text-slate-700" x-text="'Rp ' + Number(alloc.balance_after).toLocaleString('id-ID')"></td>
+                                            <td class="py-2 px-3 text-center">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                                      :class="alloc.ar_status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
+                                                      x-text="alloc.ar_status"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <!-- ============================================== -->
-        <!-- TAB 3: BUKTI BANK MASUK (BBM)                  -->
+        <!-- TAB 3: BUKTI BANK MASUK (BBM - 1 MENU TERPADU) -->
         <!-- ============================================== -->
         <div x-show="activeTab === 'BBM'" x-cloak>
-            <div class="mb-4 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-300">
-                        DocType: BBM
-                    </span>
-                    <span class="text-xs text-slate-500">Pencatatan mutasi kas masuk perbankan & kasir operasional</span>
-                </div>
-            </div>
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+                    <div>
+                        <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                            <i data-lucide="landmark" class="w-4 h-4 text-indigo-600"></i>
+                            <span>Bukti Bank Masuk (BBM - Kas & Bank Masuk)</span>
+                        </h3>
+                        <p class="text-xs text-slate-500">1 Menu Terpadu untuk Bukti Bank Masuk Tunai (Kas) dan Non Tunai (Transfer / Giro).</p>
+                    </div>
 
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
+                    <!-- Filter Toggle BBM Tunai vs Non-Tunai -->
+                    <div class="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl text-xs font-bold">
+                        <button type="button" 
+                                @click="bbmFilter = 'ALL'"
+                                class="px-3 py-1.5 rounded-lg transition-all"
+                                :class="bbmFilter === 'ALL' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'">
+                            Semua BBM ({{ count($bankReceipts) }})
+                        </button>
+                        <button type="button" 
+                                @click="bbmFilter = 'TUNAI'"
+                                class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                                :class="bbmFilter === 'TUNAI' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
+                            BBM Tunai
+                        </button>
+                        <button type="button" 
+                                @click="bbmFilter = 'NON_TUNAI'"
+                                class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                                :class="bbmFilter === 'NON_TUNAI' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'">
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
+                            BBM Non Tunai
+                        </button>
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+                        <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                             <tr>
                                 <th class="py-3 px-4">No. Dokumen BBM</th>
-                                <th class="py-3 px-4">Ref. Dokumen TTK</th>
-                                <th class="py-3 px-4">Jenis Penerimaan</th>
-                                <th class="py-3 px-4">Tanggal</th>
-                                <th class="py-3 px-4">Bank / Akun Kas Masuk</th>
-                                <th class="py-3 px-4">No. Rekening</th>
-                                <th class="py-3 px-4 text-right">Nominal Masuk</th>
-                                <th class="py-3 px-4 text-center">Status Verifikasi</th>
+                                <th class="py-3 px-4 text-center">Tipe BBM</th>
+                                <th class="py-3 px-4">Ref Dokumen TTK</th>
+                                <th class="py-3 px-4">Toko / Pelanggan</th>
+                                <th class="py-3 px-4">Kas / Rekening Penerima</th>
+                                <th class="py-3 px-4">Tanggal Masuk</th>
+                                <th class="py-3 px-4 text-center">Faktur Terbayar</th>
+                                <th class="py-3 px-4 text-right">Total Penerimaan</th>
+                                <th class="py-3 px-4 text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-medium">
-                            @forelse($bankReceipts as $bbm)
-                                <tr class="hover:bg-slate-50/70 transition-colors">
-                                    <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="px-1.5 py-0.5 rounded text-[10px] bg-indigo-700 text-white font-mono font-bold">BBM</span>
-                                            <span>{{ $bbm->doc_number }}</span>
-                                        </div>
+                            <template x-for="bbm in filteredBbmList" :key="bbm.id">
+                                <tr class="hover:bg-indigo-50/40 transition-colors cursor-pointer"
+                                    :class="selectedBbm?.id === bbm.id ? 'bg-indigo-50/70 border-l-4 border-indigo-600' : ''"
+                                    @click="selectBbm(bbm)">
+                                    <td class="py-3.5 px-4 font-mono font-bold text-indigo-900" x-text="bbm.doc_number"></td>
+                                    <td class="py-3.5 px-4 text-center">
+                                        <template x-if="bbm.receipt_type === 'TUNAI'">
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                BBM TUNAI
+                                            </span>
+                                        </template>
+                                        <template x-if="bbm.receipt_type === 'NON_TUNAI'">
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                                BBM NON TUNAI
+                                            </span>
+                                        </template>
                                     </td>
-
-                                    <td class="py-3.5 px-4 font-mono font-bold text-emerald-700">
-                                        {{ $bbm->ref_doc_number }}
+                                    <td class="py-3.5 px-4 font-mono text-emerald-700 font-bold" x-text="bbm.ttk_number || '-'"></td>
+                                    <td class="py-3.5 px-4 font-bold text-slate-900">
+                                        <span x-text="bbm.customer_name || '-'"></span>
+                                        <span class="block text-[11px] font-normal text-slate-400" x-text="'Sales: ' + (bbm.sales_summary || '-')"></span>
                                     </td>
-
                                     <td class="py-3.5 px-4">
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono
-                                            {{ $bbm->receipt_type === 'TUNAI' ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800' }}">
-                                            {{ $bbm->receipt_type === 'TUNAI' ? 'BBM TUNAI' : 'BBM NON TUNAI' }}
-                                        </span>
+                                        <span class="font-bold text-slate-800 block" x-text="bbm.bank_name"></span>
+                                        <span class="font-mono text-slate-500 text-[11px]" x-text="bbm.account_number || '-'"></span>
                                     </td>
-
-                                    <td class="py-3.5 px-4 text-slate-600">
-                                        {{ date('d M Y', strtotime($bbm->receipt_date)) }}
+                                    <td class="py-3.5 px-4 text-slate-600" x-text="bbm.receipt_date"></td>
+                                    <td class="py-3.5 px-4 text-center">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700" x-text="(bbm.ar_count || 0) + ' Faktur'"></span>
                                     </td>
-
-                                    <td class="py-3.5 px-4 font-bold text-slate-800">
-                                        {{ $bbm->bank_name }}
-                                    </td>
-
-                                    <td class="py-3.5 px-4 font-mono text-slate-500">
-                                        {{ $bbm->account_number ?? '-' }}
-                                    </td>
-
-                                    <td class="py-3.5 px-4 text-right font-mono font-extrabold text-slate-900">
-                                        Rp {{ number_format($bbm->amount, 0, ',', '.') }}
-                                    </td>
-
+                                    <td class="py-3.5 px-4 text-right font-mono font-extrabold text-indigo-900" x-text="'Rp ' + Number(bbm.amount).toLocaleString('id-ID')"></td>
                                     <td class="py-3.5 px-4 text-center">
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                            {{ $bbm->status }}
+                                            VERIFIED
                                         </span>
                                     </td>
                                 </tr>
-                            @empty
+                            </template>
+                            <template x-if="filteredBbmList.length === 0">
                                 <tr>
-                                    <td colspan="8" class="py-8 text-center text-slate-400">
-                                        Belum ada data Bukti Bank Masuk (BBM).
+                                    <td colspan="9" class="py-8 text-center text-slate-400">
+                                        Tidak ada data Bukti Bank Masuk (BBM) untuk filter ini.
                                     </td>
                                 </tr>
-                            @endforelse
+                            </template>
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <!-- INLINE DETAIL BBM DI BAWAH TABEL -->
+            <template x-if="selectedBbm">
+                <div class="mt-4 bg-white rounded-2xl border border-indigo-500/30 p-5 shadow-sm">
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold"
+                                  :class="selectedBbm.receipt_type === 'TUNAI' ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800'"
+                                  x-text="'DETAIL ' + (selectedBbm.receipt_type === 'TUNAI' ? 'BBM TUNAI' : 'BBM NON TUNAI')"></span>
+                            <h4 class="font-bold text-slate-900 text-xs font-mono" x-text="selectedBbm.doc_number"></h4>
+                            <span class="text-xs text-slate-500" x-text="'&bull; Toko: ' + (selectedBbm.customer_name || '-')"></span>
+                        </div>
+                        <span class="text-xs font-mono font-bold text-indigo-700" x-text="'Total: Rp ' + Number(selectedBbm.amount).toLocaleString('id-ID')"></span>
+                    </div>
+
+                    <div>
+                        <span class="text-xs font-bold text-slate-700 block mb-2">Faktur AR Terkait Penerimaan Ini:</span>
+                        <div class="border border-slate-200 rounded-xl overflow-hidden">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-2 px-3">No. AR</th>
+                                        <th class="py-2 px-3">Ref SO & Channel</th>
+                                        <th class="py-2 px-3">Sales Penanggung Jawab</th>
+                                        <th class="py-2 px-3 text-right">Nominal Masuk</th>
+                                        <th class="py-2 px-3 text-right">Sisa Piutang Setelah Bayar</th>
+                                        <th class="py-2 px-3 text-center">Status AR</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="alloc in selectedBbm.allocations" :key="alloc.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="py-2 px-3 font-mono font-bold text-amber-900" x-text="alloc.ar_number"></td>
+                                            <td class="py-2 px-3">
+                                                <span class="font-mono text-slate-700" x-text="alloc.so_number || '-'"></span>
+                                                <template x-if="alloc.so_channel === 'MOBILE_SALES'">
+                                                    <span class="ml-1 px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-700">MOBILE</span>
+                                                </template>
+                                            </td>
+                                            <td class="py-2 px-3 font-medium text-slate-800" x-text="alloc.sales_name || '-'"></td>
+                                            <td class="py-2 px-3 text-right font-mono font-extrabold text-indigo-700" x-text="'Rp ' + Number(alloc.amount).toLocaleString('id-ID')"></td>
+                                            <td class="py-2 px-3 text-right font-mono text-slate-700" x-text="'Rp ' + Number(alloc.balance_after).toLocaleString('id-ID')"></td>
+                                            <td class="py-2 px-3 text-center">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                                      :class="alloc.ar_status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
+                                                      x-text="alloc.ar_status"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
 
     </div>
@@ -539,23 +731,52 @@
         function financeApp() {
             return {
                 activeTab: 'AR',
+                bbmFilter: 'ALL',
                 createTtkOpen: false,
+
+                // Selection Objects for inline detail view
                 selectedAr: null,
+                selectedPayment: null,
+                selectedBbm: null,
 
-                selectedArId: '',
-                currentArObj: null,
-                paymentMethod: 'TRANSFER',
-                payAmount: 0,
-
+                // TTK Multi-AR Form State
+                selectedCustomerId: '',
+                paymentMethod: 'CASH',
                 unpaidReceivables: @json($unpaidReceivables),
+                bankReceiptsList: @json($bankReceipts),
+                paymentsList: @json($payments),
+
+                customerArList: [],
+                selectedAllocations: {}, // format: { arId: { selected: true/false, amount: 100000 } }
 
                 initData() {
                     const firstAr = @json($receivables->first());
                     if (firstAr) this.selectedAr = firstAr;
 
+                    const firstPayment = @json($payments->first());
+                    if (firstPayment) this.selectedPayment = firstPayment;
+
+                    const firstBbm = @json($bankReceipts->first());
+                    if (firstBbm) this.selectedBbm = firstBbm;
+
                     this.$nextTick(() => {
                         lucide.createIcons();
                     });
+                },
+
+                get filteredBbmList() {
+                    if (this.bbmFilter === 'ALL') return this.bankReceiptsList;
+                    return this.bankReceiptsList.filter(b => b.receipt_type === this.bbmFilter);
+                },
+
+                get selectedCount() {
+                    return Object.values(this.selectedAllocations).filter(a => a.selected && a.amount > 0).length;
+                },
+
+                get calculatedTotalPay() {
+                    return Object.values(this.selectedAllocations)
+                        .filter(a => a.selected)
+                        .reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
                 },
 
                 selectAr(ar) {
@@ -567,37 +788,101 @@
                     });
                 },
 
-                openTtkFromTab() {
-                    this.createTtkOpen = true;
-                    if (this.unpaidReceivables.length > 0) {
-                        this.selectedArId = this.unpaidReceivables[0].id;
-                        this.onSelectedArChange();
-                    }
+                selectPayment(payment) {
+                    this.selectedPayment = payment;
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
                 },
 
-                quickPayAr(ar) {
+                selectBbm(bbm) {
+                    this.selectedBbm = bbm;
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                },
+
+                openTtkModal() {
                     this.createTtkOpen = true;
-                    this.selectedArId = ar.id;
-                    this.currentArObj = ar;
-                    this.payAmount = parseFloat(ar.balance_amount) || 0;
                     this.$nextTick(() => {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     });
                 },
 
-                onSelectedArChange() {
-                    this.currentArObj = this.unpaidReceivables.find(a => a.id == this.selectedArId) || null;
-                    if (this.currentArObj) {
-                        this.payAmount = parseFloat(this.currentArObj.balance_amount) || 0;
+                onCustomerChange() {
+                    if (!this.selectedCustomerId) {
+                        this.customerArList = [];
+                        this.selectedAllocations = {};
+                        return;
+                    }
+
+                    this.customerArList = this.unpaidReceivables.filter(
+                        ar => ar.customer_id == this.selectedCustomerId
+                    );
+
+                    // Inisialisasi map alokasi
+                    this.selectedAllocations = {};
+                    this.customerArList.forEach(ar => {
+                        this.selectedAllocations[ar.id] = {
+                            selected: false,
+                            amount: 0
+                        };
+                    });
+                },
+
+                toggleArSelection(ar) {
+                    const item = this.selectedAllocations[ar.id];
+                    item.selected = !item.selected;
+                    if (item.selected) {
+                        item.amount = parseFloat(ar.balance_amount) || 0;
                     } else {
-                        this.payAmount = 0;
+                        item.amount = 0;
                     }
                 },
 
-                payFull() {
-                    if (this.currentArObj) {
-                        this.payAmount = parseFloat(this.currentArObj.balance_amount) || 0;
+                payFullAr(ar) {
+                    const item = this.selectedAllocations[ar.id];
+                    item.selected = true;
+                    item.amount = parseFloat(ar.balance_amount) || 0;
+                },
+
+                onAmountInput(ar) {
+                    const item = this.selectedAllocations[ar.id];
+                    if (item.amount > parseFloat(ar.balance_amount)) {
+                        item.amount = parseFloat(ar.balance_amount);
                     }
+                    if (item.amount > 0) {
+                        item.selected = true;
+                    }
+                },
+
+                selectAllAr() {
+                    this.customerArList.forEach(ar => {
+                        this.selectedAllocations[ar.id] = {
+                            selected: true,
+                            amount: parseFloat(ar.balance_amount) || 0
+                        };
+                    });
+                },
+
+                deselectAllAr() {
+                    this.customerArList.forEach(ar => {
+                        this.selectedAllocations[ar.id] = {
+                            selected: false,
+                            amount: 0
+                        };
+                    });
+                },
+
+                quickPaySingleAr(ar) {
+                    this.createTtkOpen = true;
+                    this.selectedCustomerId = ar.customer_id;
+                    this.onCustomerChange();
+
+                    this.$nextTick(() => {
+                        this.payFullAr(ar);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
                 }
             }
         }
