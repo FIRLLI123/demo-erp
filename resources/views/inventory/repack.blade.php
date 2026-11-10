@@ -319,6 +319,7 @@
                                 <th class="py-3 px-4">No. Dokumen RO</th>
                                 <th class="py-3 px-4">Tanggal</th>
                                 <th class="py-3 px-4">Gudang</th>
+                                <th class="py-3 px-4">Catatan</th>
                                 <th class="py-3 px-4 text-center">Komponen Keluar</th>
                                 <th class="py-3 px-4 text-right">Total Nilai RO</th>
                                 <th class="py-3 px-4 text-center">Status</th>
@@ -344,6 +345,16 @@
 
                                     <td class="py-3.5 px-4 font-bold text-slate-800">
                                         {{ $ro->warehouse_name }}
+                                    </td>
+
+                                    <td class="py-3.5 px-4 text-slate-600 max-w-[170px]">
+                                        @if(!empty($ro->notes))
+                                            <span class="text-[11px] font-medium text-slate-700 block truncate" title="{{ $ro->notes }}">
+                                                {{ $ro->notes }}
+                                            </span>
+                                        @else
+                                            <span class="text-slate-400 font-mono text-xs">-</span>
+                                        @endif
                                     </td>
 
                                     <td class="py-3.5 px-4 text-center">
@@ -401,6 +412,16 @@
                     </div>
 
                     <div class="p-6">
+                        <template x-if="selectedRo && selectedRo.notes">
+                            <div class="mb-4 px-4 py-2.5 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-start gap-2.5">
+                                <i data-lucide="file-text" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                                <div>
+                                    <span class="text-[11px] font-bold text-amber-900 block">Catatan Repack Out:</span>
+                                    <span class="text-xs text-slate-700 font-medium" x-text="selectedRo.notes"></span>
+                                </div>
+                            </div>
+                        </template>
+
                         <h5 class="text-xs font-bold text-slate-700 uppercase mb-2">2 Komponen Bahan yang Dikeluarkan dari Gudang:</h5>
                         <div class="border border-slate-200 rounded-xl overflow-hidden bg-white mb-4">
                             <table class="w-full text-left text-xs">
@@ -499,7 +520,7 @@
                       data-doctype="RPKIN">
                     @csrf
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Dokumen RO Referensi</label>
                             <select name="ref_ro_doc_number" 
@@ -533,6 +554,11 @@
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Pemasukan</label>
                             <input type="date" name="repack_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan / Notes</label>
+                            <input type="text" name="notes" placeholder="Catatan repack in" value="Repack In Produk Jadi" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
                         </div>
                     </div>
 
@@ -591,6 +617,7 @@
                                 <th class="py-3 px-4">Ref Dokumen RO</th>
                                 <th class="py-3 px-4">Tanggal</th>
                                 <th class="py-3 px-4">Gudang</th>
+                                <th class="py-3 px-4">Catatan</th>
                                 <th class="py-3 px-4 text-center">Produk Hasil</th>
                                 <th class="py-3 px-4 text-right">Total Nilai RI</th>
                                 <th class="py-3 px-4 text-center">Status</th>
@@ -620,6 +647,16 @@
 
                                     <td class="py-3.5 px-4 font-bold text-slate-800">
                                         {{ $ri->warehouse_name }}
+                                    </td>
+
+                                    <td class="py-3.5 px-4 text-slate-600 max-w-[170px]">
+                                        @if(!empty($ri->notes))
+                                            <span class="text-[11px] font-medium text-slate-700 block truncate" title="{{ $ri->notes }}">
+                                                {{ $ri->notes }}
+                                            </span>
+                                        @else
+                                            <span class="text-slate-400 font-mono text-xs">-</span>
+                                        @endif
                                     </td>
 
                                     <td class="py-3.5 px-4 text-center font-bold text-indigo-900">
@@ -678,6 +715,16 @@
                     </div>
 
                     <div class="p-6">
+                        <template x-if="selectedRi && selectedRi.notes">
+                            <div class="mb-4 px-4 py-2.5 bg-indigo-50/70 border border-indigo-200/80 rounded-xl flex items-start gap-2.5">
+                                <i data-lucide="file-text" class="w-4 h-4 text-indigo-600 shrink-0 mt-0.5"></i>
+                                <div>
+                                    <span class="text-[11px] font-bold text-indigo-900 block">Catatan Repack In:</span>
+                                    <span class="text-xs text-slate-700 font-medium" x-text="selectedRi.notes"></span>
+                                </div>
+                            </div>
+                        </template>
+
                         <h5 class="text-xs font-bold text-slate-700 uppercase mb-2">Produk Hasil Repack yang Masuk ke Gudang:</h5>
                         <div class="border border-slate-200 rounded-xl overflow-hidden bg-white mb-4">
                             <table class="w-full text-left text-xs">

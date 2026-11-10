@@ -51,7 +51,7 @@
                 @csrf
 
                 <!-- Header Info -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">TAP Pemesan</label>
                         <select name="tap_id" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
@@ -69,6 +69,11 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal</label>
                         <input type="date" name="order_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Catatan / Keterangan (Notes)</label>
+                        <input type="text" name="notes" placeholder="e.g. PO Pengadaan Awal Bulan" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
                     </div>
                 </div>
 
@@ -201,7 +206,8 @@
                             <th class="py-3 px-4">Tanggal</th>
                             <th class="py-3 px-4 text-center">Item</th>
                             <th class="py-3 px-4 text-right">Total Nilai</th>
-                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4">Catatan (Notes)</th>
+                            <th class="py-3 px-4 text-center">Status</th>
                             <th class="py-3 px-4 text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -245,7 +251,17 @@
                                     Rp {{ number_format($po->total_amount, 0, ',', '.') }}
                                 </td>
 
-                                <td class="py-3.5 px-4">
+                                <td class="py-3.5 px-4 text-slate-600 max-w-[180px]">
+                                    @if(!empty($po->notes))
+                                        <span class="text-[11px] font-medium text-slate-700 block truncate" title="{{ $po->notes }}">
+                                            {{ $po->notes }}
+                                        </span>
+                                    @else
+                                        <span class="text-slate-400 font-mono text-xs">-</span>
+                                    @endif
+                                </td>
+
+                                <td class="py-3.5 px-4 text-center">
                                     @if($po->status === 'RECEIVED')
                                         <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                                             RECEIVED
@@ -300,7 +316,13 @@
                         <h4 class="text-base font-extrabold text-white tracking-tight" x-text="selectedPo ? selectedPo.doc_number : ''"></h4>
                     </div>
 
-                    <div class="flex items-center gap-3 text-xs">
+                    <div class="flex items-center gap-3 text-xs flex-wrap">
+                        <template x-if="selectedPo && selectedPo.notes">
+                            <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                                <span class="text-slate-400">Catatan:</span>
+                                <span class="font-bold text-amber-300" x-text="selectedPo.notes"></span>
+                            </div>
+                        </template>
                         <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
                             <span class="text-slate-400">TAP:</span>
                             <span class="font-bold text-white" x-text="selectedPo ? selectedPo.tap_name : ''"></span>

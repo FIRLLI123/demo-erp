@@ -52,7 +52,7 @@
                 @csrf
 
                 <!-- Header Info -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Outlet / Customer</label>
                         <select name="customer_id" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
@@ -96,6 +96,11 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Pesanan</label>
                         <input type="date" name="order_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Catatan / Keterangan (Notes)</label>
+                        <input type="text" name="notes" placeholder="e.g. Titip nota asli, kirim sore" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                     </div>
                 </div>
 
@@ -311,6 +316,7 @@
                             <th class="py-3 px-4">Tanggal</th>
                             <th class="py-3 px-4">Outlet / Customer</th>
                             <th class="py-3 px-4">Sales & Gudang</th>
+                            <th class="py-3 px-4">Catatan</th>
                             <th class="py-3 px-4 text-center">Total Qty</th>
                             <th class="py-3 px-4 text-right">Nilai Tagihan</th>
                             <th class="py-3 px-4 text-center">Status Transaksi</th>
@@ -343,6 +349,16 @@
                                 <td class="py-3.5 px-4">
                                     <span class="font-bold text-slate-800 block">{{ $so->sales_name }}</span>
                                     <span class="text-[10px] text-slate-400 font-mono">{{ $so->warehouse_name }}</span>
+                                </td>
+
+                                <td class="py-3.5 px-4 text-slate-600 max-w-[170px]">
+                                    @if(!empty($so->notes))
+                                        <span class="text-[11px] font-medium text-slate-700 block truncate" title="{{ $so->notes }}">
+                                            {{ $so->notes }}
+                                        </span>
+                                    @else
+                                        <span class="text-slate-400 font-mono text-xs">-</span>
+                                    @endif
                                 </td>
 
                                 <td class="py-3.5 px-4 text-center font-mono font-bold text-slate-800">
@@ -511,6 +527,17 @@
 
                         </div>
                     </div>
+
+                    <!-- Catatan Pesanan (Notes) Banner -->
+                    <template x-if="selectedSo && selectedSo.notes">
+                        <div class="mb-5 px-4 py-3 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-start gap-3">
+                            <i data-lucide="file-text" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <span class="text-[11px] font-bold text-amber-900 block">Catatan / Keterangan Pesanan (Notes):</span>
+                                <span class="text-xs text-slate-700 font-medium" x-text="selectedSo.notes"></span>
+                            </div>
+                        </div>
+                    </template>
 
                     <!-- Detail Line Items Table -->
                     <div class="mb-5">

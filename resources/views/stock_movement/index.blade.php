@@ -330,6 +330,7 @@
                             <th class="py-3 px-4">No. Dokumen SM</th>
                             <th class="py-3 px-4">Tanggal</th>
                             <th class="py-3 px-4">Rute Gudang (Asal &rarr; Tujuan)</th>
+                            <th class="py-3 px-4">Catatan</th>
                             <th class="py-3 px-4 text-center">Total Item</th>
                             <th class="py-3 px-4 text-center">Total Qty</th>
                             <th class="py-3 px-4 text-center">Status</th>
@@ -347,9 +348,6 @@
                                         <span class="px-1.5 py-0.5 rounded text-[10px] bg-cyan-700 text-white font-mono font-bold">SM</span>
                                         <span>{{ $sm->doc_number }}</span>
                                     </div>
-                                    @if($sm->notes)
-                                        <span class="text-[11px] font-normal text-slate-400 block truncate max-w-xs">{{ $sm->notes }}</span>
-                                    @endif
                                 </td>
 
                                 <td class="py-3.5 px-4 text-slate-600">
@@ -365,6 +363,16 @@
                                     <div class="text-[10px] text-slate-400 font-mono mt-0.5">
                                         {{ $sm->source_wh_type }} &rarr; {{ $sm->dest_wh_type }}
                                     </div>
+                                </td>
+
+                                <td class="py-3.5 px-4 text-slate-600 max-w-[170px]">
+                                    @if(!empty($sm->notes))
+                                        <span class="text-[11px] font-medium text-slate-700 block truncate" title="{{ $sm->notes }}">
+                                            {{ $sm->notes }}
+                                        </span>
+                                    @else
+                                        <span class="text-slate-400 font-mono text-xs">-</span>
+                                    @endif
                                 </td>
 
                                 <td class="py-3.5 px-4 text-center font-bold text-slate-700">
@@ -436,6 +444,17 @@
                 </div>
 
                 <div class="p-6">
+                    <!-- Catatan SM Banner -->
+                    <template x-if="selectedSm && selectedSm.notes">
+                        <div class="mb-5 px-4 py-3 bg-cyan-50/70 border border-cyan-200/80 rounded-xl flex items-start gap-3">
+                            <i data-lucide="file-text" class="w-4 h-4 text-cyan-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <span class="text-[11px] font-bold text-cyan-900 block">Catatan / Keperluan Stock Movement:</span>
+                                <span class="text-xs text-slate-700 font-medium" x-text="selectedSm.notes"></span>
+                            </div>
+                        </div>
+                    </template>
+
                     <!-- Detail Line Items Table -->
                     <div class="mb-5">
                         <h5 class="text-xs font-bold text-slate-700 uppercase mb-2">Item Barang yang Dipindahkan</h5>
