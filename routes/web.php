@@ -11,6 +11,7 @@ use App\Http\Controllers\SalesController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TrackingController;
+use App\Http\Controllers\AiAssistantController;
 
 // Dashboard
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -88,3 +89,6 @@ Route::prefix('tracking')->name('tracking.')->group(function () {
     Route::get('/locations', [TrackingController::class, 'locations'])->name('locations');
     Route::get('/devices', [TrackingController::class, 'devices'])->name('devices');
 });
+
+// AI Assistant Copilot (Nisa)
+Route::post('/ai/chat', [AiAssistantController::class, 'chat'])->name('ai.chat');

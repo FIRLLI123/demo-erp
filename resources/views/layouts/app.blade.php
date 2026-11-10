@@ -525,6 +525,211 @@
         </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- FLOATING AI ASSISTANT (NISA - VIRTUAL ERP OPERATIONS COPILOT) -->
+    <!-- ============================================================ -->
+    <div x-data="aiAssistantWidget()" class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        
+        <!-- Jendela Chat Popover AI -->
+        <div x-show="isOpen" 
+             x-cloak 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-8 scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+             x-transition:leave-end="opacity-0 translate-y-8 scale-95"
+             class="w-[370px] sm:w-[410px] h-[540px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden mb-3.5 backdrop-blur-md">
+            
+            <!-- Header Chat Widget -->
+            <div class="px-4 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-slate-800 shadow-sm shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                             alt="Nisa AI Assistant" 
+                             class="w-11 h-11 rounded-full object-cover border-2 border-rose-400 shadow-md">
+                        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-900 animate-pulse"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h4 class="font-extrabold text-sm text-white tracking-tight">Nisa</h4>
+                            <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-gradient-to-r from-rose-500 to-pink-500 text-white uppercase tracking-wider">
+                                AI Copilot
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-slate-300 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            <span>Virtual Operations Assistant &bull; PT WPY</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1 text-slate-400">
+                    <button type="button" @click="clearChat()" title="Bersihkan Percakapan" class="p-1.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" @click="isOpen = false" title="Tutup Chat" class="p-1.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body Percakapan (Scrollable) -->
+            <div id="aiChatMessagesBox" class="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-50/80 text-xs">
+                
+                <!-- Pesan Sambutan Awal dari Nisa -->
+                <div class="flex items-start gap-2.5">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                         alt="Nisa" 
+                         class="w-7 h-7 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs">
+                    <div class="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-tl-xs shadow-xs text-slate-800 max-w-[85%] leading-relaxed">
+                        <p class="font-semibold text-slate-900 mb-1">Halo! Saya <span class="text-rose-600 font-extrabold">Nisa</span> 👋</p>
+                        <p class="text-[11px] text-slate-600">
+                            Asisten pintar ERP PT Wahana Putra Yudha. Butuh info penjualan sales, stok gudang, piutang toko, kas belum setor, atau tracking GPS? Tanyakan saja ya!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Quick Prompt Pills (Pertanyaan Cepat) -->
+                <div class="pt-1">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2 px-1">
+                        Pertanyaan Cepat Rekomendasi:
+                    </span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" 
+                                @click="askQuick('Siapa sales dengan omzet tertinggi hari ini?')"
+                                class="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 font-bold rounded-xl border border-slate-200 hover:border-rose-300 shadow-xs text-[11px] flex items-center gap-1.5 transition-all text-left">
+                            <span>🏆 Top Sales Leaderboard</span>
+                        </button>
+                        <button type="button" 
+                                @click="askQuick('Berapa sisa stok barang di gudang saat ini?')"
+                                class="px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 font-bold rounded-xl border border-slate-200 hover:border-indigo-300 shadow-xs text-[11px] flex items-center gap-1.5 transition-all text-left">
+                            <span>📦 Cek Stok Gudang</span>
+                        </button>
+                        <button type="button" 
+                                @click="askQuick('Toko mana saja yang piutangnya belum lunas?')"
+                                class="px-2.5 py-1.5 bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-800 font-bold rounded-xl border border-slate-200 hover:border-amber-300 shadow-xs text-[11px] flex items-center gap-1.5 transition-all text-left">
+                            <span>💰 Piutang Toko (AR)</span>
+                        </button>
+                        <button type="button" 
+                                @click="askQuick('Ada berapa uang kasir yang belum disetor ke bank (BBM)?')"
+                                class="px-2.5 py-1.5 bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-bold rounded-xl border border-slate-200 hover:border-emerald-300 shadow-xs text-[11px] flex items-center gap-1.5 transition-all text-left">
+                            <span>🏦 Kasir Belum Setor (BBM)</span>
+                        </button>
+                        <button type="button" 
+                                @click="askQuick('Bagaimana status live tracking sales di lapangan?')"
+                                class="px-2.5 py-1.5 bg-white hover:bg-purple-50 text-slate-700 hover:text-purple-800 font-bold rounded-xl border border-slate-200 hover:border-purple-300 shadow-xs text-[11px] flex items-center gap-1.5 transition-all text-left">
+                            <span>📍 Tracking GPS Sales</span>
+                        </button>
+                        <button type="button" 
+                                @click="askQuick('Jelaskan alur TTK Tunai ke BBM Tunai')"
+                                class="px-2.5 py-1.5 bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-800 font-bold rounded-xl border border-slate-200 hover:border-blue-300 shadow-xs text-[11px] flex items-center gap-1.5 transition-all text-left">
+                            <span>ℹ️ Alur TTK ke BBM</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loop Pesan Percakapan -->
+                <template x-for="(msg, index) in messages" :key="index">
+                    <div>
+                        <!-- Pesan User (Kanan) -->
+                        <template x-if="msg.sender === 'user'">
+                            <div class="flex justify-end mb-2">
+                                <div class="bg-gradient-to-r from-rose-600 to-indigo-600 text-white p-3 rounded-2xl rounded-tr-xs shadow-xs max-w-[85%] leading-relaxed font-medium">
+                                    <p x-text="msg.text" class="text-[11.5px]"></p>
+                                    <span class="block text-right text-[9px] text-white/70 mt-1" x-text="msg.time"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Pesan Nisa (Kiri) -->
+                        <template x-if="msg.sender === 'nisa'">
+                            <div class="flex items-start gap-2.5 mb-2">
+                                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                                     alt="Nisa" 
+                                     class="w-7 h-7 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs">
+                                <div class="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-tl-xs shadow-xs text-slate-800 max-w-[85%] leading-relaxed">
+                                    <div class="text-[11.5px] space-y-1.5 whitespace-pre-line" x-html="formatMessage(msg.text)"></div>
+                                    <span class="block text-right text-[9px] text-slate-400 mt-1" x-text="msg.time"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Animasi Nisa Sedang Mengetik -->
+                <div x-show="isTyping" x-cloak class="flex items-start gap-2.5">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                         alt="Nisa" 
+                         class="w-7 h-7 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs">
+                    <div class="bg-white border border-slate-200 px-3.5 py-2.5 rounded-2xl rounded-tl-xs shadow-xs flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-rose-500 animate-bounce"></span>
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style="animation-delay: 0.15s"></span>
+                        <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay: 0.3s"></span>
+                        <span class="text-[10px] text-slate-400 ml-1 font-semibold">Nisa sedang berpikir...</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Input Chat -->
+            <div class="p-3 bg-white border-t border-slate-200/90 shrink-0">
+                <form @submit.prevent="sendMessage()" class="flex items-center gap-2">
+                    <input type="text" 
+                           x-model="inputQuery"
+                           placeholder="Ketik pertanyaan untuk Nisa..." 
+                           class="flex-1 bg-slate-100 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-rose-500 rounded-xl px-3.5 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 font-medium transition-all">
+                    <button type="submit" 
+                            :disabled="!inputQuery.trim() || isTyping"
+                            class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 via-pink-600 to-indigo-600 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center shadow-md transition-all shrink-0">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                </form>
+                <div class="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 px-1">
+                    <span>✨ AI Virtual Copilot</span>
+                    <span class="font-mono">PT Wahana Putra Yudha</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Button (FAB) & Greeting Badge -->
+        <div class="flex items-center gap-3">
+            <!-- Greeting Tooltip Pill -->
+            <div x-show="showGreeting && !isOpen" 
+                 x-cloak
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-x-4"
+                 x-transition:enter-end="opacity-100 translate-x-0"
+                 class="bg-white/95 border border-slate-200/80 py-1.5 px-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold text-slate-800 backdrop-blur-sm cursor-pointer hover:bg-slate-50 transition-all"
+                 @click="isOpen = true; showGreeting = false;">
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                </span>
+                <span>Tanya Nisa (AI Copilot) ✨</span>
+                <button type="button" @click.stop="showGreeting = false" class="text-slate-400 hover:text-slate-600 ml-1">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+            </div>
+
+            <!-- Tombol Utama Bulat (FAB) -->
+            <button type="button" 
+                    @click="isOpen = !isOpen; showGreeting = false; $nextTick(() => lucide.createIcons());"
+                    class="w-14 h-14 rounded-full bg-gradient-to-tr from-rose-600 via-purple-600 to-indigo-600 p-0.5 text-white shadow-2xl hover:scale-105 active:scale-95 transition-all relative flex items-center justify-center group focus:outline-none focus:ring-4 focus:ring-rose-500/30">
+                <div class="w-full h-full rounded-full overflow-hidden relative border-2 border-white/90">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                         alt="Nisa AI Assistant" 
+                         class="w-full h-full object-cover">
+                </div>
+                <!-- Status Dot Hijau Online -->
+                <span class="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-sm flex items-center justify-center">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                </span>
+            </button>
+        </div>
+
+    </div>
+
     <!-- Initialize Lucide Icons & Global App State -->
     <script>
         function globalApp() {
@@ -611,6 +816,104 @@
         document.addEventListener("DOMContentLoaded", function() {
             lucide.createIcons();
         });
+
+        // ============================================
+        // ALPINE JS COMPONENT: NISA AI ASSISTANT WIDGET
+        // ============================================
+        function aiAssistantWidget() {
+            return {
+                isOpen: false,
+                showGreeting: true,
+                isTyping: false,
+                inputQuery: '',
+                messages: [],
+
+                init() {
+                    setTimeout(() => {
+                        this.showGreeting = false;
+                    }, 12000);
+                },
+
+                askQuick(query) {
+                    this.inputQuery = query;
+                    this.sendMessage();
+                },
+
+                clearChat() {
+                    this.messages = [];
+                },
+
+                scrollToBottom() {
+                    this.$nextTick(() => {
+                        const box = document.getElementById('aiChatMessagesBox');
+                        if (box) {
+                            box.scrollTop = box.scrollHeight;
+                        }
+                    });
+                },
+
+                formatMessage(text) {
+                    if (!text) return '';
+                    return text
+                        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-slate-900">$1</strong>')
+                        .replace(/\n/g, '<br>');
+                },
+
+                async sendMessage() {
+                    const text = this.inputQuery.trim();
+                    if (!text || this.isTyping) return;
+
+                    const now = new Date();
+                    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+                    // 1. Tambahkan pesan user
+                    this.messages.push({
+                        sender: 'user',
+                        text: text,
+                        time: timeStr
+                    });
+
+                    this.inputQuery = '';
+                    this.isTyping = true;
+                    this.scrollToBottom();
+
+                    try {
+                        const response = await fetch('{{ route('ai.chat') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ message: text })
+                        });
+
+                        const data = await response.json();
+                        
+                        setTimeout(() => {
+                            this.isTyping = false;
+                            this.messages.push({
+                                sender: 'nisa',
+                                text: data.reply || 'Maaf, saya belum memahami pertanyaan tersebut. Bisa tanyakan hal lain seputar operasional ERP?',
+                                time: data.timestamp || timeStr
+                            });
+                            this.scrollToBottom();
+                            this.$nextTick(() => {
+                                lucide.createIcons();
+                            });
+                        }, 400);
+
+                    } catch (error) {
+                        this.isTyping = false;
+                        this.messages.push({
+                            sender: 'nisa',
+                            text: 'Maaf, terjadi kendala saat menghubungkan ke asisten AI. Silakan coba lagi sebentar ya.',
+                            time: timeStr
+                        });
+                        this.scrollToBottom();
+                    }
+                }
+            }
+        }
     </script>
     @stack('scripts')
 </body>
