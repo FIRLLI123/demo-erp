@@ -95,7 +95,28 @@ class FinanceController extends Controller
             $bbm->sales_summary = !empty($salesNames) ? implode(', ', $salesNames) : '-';
         }
 
-        // 4. Daftar Customer yang memiliki Outstanding AR (Belum Lunas)
+        // 4. Daftar TTK Tunai yang Belum Disetorkan ke Bank (Pending BBM Tunai)
+        $pendingCashTtk = DB::table('payments')
+            ->join('customers', 'payments.customer_id', '=', 'customers.id')
+            ->leftJoin('bank_receipts', 'payments.id', '=', 'bank_receipts.payment_id')
+            ->where('payments.payment_method', 'CASH')
+            ->whereNull('bank_receipts.id')
+            ->select(
+                'payments.*',
+                'customers.name as customer_name',
+                'customers.code as customer_code'
+            )
+            ->orderBy('payments.id', 'asc')
+            ->get();
+
+        foreach ($pendingCashTtk as $pct) {
+            $pct->allocations = $allocationsByPayment[$pct->id] ?? [];
+            $pct->ar_count = count($pct->allocations);
+            $salesNames = collect($pct->allocations)->pluck('sales_name')->filter()->unique()->values()->all();
+            $pct->sales_summary = !empty($salesNames) ? implode(', ', $salesNames) : '-';
+        }
+
+        // 5. Daftar Customer yang memiliki Outstanding AR (Belum Lunas)
         $unpaidReceivables = DB::table('accounts_receivable')
             ->join('customers', 'accounts_receivable.customer_id', '=', 'customers.id')
             ->leftJoin('sales_orders', 'accounts_receivable.sales_order_id', '=', 'sales_orders.id')
@@ -123,6 +144,7 @@ class FinanceController extends Controller
             'receivables' => $receivablesRaw,
             'payments' => $paymentsRaw,
             'bankReceipts' => $bankReceiptsRaw,
+            'pendingCashTtk' => $pendingCashTtk,
             'unpaidReceivables' => $unpaidReceivables,
             'customersWithUnpaidAr' => $customersWithUnpaidAr
         ]);
@@ -209,40 +231,43 @@ class FinanceController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // 2. Terbitkan Dokumen Bukti Bank Masuk (BBM)
-            $nextBbm = DB::table('bank_receipts')->count() + 1;
-            $bbmNum = 'BBM/' . date('Ym') . '/' . str_pad($nextBbm, 4, '0', STR_PAD_LEFT);
+            // 2. Terbitkan Dokumen Bukti Bank Masuk (BBM) HANYA untuk Non-Tunai
+            // Jika TUNAI (CASH), BBM Tunai diterbitkan terpisah pada saat kas disetorkan ke bank
+            $bbmNum = null;
+            $receiptType = null;
 
-            $receiptType = ($paymentMethod === 'CASH') ? 'TUNAI' : 'NON_TUNAI';
-            $finalBankName = $bankName;
-            $finalAccountNum = $accountNumber;
+            if ($paymentMethod !== 'CASH') {
+                $nextBbm = DB::table('bank_receipts')->count() + 1;
+                $bbmNum = 'BBM/' . date('Ym') . '/' . str_pad($nextBbm, 4, '0', STR_PAD_LEFT);
+                $receiptType = 'NON_TUNAI';
 
-            if ($paymentMethod === 'CASH') {
-                $finalBankName = 'KAS TUNAI TAP (BBM TUNAI)';
-                $finalAccountNum = 'KAS-OPERASIONAL-01';
-            } elseif ($paymentMethod === 'DEPOSIT') {
-                $finalBankName = 'SALDO TITIPAN PELANGGAN';
-                $finalAccountNum = 'DEPOSIT-SALDO';
-            } elseif ($paymentMethod === 'RETURN_DEDUCTION') {
-                $finalBankName = 'POTONGAN NOTA RETUR';
-                $finalAccountNum = 'DEDUCTION-RETUR';
+                $finalBankName = $bankName;
+                $finalAccountNum = $accountNumber;
+
+                if ($paymentMethod === 'DEPOSIT') {
+                    $finalBankName = 'SALDO TITIPAN PELANGGAN';
+                    $finalAccountNum = 'DEPOSIT-SALDO';
+                } elseif ($paymentMethod === 'RETURN_DEDUCTION') {
+                    $finalBankName = 'POTONGAN NOTA RETUR';
+                    $finalAccountNum = 'DEDUCTION-RETUR';
+                }
+
+                DB::table('bank_receipts')->insert([
+                    'doc_type' => 'BBM',
+                    'doc_number' => $bbmNum,
+                    'receipt_type' => $receiptType,
+                    'ref_doc_type' => 'TTK',
+                    'ref_doc_number' => $ttkNum,
+                    'payment_id' => $paymentId,
+                    'bank_name' => $finalBankName,
+                    'account_number' => $finalAccountNum,
+                    'receipt_date' => $paymentDate,
+                    'amount' => $totalPayAmount,
+                    'status' => 'VERIFIED',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
-
-            DB::table('bank_receipts')->insert([
-                'doc_type' => 'BBM',
-                'doc_number' => $bbmNum,
-                'receipt_type' => $receiptType,
-                'ref_doc_type' => 'TTK',
-                'ref_doc_number' => $ttkNum,
-                'payment_id' => $paymentId,
-                'bank_name' => $finalBankName,
-                'account_number' => $finalAccountNum,
-                'receipt_date' => $paymentDate,
-                'amount' => $totalPayAmount,
-                'status' => 'VERIFIED',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
 
             // 3. Simpan Alokasi Pembayaran Multi-AR dan Update Saldo AR
             $fullyPaidCount = 0;
@@ -298,12 +323,90 @@ class FinanceController extends Controller
 
             DB::commit();
 
-            $summaryMsg = "Tanda Terima Kasir [{$ttkNum}] dan Bukti Bank Masuk [{$bbmNum} - {$receiptType}] senilai Rp " . number_format($totalPayAmount, 0, ',', '.') . " berhasil diterbitkan! (" . count($validAllocations) . " Faktur AR diproses: {$fullyPaidCount} Lunas, {$partialPaidCount} Partial).";
-            return redirect()->route('finance.index')->with('success', $summaryMsg);
+            if ($paymentMethod === 'CASH') {
+                $summaryMsg = "Tanda Terima Kasir Tunai [{$ttkNum}] senilai Rp " . number_format($totalPayAmount, 0, ',', '.') . " berhasil disimpan! Uang kas fisik tersimpan di brankas/kasir TAP. Silakan terbitkan Bukti Bank Masuk (BBM Tunai) pada tab BBM saat uang kas disetorkan ke bank.";
+                return redirect()->route('finance.index', ['tab' => 'TTK'])->with('success', $summaryMsg);
+            } else {
+                $summaryMsg = "Tanda Terima Kasir [{$ttkNum}] dan Bukti Bank Masuk Non-Tunai [{$bbmNum}] senilai Rp " . number_format($totalPayAmount, 0, ',', '.') . " berhasil diterbitkan! (" . count($validAllocations) . " Faktur AR diproses: {$fullyPaidCount} Lunas, {$partialPaidCount} Partial).";
+                return redirect()->route('finance.index', ['tab' => 'BBM'])->with('success', $summaryMsg);
+            }
 
         } catch (\Throwable $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Gagal memproses pembayaran: ' . $e->getMessage());
+        }
+    }
+
+    public function storeBbmTunai(Request $request)
+    {
+        $paymentIds = $request->input('payment_ids', []);
+        if (!is_array($paymentIds) || empty($paymentIds)) {
+            return redirect()->back()->with('error', 'Pilih minimal 1 Tanda Terima Kasir (TTK Tunai) untuk disetorkan ke bank!');
+        }
+
+        $bankName = $request->input('bank_name', 'BCA Operasional TAP');
+        $accountNumber = $request->input('account_number', '711-0988-234');
+        $receiptDate = $request->input('receipt_date', date('Y-m-d'));
+        $depositNotes = $request->input('notes', 'Setoran Kasir Tunai ke Rekening Bank');
+
+        DB::beginTransaction();
+        try {
+            $payments = DB::table('payments')
+                ->whereIn('id', $paymentIds)
+                ->where('payment_method', 'CASH')
+                ->lockForUpdate()
+                ->get();
+
+            if ($payments->isEmpty()) {
+                throw new \Exception('Data TTK Tunai tidak ditemukan atau tidak valid.');
+            }
+
+            // Periksa apakah ada TTK yang sudah dibuatkan BBM sebelumnya
+            $alreadyBbm = DB::table('bank_receipts')
+                ->whereIn('payment_id', $payments->pluck('id'))
+                ->pluck('payment_id')
+                ->toArray();
+
+            if (!empty($alreadyBbm)) {
+                throw new \Exception('Salah satu atau lebih TTK Tunai terpilih sudah pernah diterbitkan Bukti Bank Masuk.');
+            }
+
+            $createdBbmList = [];
+            $totalDepositAmount = 0;
+
+            foreach ($payments as $payment) {
+                $nextBbm = DB::table('bank_receipts')->count() + 1;
+                $bbmNum = 'BBM/' . date('Ym') . '/' . str_pad($nextBbm, 4, '0', STR_PAD_LEFT);
+
+                DB::table('bank_receipts')->insert([
+                    'doc_type' => 'BBM',
+                    'doc_number' => $bbmNum,
+                    'receipt_type' => 'TUNAI',
+                    'ref_doc_type' => 'TTK',
+                    'ref_doc_number' => $payment->doc_number,
+                    'payment_id' => $payment->id,
+                    'bank_name' => $bankName,
+                    'account_number' => $accountNumber,
+                    'receipt_date' => $receiptDate,
+                    'amount' => $payment->amount,
+                    'status' => 'VERIFIED',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $createdBbmList[] = $bbmNum;
+                $totalDepositAmount += (float)$payment->amount;
+            }
+
+            DB::commit();
+
+            $bbmStr = implode(', ', $createdBbmList);
+            $msg = "Setoran Kas ke Bank Berhasil! Bukti Bank Masuk Tunai [{$bbmStr}] senilai total Rp " . number_format($totalDepositAmount, 0, ',', '.') . " berhasil diterbitkan ke rekening {$bankName} ({$accountNumber}).";
+            return redirect()->route('finance.index', ['tab' => 'BBM'])->with('success', $msg);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal menerbitkan BBM Tunai: ' . $e->getMessage());
         }
     }
 

@@ -72,6 +72,7 @@ Route::prefix('sales')->name('sales.')->group(function () {
 Route::prefix('finance')->name('finance.')->group(function () {
     Route::get('/', [FinanceController::class, 'index'])->name('index');
     Route::post('/store-ttk', [FinanceController::class, 'storeTtk'])->name('store-ttk');
+    Route::post('/store-bbm-tunai', [FinanceController::class, 'storeBbmTunai'])->name('store-bbm-tunai');
     Route::get('/print-kwitansi/{id}', [FinanceController::class, 'printKwitansi'])->name('print-kwitansi');
 });
 

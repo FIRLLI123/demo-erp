@@ -195,3 +195,4 @@ class TrackingController extends Controller
         return view('tracking.devices', compact('devices'));
     }
 }
+

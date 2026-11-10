@@ -16,17 +16,21 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="{{ route('reports.index', ['type' => 'AR']) }}" 
-                   class="px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-purple-600"></i>
-                    <span>Rekap Piutang/Kas (Excel/PDF)</span>
-                </a>
-
                 <button type="button" 
                         @click="openTtkModal()"
                         class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
                     <span>Buat TTK Baru</span>
+                </button>
+
+                <button type="button" 
+                        @click="openBbmTunaiModal()"
+                        class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
+                    <i data-lucide="landmark" class="w-4 h-4"></i>
+                    <span>Buat BBM Tunai</span>
+                    @if(count($pendingCashTtk) > 0)
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400 text-slate-900 font-extrabold">{{ count($pendingCashTtk) }}</span>
+                    @endif
                 </button>
 
                 <!-- Tab Switcher with Distinct Colors -->
@@ -61,6 +65,177 @@
             </div>
         </div>
 
+        <!-- ======================================================= -->
+        <!-- MODAL SETOR KASIR KE BANK (BUAT BBM TUNAI DARI TTK TUNAI) -->
+        <!-- ======================================================= -->
+        <div x-show="createBbmTunaiOpen" x-cloak x-transition class="mb-6 bg-white rounded-2xl border-2 border-indigo-500/50 p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <span class="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                        <i data-lucide="landmark" class="w-5 h-5"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                            <span>Penerbitan Bukti Bank Masuk (BBM Tunai) - Setor Kasir ke Bank</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">KASIR &rarr; BANK</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-500">Pilih Tanda Terima Kasir (TTK Tunai) dari kasir/brankas TAP yang uang fisiknya disetorkan ke rekening bank operasional perusahaan.</p>
+                    </div>
+                </div>
+                <button @click="createBbmTunaiOpen = false" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            @if(count($pendingCashTtk) === 0)
+                <div class="py-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-6">
+                    <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="check" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-800">Semua Uang Kasir Tunai Sudah Disetorkan ke Bank!</h4>
+                    <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Saat ini tidak ada transaksi TTK Tunai yang tertunda. Semua pembayaran tunai telah diterbitkan Bukti Bank Masuk (BBM Tunai).</p>
+                    <button type="button" @click="createBbmTunaiOpen = false" class="mt-4 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-all">
+                        Tutup Formulir
+                    </button>
+                </div>
+            @else
+                <form method="POST" action="{{ route('finance.store-bbm-tunai') }}"
+                      data-loading-title="Menerbitkan Bukti Bank Masuk Tunai"
+                      data-loading-sub="Memproses setoran kas kasir ke rekening bank operasional..."
+                      data-doctype="BBM">
+                    @csrf
+
+                    <!-- Grid Info Bank Penerima & Tanggal Setor -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 rounded-xl bg-slate-50/80 border border-slate-200">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Rekening Bank Operasional Tujuan <span class="text-rose-500">*</span>
+                            </label>
+                            <select x-model="selectedBankOption" 
+                                    @change="onBankOptionChange()"
+                                    class="w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="BCA">BCA Operasional TAP - 711-0988-234</option>
+                                <option value="MANDIRI">Bank Mandiri TAP - 137-00-1928374-1</option>
+                                <option value="BRI">BRI Operasional TAP - 0341-01-002938-50-3</option>
+                                <option value="BNI">BNI Operasional TAP - 089-234-8891</option>
+                            </select>
+                            <input type="hidden" name="bank_name" :value="bbmBankName">
+                            <input type="hidden" name="account_number" :value="bbmAccountNumber">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Setor ke Bank <span class="text-rose-500">*</span></label>
+                            <input type="date" name="receipt_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Catatan / No. Slip Setoran Bank</label>
+                            <input type="text" name="notes" placeholder="e.g. Setoran Tunai Canvas Pasar Minggu" class="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Tabel Pilihan TTK Tunai -->
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-extrabold text-slate-800">Daftar TTK Tunai yang Siap Disetorkan ke Bank:</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                                    {{ count($pendingCashTtk) }} TTK Belum Ber-BBM
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" @click="selectAllPendingCashTtk()" class="px-2.5 py-1 text-[11px] font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-all">
+                                    Pilih Semua TTK
+                                </button>
+                                <button type="button" @click="deselectAllPendingCashTtk()" class="px-2.5 py-1 text-[11px] font-bold bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-all">
+                                    Reset Pilihan
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100/90 text-slate-600 font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-2.5 px-3 w-10 text-center">Pilih</th>
+                                        <th class="py-2.5 px-3">No. Dokumen TTK</th>
+                                        <th class="py-2.5 px-3">Tanggal TTK</th>
+                                        <th class="py-2.5 px-3">Toko / Outlet</th>
+                                        <th class="py-2.5 px-3">Sales Terkait</th>
+                                        <th class="py-2.5 px-3 text-center">Faktur AR</th>
+                                        <th class="py-2.5 px-3 text-right">Nominal Kas (Rp)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    @foreach($pendingCashTtk as $pct)
+                                        <tr class="hover:bg-indigo-50/40 cursor-pointer transition-colors"
+                                            :class="selectedCashTtkIds.includes({{ $pct->id }}) ? 'bg-indigo-50/60 font-medium' : ''"
+                                            @click="toggleCashTtkId({{ $pct->id }})">
+                                            <td class="py-2.5 px-3 text-center" @click.stop>
+                                                <input type="checkbox" 
+                                                       name="payment_ids[]" 
+                                                       value="{{ $pct->id }}"
+                                                       :checked="selectedCashTtkIds.includes({{ $pct->id }})"
+                                                       @change="toggleCashTtkId({{ $pct->id }})"
+                                                       class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer">
+                                            </td>
+                                            <td class="py-2.5 px-3 font-mono font-bold text-emerald-800">
+                                                {{ $pct->doc_number }}
+                                            </td>
+                                            <td class="py-2.5 px-3 text-slate-600">
+                                                {{ date('d M Y', strtotime($pct->payment_date)) }}
+                                            </td>
+                                            <td class="py-2.5 px-3 font-bold text-slate-900">
+                                                {{ $pct->customer_name }}
+                                                <span class="block text-[10px] text-slate-400 font-normal">Kasir: {{ $pct->cashier_name }}</span>
+                                            </td>
+                                            <td class="py-2.5 px-3 text-slate-700 font-semibold">
+                                                {{ $pct->sales_summary }}
+                                            </td>
+                                            <td class="py-2.5 px-3 text-center">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                                                    {{ $pct->ar_count }} Faktur
+                                                </span>
+                                            </td>
+                                            <td class="py-2.5 px-3 text-right font-mono font-extrabold text-emerald-700">
+                                                Rp {{ number_format($pct->amount, 0, ',', '.') }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot class="bg-slate-50 font-bold border-t border-slate-200">
+                                    <tr>
+                                        <td colspan="5" class="py-3 px-3 text-right text-slate-700">
+                                            Total Kas Fisik yang Disetorkan ke Bank:
+                                        </td>
+                                        <td colspan="2" class="py-3 px-3 text-right font-mono text-sm font-extrabold text-indigo-700" x-text="'Rp ' + calculatedTotalCashDeposit.toLocaleString('id-ID')"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <div class="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-indigo-600"></i>
+                            <span>Dokumen Bukti Bank Masuk (BBM Tunai) otomatis diterbitkan untuk setiap TTK yang disetor.</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="button" @click="createBbmTunaiOpen = false" class="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800">
+                                Batal
+                            </button>
+                            <button type="submit" 
+                                    :disabled="selectedCashTtkIds.length === 0"
+                                    class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-md transition-all">
+                                <i data-lucide="landmark" class="w-4 h-4"></i>
+                                <span x-text="'Setorkan ke Bank & Terbitkan BBM Tunai (' + selectedCashTtkIds.length + ' TTK)'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            @endif
+        </div>
+
         <!-- ============================================== -->
         <!-- FORM PELUNASAN TTK (MULTI-AR SELECTION)        -->
         <!-- ============================================== -->
@@ -71,8 +246,8 @@
                         <i data-lucide="badge-check" class="w-5 h-5"></i>
                     </span>
                     <div>
-                        <h3 class="font-extrabold text-slate-900 text-sm">Formulir Tanda Terima Kasir (TTK Multi-AR) & Penerbitan BBM</h3>
-                        <p class="text-[11px] text-slate-500">Pilih Toko/Pelanggan, tentukan faktur-faktur AR yang dilunasi, lalu pilih metode pembayaran.</p>
+                        <h3 class="font-extrabold text-slate-900 text-sm">Formulir Tanda Terima Kasir (TTK Multi-AR)</h3>
+                        <p class="text-[11px] text-slate-500">Pilih Toko/Pelanggan, tentukan faktur-faktur AR yang dilunasi, lalu pilih metode pembayaran (Tunai / Non-Tunai).</p>
                     </div>
                 </div>
                 <button @click="createTtkOpen = false" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg">
@@ -82,7 +257,7 @@
 
             <form method="POST" action="{{ route('finance.store-ttk') }}" 
                   data-loading-title="Memproses Pembayaran Kasir"
-                  data-loading-sub="Menerbitkan TTK, mengalokasikan saldo AR, dan mencatat Bukti Bank Masuk (BBM)..."
+                  data-loading-sub="Menerbitkan TTK dan mengalokasikan saldo pelunasan AR..."
                   data-doctype="TTK">
                 @csrf
 
@@ -219,35 +394,45 @@
                         <select name="payment_method" 
                                 x-model="paymentMethod" 
                                 required 
-                                class="w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            <option value="CASH">Uang Tunai (BBM Tunai / Kas)</option>
-                            <option value="TRANSFER">Transfer Bank (BBM Non Tunai)</option>
-                            <option value="DEPOSIT">Saldo Titipan Pelanggan (BBM Non Tunai)</option>
-                            <option value="RETURN_DEDUCTION">Potongan Nota Retur (BBM Non Tunai)</option>
+                                class="w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="CASH">Uang Tunai (Kasir TAP - BBM dibuat terpisah)</option>
+                            <option value="TRANSFER">Transfer Bank (BBM Non Tunai Otomatis)</option>
+                            <option value="DEPOSIT">Saldo Titipan Pelanggan (BBM Non Tunai Otomatis)</option>
+                            <option value="RETURN_DEDUCTION">Potongan Nota Retur (BBM Non Tunai Otomatis)</option>
                         </select>
-                        <span class="block text-[10px] text-slate-500 mt-1" x-text="paymentMethod === 'CASH' ? 'Otomatis diterbitkan sebagai BBM TUNAI' : 'Otomatis diterbitkan sebagai BBM NON TUNAI'"></span>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kas / Bank Penerima</label>
+                    <!-- Info Kasir jika Pembayaran TUNAI -->
+                    <div x-show="paymentMethod === 'CASH'" class="md:col-span-2 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+                        <i data-lucide="banknote" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-extrabold block text-amber-950">Pembayaran Kasir Tunai (Physical Cash)</span>
+                            <span class="text-[11px] text-amber-800 leading-relaxed block mt-0.5">
+                                Uang fisik disimpan di brankas/kasir TAP. Dokumen TTK diterbitkan untuk toko. <strong>BBM Tunai TIDAK otomatis dibuat sekarang</strong>, melainkan diterbitkan di tab <b>Bukti Bank Masuk (BBM)</b> saat uang kas disetorkan ke rekening bank.
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Input Bank Penerima jika NON-TUNAI -->
+                    <div x-show="paymentMethod !== 'CASH'">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Bank Penerima</label>
                         <input type="text" 
                                name="bank_name" 
-                               :value="paymentMethod === 'CASH' ? 'KAS TUNAI TAP (BBM TUNAI)' : 'BCA Operasional TAP'" 
-                               required 
-                               class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2 focus:outline-none">
+                               value="BCA Operasional TAP" 
+                               class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none">
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Rekening / Akun Kas</label>
+                    <div x-show="paymentMethod !== 'CASH'">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Rekening Bank</label>
                         <input type="text" 
                                name="account_number" 
-                               :value="paymentMethod === 'CASH' ? 'KAS-OPERASIONAL-01' : '711-0988-234'" 
-                               class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2 focus:outline-none font-mono">
+                               value="711-0988-234" 
+                               class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none font-mono">
                     </div>
 
                     <div class="md:col-span-3">
                         <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Tambahan</label>
-                        <input type="text" name="notes" placeholder="e.g. Pembayaran pelunasan gabungan faktur SA & Voucher" class="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl px-3 py-2 focus:outline-none">
+                        <input type="text" name="notes" placeholder="e.g. Pembayaran pelunasan faktur SA & Voucher Fisik" class="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none">
                     </div>
                 </div>
 
@@ -259,7 +444,7 @@
                             :disabled="calculatedTotalPay <= 0"
                             class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-md transition-all">
                         <i data-lucide="check-circle" class="w-4 h-4"></i>
-                        <span x-text="'Simpan TTK & Terbitkan BBM (' + (paymentMethod === 'CASH' ? 'Tunai' : 'Non Tunai') + ')'"></span>
+                        <span x-text="paymentMethod === 'CASH' ? 'Simpan TTK (Penerimaan Tunai Kasir)' : 'Simpan TTK & Terbitkan BBM Non Tunai'"></span>
                     </button>
                 </div>
             </form>
@@ -485,11 +670,30 @@
                                         Rp {{ number_format($p->amount, 0, ',', '.') }}
                                     </td>
                                     <td class="py-3.5 px-4">
-                                        <div class="font-mono text-indigo-700 font-bold">{{ $p->bbm_number ?? '-' }}</div>
-                                        @if($p->bbm_type === 'TUNAI')
-                                            <span class="text-[9px] font-extrabold text-emerald-700">BBM TUNAI</span>
-                                        @elseif($p->bbm_type === 'NON_TUNAI')
-                                            <span class="text-[9px] font-extrabold text-indigo-700">BBM NON TUNAI</span>
+                                        @if(!empty($p->bbm_number))
+                                            <div class="font-mono text-indigo-700 font-bold">{{ $p->bbm_number }}</div>
+                                            @if($p->bbm_type === 'TUNAI')
+                                                <span class="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">BBM TUNAI</span>
+                                            @elseif($p->bbm_type === 'NON_TUNAI')
+                                                <span class="text-[9px] font-extrabold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200">BBM NON TUNAI</span>
+                                            @endif
+                                        @else
+                                            @if($p->payment_method === 'CASH')
+                                                <div class="inline-flex flex-col items-start gap-1">
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                                                        <i data-lucide="clock" class="w-3 h-3 text-amber-600"></i>
+                                                        <span>Menunggu Setor Bank</span>
+                                                    </span>
+                                                    <button type="button" 
+                                                            @click.stop="openBbmTunaiModal({{ $p->id }})"
+                                                            class="text-[10px] font-extrabold text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-0.5">
+                                                        <span>+ Buat BBM Tunai</span>
+                                                        <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                                    </button>
+                                                </div>
+                                            @else
+                                                <span class="text-slate-400 font-mono text-xs">-</span>
+                                            @endif
                                         @endif
                                     </td>
                                     <td class="py-3.5 px-4 text-center" @click.stop>
@@ -576,6 +780,38 @@
         <!-- TAB 3: BUKTI BANK MASUK (BBM - 1 MENU TERPADU) -->
         <!-- ============================================== -->
         <div x-show="activeTab === 'BBM'" x-cloak>
+            
+            <!-- Banner Kas Tunai Belum Disetor ke Bank -->
+            @if(count($pendingCashTtk) > 0)
+                <div class="mb-5 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-white border border-amber-300 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <span class="p-2.5 bg-amber-100 text-amber-800 rounded-xl mt-0.5 shadow-xs">
+                            <i data-lucide="banknote" class="w-5 h-5"></i>
+                        </span>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-xs font-extrabold text-slate-900">
+                                    {{ count($pendingCashTtk) }} Tanda Terima Kasir (TTK Tunai) Siap Disetorkan ke Bank
+                                </h4>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 border border-amber-300 animate-pulse">
+                                    Kasir TAP
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-600 mt-0.5">
+                                Total uang kas fisik di brankas kasir sebesar <strong class="font-mono text-emerald-700 font-extrabold">Rp {{ number_format($pendingCashTtk->sum('amount'), 0, ',', '.') }}</strong> dari {{ count($pendingCashTtk) }} bukti TTK tunai. Klik tombol di samping untuk mencatat setoran ke rekening bank perusahaan (BBM Tunai).
+                            </p>
+                        </div>
+                    </div>
+
+                    <button type="button" 
+                            @click="openBbmTunaiModal()"
+                            class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-sm transition-all shrink-0">
+                        <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                        <span>Setorkan Kasir ke Bank (BBM Tunai)</span>
+                    </button>
+                </div>
+            @endif
+
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
                     <div>
@@ -583,31 +819,43 @@
                             <i data-lucide="landmark" class="w-4 h-4 text-indigo-600"></i>
                             <span>Bukti Bank Masuk (BBM - Kas & Bank Masuk)</span>
                         </h3>
-                        <p class="text-xs text-slate-500">1 Menu Terpadu untuk Bukti Bank Masuk Tunai (Kas) dan Non Tunai (Transfer / Giro).</p>
+                        <p class="text-xs text-slate-500">1 Menu Terpadu untuk Bukti Bank Masuk Tunai (Setoran Kasir) dan Non Tunai (Transfer / Giro).</p>
                     </div>
 
-                    <!-- Filter Toggle BBM Tunai vs Non-Tunai -->
-                    <div class="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl text-xs font-bold">
+                    <div class="flex items-center gap-2.5">
                         <button type="button" 
-                                @click="bbmFilter = 'ALL'"
-                                class="px-3 py-1.5 rounded-lg transition-all"
-                                :class="bbmFilter === 'ALL' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'">
-                            Semua BBM ({{ count($bankReceipts) }})
+                                @click="openBbmTunaiModal()"
+                                class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            <span>Buat BBM Tunai Baru</span>
+                            @if(count($pendingCashTtk) > 0)
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white text-indigo-800 font-extrabold">{{ count($pendingCashTtk) }}</span>
+                            @endif
                         </button>
-                        <button type="button" 
-                                @click="bbmFilter = 'TUNAI'"
-                                class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
-                                :class="bbmFilter === 'TUNAI' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
-                            BBM Tunai
-                        </button>
-                        <button type="button" 
-                                @click="bbmFilter = 'NON_TUNAI'"
-                                class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
-                                :class="bbmFilter === 'NON_TUNAI' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'">
-                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
-                            BBM Non Tunai
-                        </button>
+
+                        <!-- Filter Toggle BBM Tunai vs Non-Tunai -->
+                        <div class="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl text-xs font-bold">
+                            <button type="button" 
+                                    @click="bbmFilter = 'ALL'"
+                                    class="px-3 py-1.5 rounded-lg transition-all"
+                                    :class="bbmFilter === 'ALL' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'">
+                                Semua BBM ({{ count($bankReceipts) }})
+                            </button>
+                            <button type="button" 
+                                    @click="bbmFilter = 'TUNAI'"
+                                    class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                                    :class="bbmFilter === 'TUNAI' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
+                                BBM Tunai
+                            </button>
+                            <button type="button" 
+                                    @click="bbmFilter = 'NON_TUNAI'"
+                                    class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                                    :class="bbmFilter === 'NON_TUNAI' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'">
+                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
+                                BBM Non Tunai
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -739,9 +987,10 @@
     <script>
         function financeApp() {
             return {
-                activeTab: 'AR',
+                activeTab: '{{ request('tab', 'AR') }}',
                 bbmFilter: 'ALL',
                 createTtkOpen: false,
+                createBbmTunaiOpen: false,
 
                 // Selection Objects for inline detail view
                 selectedAr: null,
@@ -754,9 +1003,16 @@
                 unpaidReceivables: @json($unpaidReceivables),
                 bankReceiptsList: @json($bankReceipts),
                 paymentsList: @json($payments),
+                pendingCashTtkList: @json($pendingCashTtk),
 
                 customerArList: [],
                 selectedAllocations: {}, // format: { arId: { selected: true/false, amount: 100000 } }
+
+                // BBM Tunai State
+                selectedCashTtkIds: [],
+                selectedBankOption: 'BCA',
+                bbmBankName: 'BCA Operasional TAP',
+                bbmAccountNumber: '711-0988-234',
 
                 initData() {
                     const firstAr = @json($receivables->first());
@@ -788,6 +1044,62 @@
                         .reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
                 },
 
+                get calculatedTotalCashDeposit() {
+                    return this.pendingCashTtkList
+                        .filter(p => this.selectedCashTtkIds.includes(p.id))
+                        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                },
+
+                onBankOptionChange() {
+                    if (this.selectedBankOption === 'BCA') {
+                        this.bbmBankName = 'BCA Operasional TAP';
+                        this.bbmAccountNumber = '711-0988-234';
+                    } else if (this.selectedBankOption === 'MANDIRI') {
+                        this.bbmBankName = 'Bank Mandiri TAP';
+                        this.bbmAccountNumber = '137-00-1928374-1';
+                    } else if (this.selectedBankOption === 'BRI') {
+                        this.bbmBankName = 'BRI Operasional TAP';
+                        this.bbmAccountNumber = '0341-01-002938-50-3';
+                    } else if (this.selectedBankOption === 'BNI') {
+                        this.bbmBankName = 'BNI Operasional TAP';
+                        this.bbmAccountNumber = '089-234-8891';
+                    }
+                },
+
+                openBbmTunaiModal(paymentId = null) {
+                    this.createBbmTunaiOpen = true;
+                    this.createTtkOpen = false;
+
+                    if (paymentId) {
+                        this.selectedCashTtkIds = [paymentId];
+                    } else if (this.selectedCashTtkIds.length === 0) {
+                        // Default pilih semua pending TTK Tunai
+                        this.selectedCashTtkIds = this.pendingCashTtkList.map(p => p.id);
+                    }
+
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+                },
+
+                toggleCashTtkId(id) {
+                    const idx = this.selectedCashTtkIds.indexOf(id);
+                    if (idx > -1) {
+                        this.selectedCashTtkIds.splice(idx, 1);
+                    } else {
+                        this.selectedCashTtkIds.push(id);
+                    }
+                },
+
+                selectAllPendingCashTtk() {
+                    this.selectedCashTtkIds = this.pendingCashTtkList.map(p => p.id);
+                },
+
+                deselectAllPendingCashTtk() {
+                    this.selectedCashTtkIds = [];
+                },
+
                 selectAr(ar) {
                     this.selectedAr = ar;
                     this.$nextTick(() => {
@@ -813,7 +1125,9 @@
 
                 openTtkModal() {
                     this.createTtkOpen = true;
+                    this.createBbmTunaiOpen = false;
                     this.$nextTick(() => {
+                        lucide.createIcons();
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     });
                 },
@@ -885,11 +1199,13 @@
 
                 quickPaySingleAr(ar) {
                     this.createTtkOpen = true;
+                    this.createBbmTunaiOpen = false;
                     this.selectedCustomerId = ar.customer_id;
                     this.onCustomerChange();
 
                     this.$nextTick(() => {
                         this.payFullAr(ar);
+                        lucide.createIcons();
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     });
                 }
