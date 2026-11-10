@@ -674,17 +674,19 @@
 
             <!-- Footer Input Chat -->
             <div class="p-3 bg-white border-t border-slate-200/90 shrink-0">
-                <form @submit.prevent="sendMessage()" class="flex items-center gap-2">
+                <div class="flex items-center gap-2">
                     <input type="text" 
                            x-model="inputQuery"
+                           @keydown.enter.prevent="sendMessage()"
                            placeholder="Ketik pertanyaan untuk Nisa..." 
                            class="flex-1 bg-slate-100 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-rose-500 rounded-xl px-3.5 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 font-medium transition-all">
-                    <button type="submit" 
+                    <button type="button" 
+                            @click="sendMessage()"
                             :disabled="!inputQuery.trim() || isTyping"
                             class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 via-pink-600 to-indigo-600 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center shadow-md transition-all shrink-0">
                         <i data-lucide="send" class="w-4 h-4"></i>
                     </button>
-                </form>
+                </div>
                 <div class="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 px-1">
                     <span>✨ AI Virtual Copilot</span>
                     <span class="font-mono">PT Wahana Putra Yudha</span>
@@ -782,10 +784,13 @@
                         this.showToast(@json(session('error')), 'error', 'Perhatian');
                     @endif
 
-                    // Otomatis intercept semua form submit untuk menampilkan loading modern
+                    // Otomatis intercept semua form submit untuk menampilkan loading modern (kecuali chat AI & no-loading)
                     document.addEventListener('submit', (e) => {
                         const form = e.target;
-                        if (form.tagName.toLowerCase() === 'form') {
+                        if (form && form.tagName && form.tagName.toLowerCase() === 'form') {
+                            if (form.closest('[x-data*="aiAssistantWidget"]') || form.hasAttribute('data-no-loading')) {
+                                return;
+                            }
                             const customTitle = form.getAttribute('data-loading-title') || 'Memproses Transaksi...';
                             const customSub = form.getAttribute('data-loading-sub') || 'Menyimpan perubahan ke database ERP & menerbitkan dokumen...';
                             const docType = form.getAttribute('data-doctype') || '';
