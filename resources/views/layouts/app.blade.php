@@ -545,9 +545,9 @@
             <div class="px-4 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-slate-800 shadow-sm shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="relative">
-                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                        <img src="{{ asset('images/nisa-avatar.svg') }}" 
                              alt="Nisa AI Assistant" 
-                             class="w-11 h-11 rounded-full object-cover border-2 border-rose-400 shadow-md">
+                             class="w-11 h-11 rounded-full object-cover border-2 border-rose-400 shadow-md bg-white">
                         <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-900 animate-pulse"></span>
                     </div>
                     <div>
@@ -579,9 +579,9 @@
                 
                 <!-- Pesan Sambutan Awal dari Nisa -->
                 <div class="flex items-start gap-2.5">
-                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                    <img src="{{ asset('images/nisa-avatar.svg') }}" 
                          alt="Nisa" 
-                         class="w-7 h-7 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs">
+                         class="w-8 h-8 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs bg-white">
                     <div class="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-tl-xs shadow-xs text-slate-800 max-w-[85%] leading-relaxed">
                         <p class="font-semibold text-slate-900 mb-1">Halo! Saya <span class="text-rose-600 font-extrabold">Nisa</span> 👋</p>
                         <p class="text-[11px] text-slate-600">
@@ -645,9 +645,9 @@
                         <!-- Pesan Nisa (Kiri) -->
                         <template x-if="msg.sender === 'nisa'">
                             <div class="flex items-start gap-2.5 mb-2">
-                                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                                <img src="{{ asset('images/nisa-avatar.svg') }}" 
                                      alt="Nisa" 
-                                     class="w-7 h-7 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs">
+                                     class="w-8 h-8 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs bg-white">
                                 <div class="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-tl-xs shadow-xs text-slate-800 max-w-[85%] leading-relaxed">
                                     <div class="text-[11.5px] space-y-1.5 whitespace-pre-line" x-html="formatMessage(msg.text)"></div>
                                     <span class="block text-right text-[9px] text-slate-400 mt-1" x-text="msg.time"></span>
@@ -659,9 +659,9 @@
 
                 <!-- Animasi Nisa Sedang Mengetik -->
                 <div x-show="isTyping" x-cloak class="flex items-start gap-2.5">
-                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                    <img src="{{ asset('images/nisa-avatar.svg') }}" 
                          alt="Nisa" 
-                         class="w-7 h-7 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs">
+                         class="w-8 h-8 rounded-full object-cover border border-rose-300 shrink-0 mt-0.5 shadow-xs bg-white">
                     <div class="bg-white border border-slate-200 px-3.5 py-2.5 rounded-2xl rounded-tl-xs shadow-xs flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-rose-500 animate-bounce"></span>
                         <span class="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style="animation-delay: 0.15s"></span>
@@ -716,8 +716,8 @@
             <button type="button" 
                     @click="isOpen = !isOpen; showGreeting = false; $nextTick(() => lucide.createIcons());"
                     class="w-14 h-14 rounded-full bg-gradient-to-tr from-rose-600 via-purple-600 to-indigo-600 p-0.5 text-white shadow-2xl hover:scale-105 active:scale-95 transition-all relative flex items-center justify-center group focus:outline-none focus:ring-4 focus:ring-rose-500/30">
-                <div class="w-full h-full rounded-full overflow-hidden relative border-2 border-white/90">
-                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop" 
+                <div class="w-full h-full rounded-full overflow-hidden relative border-2 border-white/90 bg-white">
+                    <img src="{{ asset('images/nisa-avatar.svg') }}" 
                          alt="Nisa AI Assistant" 
                          class="w-full h-full object-cover">
                 </div>
