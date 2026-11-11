@@ -235,7 +235,28 @@
             </div>
 
             <!-- Navigation Links with Smooth Collapsible Dropdowns -->
-            <nav class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            <nav x-data="{
+                openMenus: {
+                    master: {{ request()->routeIs('master.*') ? 'true' : 'false' }},
+                    procurement: {{ (request()->routeIs('procurement*') || request()->routeIs('stock-movement*') || request()->routeIs('inventory.*')) ? 'true' : 'false' }},
+                    sales: {{ request()->routeIs('sales*') ? 'true' : 'false' }},
+                    finance: {{ request()->routeIs('finance*') ? 'true' : 'false' }},
+                    reports: {{ request()->routeIs('reports*') ? 'true' : 'false' }},
+                    tracking: {{ request()->routeIs('tracking*') ? 'true' : 'false' }}
+                },
+                toggle(key) {
+                    this.openMenus[key] = !this.openMenus[key];
+                },
+                collapseAll() {
+                    Object.keys(this.openMenus).forEach(k => this.openMenus[k] = false);
+                },
+                expandAll() {
+                    Object.keys(this.openMenus).forEach(k => this.openMenus[k] = true);
+                },
+                isAllCollapsed() {
+                    return !Object.values(this.openMenus).some(v => v);
+                }
+            }" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
                 <!-- Group: CORE (Dashboard) -->
                 <div>
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs uppercase tracking-wider font-bold transition-all {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg shadow-red-600/30 ring-1 ring-white/20' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
@@ -255,24 +276,45 @@
                     </a>
                 </div>
 
+                <!-- Toolbar Toggle Collapse / Expand Semua Sub-Menu -->
+                <div class="px-2 pt-2.5 pb-1 flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider border-t border-slate-800/70">
+                    <span class="text-[10px] text-slate-400 font-bold tracking-wider">Modul Operasional</span>
+                    <button type="button" 
+                            @click="isAllCollapsed() ? expandAll() : collapseAll()" 
+                            class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 transition border border-slate-700/60 cursor-pointer select-none">
+                        <template x-if="!isAllCollapsed()">
+                            <span class="flex items-center gap-1 text-rose-400">
+                                <i data-lucide="chevrons-up" class="w-3 h-3"></i>
+                                <span>Tutup Semua</span>
+                            </span>
+                        </template>
+                        <template x-if="isAllCollapsed()">
+                            <span class="flex items-center gap-1 text-emerald-400">
+                                <i data-lucide="chevrons-down" class="w-3 h-3"></i>
+                                <span>Buka Semua</span>
+                            </span>
+                        </template>
+                    </button>
+                </div>
+
                 <!-- Group: MASTER HIERARKI (Collapsible Dropdown) -->
-                <div x-data="{ open: {{ request()->routeIs('master.*') ? 'true' : 'true' }} }" class="space-y-1">
-                    <button type="button" @click="open = !open" 
-                            :class="open ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
+                <div class="space-y-1">
+                    <button type="button" @click="toggle('master')" 
+                            :class="openMenus.master ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
                             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all select-none text-left focus:outline-none group">
                         <div class="flex items-center gap-2.5">
-                            <i data-lucide="network" :class="open ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
+                            <i data-lucide="network" :class="openMenus.master ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
                             <span class="font-bold">Master & Organisasi</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">6 Menu</span>
-                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="openMenus.master ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
-                    <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
+                    <div x-show="openMenus.master" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
                         <a href="{{ route('master.organization') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.organization*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.organization*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
@@ -304,23 +346,23 @@
                 </div>
 
                 <!-- Group: PENGADAAN & DISTRIBUSI (Collapsible Dropdown) -->
-                <div x-data="{ open: {{ (request()->routeIs('procurement*') || request()->routeIs('stock-movement*') || request()->routeIs('inventory.*')) ? 'true' : 'true' }} }" class="space-y-1">
-                    <button type="button" @click="open = !open" 
-                            :class="open ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
+                <div class="space-y-1">
+                    <button type="button" @click="toggle('procurement')" 
+                            :class="openMenus.procurement ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
                             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all select-none text-left focus:outline-none group">
                         <div class="flex items-center gap-2.5">
-                            <i data-lucide="package-check" :class="open ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
+                            <i data-lucide="package-check" :class="openMenus.procurement ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
                             <span class="font-bold">Pengadaan & Distribusi</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-mono text-slate-400">PO • GR • SM</span>
-                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="openMenus.procurement ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
-                    <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
+                    <div x-show="openMenus.procurement" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
                         <a href="{{ route('procurement.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('procurement*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('procurement*') ? 'bg-emerald-400 ring-2 ring-emerald-400/40' : 'bg-slate-600' }}"></span>
@@ -353,23 +395,23 @@
                 </div>
 
                 <!-- Group: PENJUALAN (Collapsible Dropdown) -->
-                <div x-data="{ open: {{ request()->routeIs('sales*') ? 'true' : 'true' }} }" class="space-y-1">
-                    <button type="button" @click="open = !open" 
-                            :class="open ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
+                <div class="space-y-1">
+                    <button type="button" @click="toggle('sales')" 
+                            :class="openMenus.sales ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
                             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all select-none text-left focus:outline-none group">
                         <div class="flex items-center gap-2.5">
-                            <i data-lucide="shopping-bag" :class="open ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
+                            <i data-lucide="shopping-bag" :class="openMenus.sales ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
                             <span class="font-bold">Penjualan Lapangan</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">2 Menu</span>
-                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="openMenus.sales ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
-                    <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
+                    <div x-show="openMenus.sales" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
                         <a href="{{ route('sales.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('sales.index*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('sales.index*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
@@ -388,23 +430,23 @@
                 </div>
 
                 <!-- Group: KEUANGAN & KAS/BANK (Collapsible Dropdown) -->
-                <div x-data="{ open: {{ request()->routeIs('finance*') ? 'true' : 'true' }} }" class="space-y-1">
-                    <button type="button" @click="open = !open" 
-                            :class="open ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
+                <div class="space-y-1">
+                    <button type="button" @click="toggle('finance')" 
+                            :class="openMenus.finance ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
                             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all select-none text-left focus:outline-none group">
                         <div class="flex items-center gap-2.5">
-                            <i data-lucide="receipt" :class="open ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
+                            <i data-lucide="receipt" :class="openMenus.finance ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
                             <span class="font-bold">Keuangan & Kas/Bank</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-mono text-slate-400">AR • BBM</span>
-                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="openMenus.finance ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
-                    <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
+                    <div x-show="openMenus.finance" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
                         <a href="{{ route('finance.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('finance*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('finance*') ? 'bg-rose-400 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
@@ -416,23 +458,23 @@
                 </div>
 
                 <!-- Group: PUSAT LAPORAN & EKSPOR (Collapsible Dropdown) -->
-                <div x-data="{ open: {{ request()->routeIs('reports*') ? 'true' : 'true' }} }" class="space-y-1">
-                    <button type="button" @click="open = !open" 
-                            :class="open ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
+                <div class="space-y-1">
+                    <button type="button" @click="toggle('reports')" 
+                            :class="openMenus.reports ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
                             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all select-none text-left focus:outline-none group">
                         <div class="flex items-center gap-2.5">
-                            <i data-lucide="file-spreadsheet" :class="open ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
+                            <i data-lucide="file-spreadsheet" :class="openMenus.reports ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
                             <span class="font-bold">Pusat Laporan & Ekspor</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">2 Menu</span>
-                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="openMenus.reports ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
-                    <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
+                    <div x-show="openMenus.reports" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
                         <a href="{{ route('reports.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('reports.index*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('reports.index*') ? 'bg-emerald-400 ring-2 ring-emerald-400/40' : 'bg-slate-600' }}"></span>
@@ -451,23 +493,23 @@
                 </div>
 
                 <!-- Group: TRACKING & INFORMASI (Collapsible Dropdown) -->
-                <div x-data="{ open: {{ request()->routeIs('tracking*') ? 'true' : 'true' }} }" class="space-y-1">
-                    <button type="button" @click="open = !open" 
-                            :class="open ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
+                <div class="space-y-1">
+                    <button type="button" @click="toggle('tracking')" 
+                            :class="openMenus.tracking ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
                             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all select-none text-left focus:outline-none group">
                         <div class="flex items-center gap-2.5">
-                            <i data-lucide="map-pin" :class="open ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
+                            <i data-lucide="map-pin" :class="openMenus.tracking ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-200'" class="w-4 h-4 transition-colors"></i>
                             <span class="font-bold">Tracking & Informasi</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">3 Menu</span>
-                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
+                            <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="openMenus.tracking ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
                         </div>
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
-                    <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
+                    <div x-show="openMenus.tracking" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
                         <a href="{{ route('tracking.locations') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('tracking.locations*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('tracking.locations*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
