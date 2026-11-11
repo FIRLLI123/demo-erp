@@ -10,6 +10,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AiAssistantController;
@@ -82,6 +83,7 @@ Route::prefix('finance')->name('finance.')->group(function () {
 // Reports & Export Center (Excel & PDF)
 Route::prefix('reports')->name('reports.')->group(function () {
     Route::get('/', [ReportController::class, 'index'])->name('index');
+    Route::get('/audit', [AuditLogController::class, 'index'])->name('audit');
     Route::get('/export-excel', [ReportController::class, 'exportExcel'])->name('export-excel');
     Route::get('/print-pdf', [ReportController::class, 'printPdf'])->name('print-pdf');
 });

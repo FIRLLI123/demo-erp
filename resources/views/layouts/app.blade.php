@@ -425,7 +425,7 @@
                             <span class="font-bold">Pusat Laporan & Ekspor</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-[9px] font-mono text-slate-400">PDF • XLS</span>
+                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">2 Menu</span>
                             <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
@@ -433,12 +433,19 @@
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
                     <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
-                        <a href="{{ route('reports.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('reports*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                        <a href="{{ route('reports.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('reports.index*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
-                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('reports*') ? 'bg-emerald-400 ring-2 ring-emerald-400/40' : 'bg-slate-600' }}"></span>
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('reports.index*') ? 'bg-emerald-400 ring-2 ring-emerald-400/40' : 'bg-slate-600' }}"></span>
                                 <span>Pusat Laporan Terpadu</span>
                             </div>
                             <span class="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">REPORT</span>
+                        </a>
+                        <a href="{{ route('reports.audit') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('reports.audit*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('reports.audit*') ? 'bg-indigo-400 ring-2 ring-indigo-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Audit Trail & Aktivitas</span>
+                            </div>
+                            <span class="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold">AUDIT LOG</span>
                         </a>
                     </div>
                 </div>
