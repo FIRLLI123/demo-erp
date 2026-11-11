@@ -496,6 +496,9 @@
                 init() {
                     this.$nextTick(() => {
                         this.initMap();
+                        setTimeout(() => {
+                            if (this.map) this.map.invalidateSize();
+                        }, 250);
                     });
                 },
 

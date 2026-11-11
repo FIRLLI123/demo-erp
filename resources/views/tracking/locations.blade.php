@@ -251,6 +251,9 @@
                 init() {
                     this.$nextTick(() => {
                         this.initMap();
+                        setTimeout(() => {
+                            if (this.map) this.map.invalidateSize();
+                        }, 250);
                     });
                 },
 
@@ -258,10 +261,9 @@
                     // Inisialisasi peta di area Jakarta Selatan / Jabodetabek
                     this.map = L.map('salesMap').setView([-6.2750, 106.8250], 13);
 
-                    // Tambahkan tile layer CartoDB Voyager / OpenStreetMap yang bersih
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-                        subdomains: 'abcd',
+                    // Gunakan OpenStreetMap standar (100% gratis & tanpa perlu API Key)
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Telkomsel Sales Tracker',
                         maxZoom: 19
                     }).addTo(this.map);
 
