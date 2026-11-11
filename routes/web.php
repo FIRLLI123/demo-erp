@@ -58,9 +58,10 @@ Route::prefix('inventory')->name('inventory.')->group(function () {
     Route::post('/quick-sm', [InventoryController::class, 'quickSm'])->name('quick-sm');
 });
 
-// Sales (SO, Approval, GD, Cetak Nota, Retur)
+// Sales (SO, Approval, GD, Cetak Nota, Retur, Target & Komisi)
 Route::prefix('sales')->name('sales.')->group(function () {
     Route::get('/', [SalesController::class, 'index'])->name('index');
+    Route::get('/targets', [SalesController::class, 'targets'])->name('targets');
     Route::post('/store', [SalesController::class, 'store'])->name('store');
     Route::post('/approve/{id}', [SalesController::class, 'approve'])->name('approve');
     Route::post('/reject/{id}', [SalesController::class, 'reject'])->name('reject');
@@ -87,6 +88,7 @@ Route::prefix('reports')->name('reports.')->group(function () {
 // Tracking & Informasi Sales Force
 Route::prefix('tracking')->name('tracking.')->group(function () {
     Route::get('/locations', [TrackingController::class, 'locations'])->name('locations');
+    Route::get('/pjp', [TrackingController::class, 'pjp'])->name('pjp');
     Route::get('/devices', [TrackingController::class, 'devices'])->name('devices');
 });
 

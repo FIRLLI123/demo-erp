@@ -351,7 +351,7 @@
                             <span class="font-bold">Penjualan Lapangan</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-[9px] font-mono text-slate-400">SO • GD</span>
+                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">2 Menu</span>
                             <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
@@ -359,12 +359,19 @@
                     </button>
                     <!-- Sub-Menu (Tree View Indented) -->
                     <div x-show="open" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
-                        <a href="{{ route('sales.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('sales*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                        <a href="{{ route('sales.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('sales.index*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
-                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('sales*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('sales.index*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
                                 <span>Sales Order & Delivery</span>
                             </div>
                             <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">SO-GD</span>
+                        </a>
+                        <a href="{{ route('sales.targets') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('sales.targets*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('sales.targets*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Target & Komisi Sales</span>
+                            </div>
+                            <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">LEADERBOARD</span>
                         </a>
                     </div>
                 </div>
@@ -435,7 +442,7 @@
                             <span class="font-bold">Tracking & Informasi</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">2 Menu</span>
+                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">3 Menu</span>
                             <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="open ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
@@ -449,6 +456,13 @@
                                 <span>Tracking Lokasi Sales (GPS)</span>
                             </div>
                             <span class="text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">LIVE MAP</span>
+                        </a>
+                        <a href="{{ route('tracking.pjp') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('tracking.pjp*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('tracking.pjp*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Rencana Kunjungan (PJP)</span>
+                            </div>
+                            <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">CALL PLAN</span>
                         </a>
                         <a href="{{ route('tracking.devices') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('tracking.devices*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">

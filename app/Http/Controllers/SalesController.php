@@ -621,4 +621,169 @@ class SalesController extends Controller
             return redirect()->back()->with('error', 'Gagal memproses Sales Retur: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Tampilan Target, Komisi & Leaderboard Sales Kanvaser
+     */
+    public function targets(Request $request)
+    {
+        $salesRaw = DB::table('sales')
+            ->join('taps', 'sales.tap_id', '=', 'taps.id')
+            ->select('sales.*', 'taps.name as tap_name')
+            ->where('sales.status', 'ACTIVE')
+            ->get();
+
+        // Ambil omset riil dari sales_orders
+        $soTotals = DB::table('sales_orders')
+            ->whereNotIn('status', ['REJECTED'])
+            ->select('sales_id', DB::raw('SUM(grand_total) as total_omset'), DB::raw('COUNT(id) as total_so'))
+            ->groupBy('sales_id')
+            ->get()
+            ->keyBy('sales_id');
+
+        // Target & Capaian Bulanan Realistis untuk Demo Distributor
+        $salesProfiles = [
+            1 => [
+                'target_revenue' => 110000000,
+                'base_revenue' => 129450000, // Di atas target
+                'target_sa_pcs' => 1200,
+                'real_sa_pcs' => 1380,
+                'target_vcr_pcs' => 2500,
+                'real_vcr_pcs' => 2850,
+                'target_noa' => 8,
+                'real_noa' => 11, // Toko baru
+                'avatar_color' => 'bg-amber-500',
+                'badge_title' => 'TOP GUN KANVASER',
+            ],
+            2 => [
+                'target_revenue' => 100000000,
+                'base_revenue' => 108320000,
+                'target_sa_pcs' => 1000,
+                'real_sa_pcs' => 1120,
+                'target_vcr_pcs' => 2200,
+                'real_vcr_pcs' => 2340,
+                'target_noa' => 8,
+                'real_noa' => 9,
+                'avatar_color' => 'bg-blue-600',
+                'badge_title' => 'STAR ACHIEVER',
+            ],
+            3 => [
+                'target_revenue' => 95000000,
+                'base_revenue' => 91800000,
+                'target_sa_pcs' => 950,
+                'real_sa_pcs' => 910,
+                'target_vcr_pcs' => 2000,
+                'real_vcr_pcs' => 1980,
+                'target_noa' => 6,
+                'real_noa' => 7,
+                'avatar_color' => 'bg-emerald-600',
+                'badge_title' => 'SOLID PERFORMER',
+            ],
+        ];
+
+        $leaderboard = [];
+
+        foreach ($salesRaw as $idx => $s) {
+            $profile = $salesProfiles[$s->id] ?? [
+                'target_revenue' => 80000000,
+                'base_revenue' => 72000000,
+                'target_sa_pcs' => 800,
+                'real_sa_pcs' => 750,
+                'target_vcr_pcs' => 1600,
+                'real_vcr_pcs' => 1500,
+                'target_noa' => 5,
+                'real_noa' => 4,
+                'avatar_color' => 'bg-slate-700',
+                'badge_title' => 'CANVAS PRO',
+            ];
+
+            // Tambahkan omset transaksi riil di DB jika ada
+            $realFromDb = (float)($soTotals[$s->id]->total_omset ?? 0);
+            $finalRevenue = $profile['base_revenue'] + $realFromDb;
+            $targetRevenue = $profile['target_revenue'];
+
+            $achievementPct = $targetRevenue > 0 ? round(($finalRevenue / $targetRevenue) * 100, 1) : 0;
+
+            // Hitung Komisi & Bonus Insentif berdasarkan Tier Capaian
+            if ($achievementPct >= 115) {
+                $commissionRate = 3.5;
+                $bonusChampion = 1500000;
+                $tierBadge = 'TIER 3 (SUPERIOR)';
+                $tierColor = 'emerald';
+            } elseif ($achievementPct >= 100) {
+                $commissionRate = 3.0;
+                $bonusChampion = 750000;
+                $tierBadge = 'TIER 2 (TARGET MET)';
+                $tierColor = 'blue';
+            } elseif ($achievementPct >= 90) {
+                $commissionRate = 2.5;
+                $bonusChampion = 0;
+                $tierBadge = 'TIER 1 (QUALIFIED)';
+                $tierColor = 'amber';
+            } else {
+                $commissionRate = 1.5;
+                $bonusChampion = 0;
+                $tierBadge = 'TIER DASAR';
+                $tierColor = 'slate';
+            }
+
+            $commissionAmount = round($finalRevenue * ($commissionRate / 100));
+            $noaBonus = $profile['real_noa'] * 75000; // Rp 75rb per New Open Account
+            $totalTakeHomeIncentive = $commissionAmount + $bonusChampion + $noaBonus;
+
+            $leaderboard[] = (object) [
+                'id' => $s->id,
+                'code' => $s->code,
+                'name' => $s->name,
+                'phone' => $s->phone,
+                'tap_name' => $s->tap_name,
+                'target_revenue' => $targetRevenue,
+                'final_revenue' => $finalRevenue,
+                'achievement_pct' => $achievementPct,
+                'target_sa_pcs' => $profile['target_sa_pcs'],
+                'real_sa_pcs' => $profile['real_sa_pcs'],
+                'target_vcr_pcs' => $profile['target_vcr_pcs'],
+                'real_vcr_pcs' => $profile['real_vcr_pcs'],
+                'target_noa' => $profile['target_noa'],
+                'real_noa' => $profile['real_noa'],
+                'commission_rate' => $commissionRate,
+                'commission_amount' => $commissionAmount,
+                'bonus_champion' => $bonusChampion,
+                'noa_bonus' => $noaBonus,
+                'total_incentive' => $totalTakeHomeIncentive,
+                'tier_badge' => $tierBadge,
+                'tier_color' => $tierColor,
+                'avatar_color' => $profile['avatar_color'],
+                'badge_title' => $profile['badge_title'],
+                'payout_status' => $achievementPct >= 100 ? 'READY FOR PAYOUT' : 'PENDING REVIEW',
+            ];
+        }
+
+        // Urutkan peringkat berdasarkan persentase capaian tertinggi
+        usort($leaderboard, function ($a, $b) {
+            return $b->achievement_pct <=> $a->achievement_pct;
+        });
+
+        // Tetapkan Rank 1, 2, 3 .. N
+        foreach ($leaderboard as $pos => $item) {
+            $item->rank = $pos + 1;
+        }
+
+        // Ringkasan Cluster Level
+        $totalClusterTarget = collect($leaderboard)->sum('target_revenue');
+        $totalClusterRevenue = collect($leaderboard)->sum('final_revenue');
+        $totalClusterPoolIncentive = collect($leaderboard)->sum('total_incentive');
+        $clusterAchievementPct = $totalClusterTarget > 0 ? round(($totalClusterRevenue / $totalClusterTarget) * 100, 1) : 0;
+
+        $topSales = $leaderboard[0] ?? null;
+
+        return view('sales.targets', compact(
+            'leaderboard',
+            'totalClusterTarget',
+            'totalClusterRevenue',
+            'totalClusterPoolIncentive',
+            'clusterAchievementPct',
+            'topSales'
+        ));
+    }
 }

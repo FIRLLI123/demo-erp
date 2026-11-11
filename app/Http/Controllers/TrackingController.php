@@ -194,5 +194,252 @@ class TrackingController extends Controller
 
         return view('tracking.devices', compact('devices'));
     }
+
+    /**
+     * Tampilan Rencana Kunjungan & Call Plan (PJP - Periodic Journey Plan)
+     */
+    public function pjp(Request $request)
+    {
+        $salesList = DB::table('sales')
+            ->join('taps', 'sales.tap_id', '=', 'taps.id')
+            ->select('sales.id', 'sales.code', 'sales.name', 'sales.phone', 'taps.name as tap_name')
+            ->where('sales.status', 'ACTIVE')
+            ->get();
+
+        $selectedSalesId = (int)$request->input('sales_id', $salesList->first()->id ?? 1);
+        $selectedDay = $request->input('day', 'Senin');
+
+        $activeSales = $salesList->firstWhere('id', $selectedSalesId) ?? $salesList->first();
+
+        // Ambil data customer asli dari DB untuk dipetakan ke rute
+        $customersDb = DB::table('customers')->orderBy('id')->get();
+
+        // Rute jadwal mingguan realistis
+        $daysSchedule = [
+            'Senin' => [
+                'area_cluster' => 'Rute Jalur 1 - Ragunan & Pasar Minggu',
+                'target_outlets' => 12,
+                'target_omset' => 6500000,
+            ],
+            'Selasa' => [
+                'area_cluster' => 'Rute Jalur 2 - Kebagusan, Lenteng Agung & Jagakarsa',
+                'target_outlets' => 14,
+                'target_omset' => 7500000,
+            ],
+            'Rabu' => [
+                'area_cluster' => 'Rute Jalur 3 - Cilandak, Ampera & Pejaten',
+                'target_outlets' => 11,
+                'target_omset' => 6000000,
+            ],
+            'Kamis' => [
+                'area_cluster' => 'Rute Jalur 4 - Mampang Prapatan & Warung Buncit',
+                'target_outlets' => 13,
+                'target_omset' => 7000000,
+            ],
+            'Jumat' => [
+                'area_cluster' => 'Rute Jalur 5 - Tebet Barat & Manggarai',
+                'target_outlets' => 10,
+                'target_omset' => 5500000,
+            ],
+            'Sabtu' => [
+                'area_cluster' => 'Rute Jalur 6 - Pancoran & Kalibata (Weekend Push)',
+                'target_outlets' => 15,
+                'target_omset' => 9000000,
+            ],
+        ];
+
+        // Rencana kunjungan toko untuk hari terpilih (berurutan)
+        $routeStops = [
+            [
+                'stop_no' => 1,
+                'time_plan' => '08:30 - 09:00',
+                'customer_name' => 'Toko Berkah Cellindo',
+                'digipos_id' => 'DGP-JKT-10021',
+                'no_rs' => '081299887711',
+                'address' => 'Jl. Ragunan Raya No. 14, Pasar Minggu',
+                'pic' => 'Haji Mansur',
+                'phone' => '081299887711',
+                'status' => 'EFFECTIVE_CALL',
+                'checkin_time' => '08:42 WIB',
+                'checkout_time' => '09:05 WIB',
+                'duration' => '23 mnt',
+                'so_doc' => 'SO/202611/0014',
+                'omset' => 1450000,
+                'notes' => 'Restok perdana Telkomsel 5GB (30 pcs) & Voucher 2.5GB (50 pcs). Toko ramai lancar.',
+                'lat' => -6.2841,
+                'lng' => 106.8436,
+                'photo_verified' => true,
+            ],
+            [
+                'stop_no' => 2,
+                'time_plan' => '09:15 - 09:45',
+                'customer_name' => 'Sinar Maju Komunika',
+                'digipos_id' => 'DGP-JKT-10022',
+                'no_rs' => '082188776622',
+                'address' => 'Jl. Kebagusan Raya No. 45, Pasar Minggu',
+                'pic' => 'Bambang S.',
+                'phone' => '082188776622',
+                'status' => 'EFFECTIVE_CALL',
+                'checkin_time' => '09:20 WIB',
+                'checkout_time' => '09:41 WIB',
+                'duration' => '21 mnt',
+                'so_doc' => 'SO/202611/0015',
+                'omset' => 890000,
+                'notes' => 'Order Voucher Fisik NGRS & saldo Digipos. Minta brosur promo Telkomsel terbaru.',
+                'lat' => -6.2895,
+                'lng' => 106.8402,
+                'photo_verified' => true,
+            ],
+            [
+                'stop_no' => 3,
+                'time_plan' => '10:00 - 10:30',
+                'customer_name' => 'Mitra Rezeki Pulsa',
+                'digipos_id' => 'DGP-JKT-10024',
+                'no_rs' => '081155443311',
+                'address' => 'Jl. Jatipadang Barat No. 12',
+                'pic' => 'Ibu Ratna',
+                'phone' => '081155443311',
+                'status' => 'VISIT_ONLY',
+                'checkin_time' => '10:08 WIB',
+                'checkout_time' => '10:19 WIB',
+                'duration' => '11 mnt',
+                'so_doc' => null,
+                'omset' => 0,
+                'notes' => 'Stok perdana masih ada 15 pcs. Janji repeat order di hari Kamis pada rute berikutnya.',
+                'lat' => -6.2810,
+                'lng' => 106.8375,
+                'photo_verified' => true,
+            ],
+            [
+                'stop_no' => 4,
+                'time_plan' => '10:45 - 11:15',
+                'customer_name' => 'Bintang Phone Cell',
+                'digipos_id' => 'DGP-JKT-10025',
+                'no_rs' => '085233221100',
+                'address' => 'Jl. Salihara No. 8, Pasar Minggu',
+                'pic' => 'Ko Kevin',
+                'phone' => '085233221100',
+                'status' => 'EFFECTIVE_CALL',
+                'checkin_time' => '10:52 WIB',
+                'checkout_time' => '11:14 WIB',
+                'duration' => '22 mnt',
+                'so_doc' => 'SO/202611/0016',
+                'omset' => 2120000,
+                'notes' => 'Ambil paket perdana kuota besar SA 14D & voucher Telkomsel. Pembayaran transfer langsung.',
+                'lat' => -6.2870,
+                'lng' => 106.8480,
+                'photo_verified' => true,
+            ],
+            [
+                'stop_no' => 5,
+                'time_plan' => '11:30 - 12:00',
+                'customer_name' => 'Dua Saudara Telco',
+                'digipos_id' => 'DGP-JKT-10026',
+                'no_rs' => '081377889922',
+                'address' => 'Jl. Sawo Manila No. 19',
+                'pic' => 'Pak Joko',
+                'phone' => '081377889922',
+                'status' => 'CLOSED',
+                'checkin_time' => '11:35 WIB',
+                'checkout_time' => '11:40 WIB',
+                'duration' => '5 mnt',
+                'so_doc' => null,
+                'omset' => 0,
+                'notes' => 'Pintu folding gate tertutup (pemilik sedang melayat). Sudah konfirmasi via WhatsApp.',
+                'lat' => -6.2912,
+                'lng' => 106.8445,
+                'photo_verified' => true,
+            ],
+            [
+                'stop_no' => 6,
+                'time_plan' => '13:00 - 13:30',
+                'customer_name' => 'Sahabat Cell Community',
+                'digipos_id' => 'DGP-JKT-10027',
+                'no_rs' => '082266554433',
+                'address' => 'Jl. Margasatwa Raya No. 7',
+                'pic' => 'Andi Wijaya',
+                'phone' => '082266554433',
+                'status' => 'EFFECTIVE_CALL',
+                'checkin_time' => '13:05 WIB',
+                'checkout_time' => '13:28 WIB',
+                'duration' => '23 mnt',
+                'so_doc' => 'SO/202611/0017',
+                'omset' => 1750000,
+                'notes' => 'Penggantian poster etalase Telkomsel & drop perdana reguler 20 pcs.',
+                'lat' => -6.2950,
+                'lng' => 106.8390,
+                'photo_verified' => true,
+            ],
+            [
+                'stop_no' => 7,
+                'time_plan' => '13:45 - 14:15',
+                'customer_name' => 'Jaya Abadi Cell',
+                'digipos_id' => 'DGP-JKT-10023',
+                'no_rs' => '081311223344',
+                'address' => 'Jl. TB Simatupang No. 88',
+                'pic' => 'Hendro',
+                'phone' => '081311223344',
+                'status' => 'PENDING',
+                'checkin_time' => null,
+                'checkout_time' => null,
+                'duration' => null,
+                'so_doc' => null,
+                'omset' => 0,
+                'notes' => 'Rute kunjungan berikutnya sesudah istirahat siang.',
+                'lat' => -6.2990,
+                'lng' => 106.8420,
+                'photo_verified' => false,
+            ],
+            [
+                'stop_no' => 8,
+                'time_plan' => '14:30 - 15:00',
+                'customer_name' => 'Fajar Telekomunikasi',
+                'digipos_id' => 'DGP-JKT-10028',
+                'no_rs' => '081288990011',
+                'address' => 'Jl. Pejaten Barat Raya No. 25',
+                'pic' => 'Fajar Sidik',
+                'phone' => '081288990011',
+                'status' => 'PENDING',
+                'checkin_time' => null,
+                'checkout_time' => null,
+                'duration' => null,
+                'so_doc' => null,
+                'omset' => 0,
+                'notes' => 'Jadwal sore.',
+                'lat' => -6.2750,
+                'lng' => 106.8330,
+                'photo_verified' => false,
+            ],
+        ];
+
+        // Hitung metrik KPI PJP
+        $totalPlanned = count($routeStops);
+        $visitedCount = collect($routeStops)->whereIn('status', ['EFFECTIVE_CALL', 'VISIT_ONLY', 'CLOSED'])->count();
+        $effectiveCalls = collect($routeStops)->where('status', 'EFFECTIVE_CALL')->count();
+        $visitOnly = collect($routeStops)->where('status', 'VISIT_ONLY')->count();
+        $closedCount = collect($routeStops)->where('status', 'CLOSED')->count();
+        $pendingCount = collect($routeStops)->where('status', 'PENDING')->count();
+        $totalOmsetAchieved = collect($routeStops)->sum('omset');
+
+        $strikeRate = $totalPlanned > 0 ? round(($effectiveCalls / $totalPlanned) * 100, 1) : 0;
+        $callCompliance = $totalPlanned > 0 ? round(($visitedCount / $totalPlanned) * 100, 1) : 0;
+
+        return view('tracking.pjp', compact(
+            'salesList',
+            'activeSales',
+            'selectedDay',
+            'daysSchedule',
+            'routeStops',
+            'totalPlanned',
+            'visitedCount',
+            'effectiveCalls',
+            'visitOnly',
+            'closedCount',
+            'pendingCount',
+            'totalOmsetAchieved',
+            'strikeRate',
+            'callCompliance'
+        ));
+    }
 }
 
