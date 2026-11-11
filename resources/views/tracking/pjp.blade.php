@@ -85,7 +85,9 @@
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
             <div class="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
                 <span class="text-[11px] font-bold text-slate-500 block">Target Toko</span>
-                <span class="text-lg font-extrabold text-slate-900 font-mono mt-0.5 block">{{ $totalPlanned }} Outlet</span>
+                <span class="text-lg font-extrabold text-slate-900 font-mono mt-0.5 block">
+                    <span x-text="stops.length"></span> Outlet
+                </span>
                 <span class="text-[10px] text-slate-400 mt-0.5 block">Jadwal {{ $selectedDay }}</span>
             </div>
 
@@ -135,68 +137,73 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-medium">
-                            @foreach($routeStops as $stop)
+                            <template x-for="(stop, idx) in stops" :key="idx">
                                 <tr class="hover:bg-slate-50/70 transition-colors">
-                                    <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-700">
-                                        #{{ $stop['stop_no'] }}
-                                    </td>
+                                    <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-700" x-text="'#' + stop.stop_no"></td>
 
                                     <td class="py-2.5 px-3">
-                                        <span class="font-bold text-slate-900 block">{{ $stop['customer_name'] }}</span>
-                                        <span class="text-[10px] text-slate-400 font-mono block">{{ $stop['digipos_id'] }} &bull; RS: {{ $stop['no_rs'] }}</span>
+                                        <span class="font-bold text-slate-900 block" x-text="stop.customer_name"></span>
+                                        <span class="text-[10px] text-slate-400 font-mono block" x-text="stop.digipos_id + ' • RS: ' + (stop.no_rs || '-')"></span>
                                     </td>
 
                                     <td class="py-2.5 px-3 text-center">
-                                        @if($stop['status'] === 'EFFECTIVE_CALL')
+                                        <template x-if="stop.status === 'EFFECTIVE_CALL'">
                                             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
                                                 Order Sukses
                                             </span>
-                                        @elseif($stop['status'] === 'VISIT_ONLY')
+                                        </template>
+                                        <template x-if="stop.status === 'VISIT_ONLY'">
                                             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
                                                 Visit Saja
                                             </span>
-                                        @elseif($stop['status'] === 'CLOSED')
+                                        </template>
+                                        <template x-if="stop.status === 'CLOSED'">
                                             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
                                                 Tutup
                                             </span>
-                                        @else
+                                        </template>
+                                        <template x-if="stop.status === 'PENDING'">
                                             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-400">
                                                 Pending
                                             </span>
-                                        @endif
+                                        </template>
                                     </td>
 
                                     <td class="py-2.5 px-3 text-center font-mono text-[11px] text-slate-600">
-                                        @if($stop['checkin_time'])
-                                            <span>{{ $stop['checkin_time'] }}</span>
-                                            <span class="text-slate-400 block text-[10px]">({{ $stop['duration'] }})</span>
-                                        @else
-                                            <span class="text-slate-400">-</span>
-                                        @endif
+                                        <template x-if="stop.checkin_time">
+                                            <div>
+                                                <span x-text="stop.checkin_time"></span>
+                                                <span class="text-slate-400 block text-[10px]" x-text="'(' + stop.duration + ')'"></span>
+                                            </div>
+                                        </template>
+                                        <template x-if="!stop.checkin_time">
+                                            <span class="text-slate-400 font-mono text-xs">-</span>
+                                        </template>
                                     </td>
 
                                     <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">
-                                        @if($stop['omset'] > 0)
-                                            <span class="text-emerald-700">Rp {{ number_format($stop['omset'], 0, ',', '.') }}</span>
-                                        @else
+                                        <template x-if="stop.omset > 0">
+                                            <span class="text-emerald-700" x-text="'Rp ' + Number(stop.omset).toLocaleString('id-ID')"></span>
+                                        </template>
+                                        <template x-if="!stop.omset || stop.omset <= 0">
                                             <span class="text-slate-300">-</span>
-                                        @endif
+                                        </template>
                                     </td>
 
                                     <td class="py-2.5 px-3 text-center">
                                         <div class="flex items-center justify-center gap-1">
-                                            @if($stop['photo_verified'])
-                                                <button type="button" @click="openPhotoModal({{ json_encode($stop) }})" class="p-1 hover:bg-slate-100 rounded text-slate-600" title="Foto Checkin">
+                                            <template x-if="stop.photo_verified">
+                                                <button type="button" @click="openPhotoModal(stop)" class="p-1 hover:bg-slate-100 rounded text-slate-600" title="Foto Checkin">
                                                     <i data-lucide="camera" class="w-3.5 h-3.5"></i>
                                                 </button>
-                                            @endif
-                                            <button type="button" @click="focusMarker({{ $stop['stop_no'] - 1 }})" class="p-1 hover:bg-slate-100 rounded text-slate-600" title="Fokus Peta">
+                                            </template>
+                                            <button type="button" @click="focusMarker(idx)" class="p-1 hover:bg-slate-100 rounded text-slate-600" title="Fokus Peta">
                                                 <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            @endforeach
+                            </template>
                         </tbody>
                     </table>
                 </div>
@@ -281,30 +288,27 @@
         <div x-show="showAddPlanModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
             <div @click.away="showAddPlanModal = false" class="bg-white rounded-xl max-w-sm w-full overflow-hidden shadow-xl border border-slate-200">
                 <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
-                    <span class="font-bold text-xs uppercase tracking-wider">Atur Rute Kunjungan</span>
+                    <span class="font-bold text-xs uppercase tracking-wider">Tambah Outlet ke Rute</span>
                     <button type="button" @click="showAddPlanModal = false" class="text-slate-400 hover:text-white">
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
                 </div>
 
-                <form @submit.prevent="showAddPlanModal = false" class="p-4 text-xs space-y-3">
+                <form data-no-loading @submit.prevent="submitNewStop()" class="p-4 text-xs space-y-3">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Hari</label>
-                        <select class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
-                            @foreach(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as $d)
-                                <option value="{{ $d }}" {{ $selectedDay === $d ? 'selected' : '' }}>{{ $d }}</option>
-                            @endforeach
+                        <label class="block font-bold text-slate-700 mb-1">Pilih Toko / Outlet</label>
+                        <select x-model="selectedCustomerToAdd" required class="w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
+                            <option value="">-- Pilih Toko dari Master --</option>
+                            <option value="DGP-JKT-10029|Konter Barokah Cell|Jl. Warung Jati Barat No. 12|-6.2780|106.8310">DGP-JKT-10029 - Konter Barokah Cell</option>
+                            <option value="DGP-JKT-10030|Sentral Perdana 99|Jl. TB Simatupang No. 44|-6.2920|106.8350">DGP-JKT-10030 - Sentral Perdana 99</option>
+                            <option value="DGP-JKT-10031|Sahabat Pulsa Mandiri|Jl. Raya Lenteng Agung No. 7|-6.3150|106.8320">DGP-JKT-10031 - Sahabat Pulsa Mandiri</option>
+                            <option value="DGP-JKT-10032|Plaza Cellular Tebet|Jl. Tebet Barat No. 88|-6.2350|106.8520">DGP-JKT-10032 - Plaza Cellular Tebet</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Pilih Toko / Outlet</label>
-                        <select class="w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
-                            <option value="">-- Pilih Toko --</option>
-                            <option value="1">[DGP-JKT-10021] Toko Berkah Cellindo</option>
-                            <option value="2">[DGP-JKT-10022] Sinar Maju Komunika</option>
-                            <option value="3">[DGP-JKT-10023] Jaya Abadi Cell</option>
-                        </select>
+                        <label class="block font-bold text-slate-700 mb-1">Estimasi Jam Kunjungan</label>
+                        <input type="text" x-model="newTimePlan" placeholder="Contoh: 15:15 - 15:45" class="w-full text-xs font-medium bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
                     </div>
 
                     <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
@@ -312,7 +316,7 @@
                             Batal
                         </button>
                         <button type="submit" class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs">
-                            Simpan
+                            Simpan ke Rute
                         </button>
                     </div>
                 </form>
@@ -334,6 +338,8 @@
                 photoModalOpen: false,
                 selectedStop: null,
                 showAddPlanModal: false,
+                selectedCustomerToAdd: '',
+                newTimePlan: '15:15 - 15:45',
 
                 init() {
                     this.$nextTick(() => {
@@ -354,6 +360,17 @@
                         attribution: '&copy; OpenStreetMap contributors',
                         maxZoom: 19
                     }).addTo(this.map);
+
+                    this.drawStopsAndRoute();
+                },
+
+                drawStopsAndRoute() {
+                    // Clear existing markers & polyline if any
+                    this.markers.forEach(m => this.map.removeLayer(m));
+                    this.markers = [];
+                    if (this.polyline) {
+                        this.map.removeLayer(this.polyline);
+                    }
 
                     const latlngs = [];
 
@@ -405,6 +422,52 @@
                         }).addTo(this.map);
 
                         this.map.fitBounds(this.polyline.getBounds(), { padding: [30, 30] });
+                    }
+                },
+
+                submitNewStop() {
+                    if (!this.selectedCustomerToAdd) {
+                        alert('Silakan pilih toko terlebih dahulu');
+                        return;
+                    }
+
+                    const parts = this.selectedCustomerToAdd.split('|');
+                    const digiposId = parts[0];
+                    const name = parts[1];
+                    const address = parts[2];
+                    const lat = parseFloat(parts[3]) || -6.2841;
+                    const lng = parseFloat(parts[4]) || 106.8436;
+
+                    const newStopNo = this.stops.length + 1;
+                    const newStop = {
+                        stop_no: newStopNo,
+                        time_plan: this.newTimePlan || '15:15 - 15:45',
+                        customer_name: name,
+                        digipos_id: digiposId,
+                        no_rs: '0812' + Math.floor(10000000 + Math.random() * 90000000),
+                        address: address,
+                        pic: 'PIC Toko',
+                        status: 'PENDING',
+                        checkin_time: null,
+                        duration: null,
+                        omset: 0,
+                        lat: lat,
+                        lng: lng,
+                        photo_verified: false
+                    };
+
+                    this.stops.push(newStop);
+                    this.showAddPlanModal = false;
+                    this.selectedCustomerToAdd = '';
+
+                    // Refresh tampilan peta & polyline
+                    if (this.map) {
+                        this.drawStopsAndRoute();
+                        this.map.flyTo([lat, lng], 15, { duration: 1 });
+                    }
+
+                    if (window.showToast) {
+                        window.showToast('Outlet ' + name + ' berhasil ditambahkan ke rute kunjungan!', 'success', 'Rute Ditambahkan');
                     }
                 },
 
