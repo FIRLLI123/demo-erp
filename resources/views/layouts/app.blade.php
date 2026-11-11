@@ -307,7 +307,7 @@
                             <span class="font-bold">Master & Organisasi</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">6 Menu</span>
+                            <span class="text-[9px] bg-slate-900/90 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60 font-mono font-normal">12 Menu</span>
                             <span class="inline-flex items-center justify-center transition-transform duration-300 ease-in-out" :class="openMenus.master ? 'rotate-90 text-rose-400' : 'text-slate-500 group-hover:text-slate-300'">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </span>
@@ -337,6 +337,48 @@
                         <a href="{{ route('master.customers') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.customers*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.customers*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
                             <span>Master Toko / Outlet</span>
+                        </a>
+                        <a href="{{ route('master.banks') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.banks*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.banks*') ? 'bg-blue-400 ring-2 ring-blue-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Rekening Bank & Kas PT</span>
+                            </div>
+                            <span class="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-mono font-bold">FINANCE</span>
+                        </a>
+                        <a href="{{ route('master.vendors') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.vendors*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.vendors*') ? 'bg-emerald-400 ring-2 ring-emerald-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Vendor & Principal</span>
+                            </div>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">VENDOR</span>
+                        </a>
+                        <a href="{{ route('master.price-profiles') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.price-profiles*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.price-profiles*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Skema Harga & Tiering</span>
+                            </div>
+                            <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">TIERING</span>
+                        </a>
+                        <a href="{{ route('master.customer-segments') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.customer-segments*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.customer-segments*') ? 'bg-purple-400 ring-2 ring-purple-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Klasifikasi Toko (RS/BOS)</span>
+                            </div>
+                            <span class="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded font-mono font-bold">CHANNEL</span>
+                        </a>
+                        <a href="{{ route('master.territories') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.territories*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.territories*') ? 'bg-cyan-400 ring-2 ring-cyan-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Wilayah & Kecamatan</span>
+                            </div>
+                            <span class="text-[9px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono font-bold">GEO</span>
+                        </a>
+                        <a href="{{ route('master.approval-rules') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.approval-rules*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.approval-rules*') ? 'bg-rose-400 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Matriks Limit Otorisasi</span>
+                            </div>
+                            <span class="text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">MATRIX</span>
                         </a>
                         <a href="{{ route('master.users') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.users*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.users*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>

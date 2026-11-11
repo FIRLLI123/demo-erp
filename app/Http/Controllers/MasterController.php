@@ -332,4 +332,305 @@ class MasterController extends Controller
 
         return redirect()->route('master.users')->with('success', "Data akun pengguna [{$request->name}] berhasil diperbarui.");
     }
+
+    // ========================================================
+    // MASTER TAMBAHAN 1: REKENING BANK & KAS PT
+    // ========================================================
+    public function banks(Request $request)
+    {
+        if (DB::table('company_banks')->count() === 0) {
+            DB::table('company_banks')->insert([
+                [
+                    'bank_name' => 'Bank Central Asia (BCA)',
+                    'account_number' => '8830-192-831',
+                    'account_holder' => 'PT WAHANA PUTRA YUDHA',
+                    'branch_name' => 'KCU Tangerang Kisamaun',
+                    'account_type' => 'BANK',
+                    'balance' => 450000000,
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'bank_name' => 'Bank Mandiri',
+                    'account_number' => '155-00-9823101-2',
+                    'account_holder' => 'PT WAHANA PUTRA YUDHA',
+                    'branch_name' => 'KC Bintaro Sektor 7',
+                    'account_type' => 'BANK',
+                    'balance' => 280000000,
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'bank_name' => 'Bank Syariah Indonesia (BSI)',
+                    'account_number' => '712-093-8491',
+                    'account_holder' => 'PT WAHANA PUTRA YUDHA',
+                    'branch_name' => 'KC BSD City Serpong',
+                    'account_type' => 'BANK',
+                    'balance' => 125000000,
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'bank_name' => 'Kas Operasional Kasir',
+                    'account_number' => 'KAS-TGR-01',
+                    'account_holder' => 'Bendahara Kasir TAP Tangerang',
+                    'branch_name' => 'Kantor TAP Tangerang',
+                    'account_type' => 'CASH',
+                    'balance' => 15450000,
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'bank_name' => 'Kas Operasional Kasir',
+                    'account_number' => 'KAS-SRP-02',
+                    'account_holder' => 'Bendahara Kasir TAP Serpong',
+                    'branch_name' => 'Kantor TAP Serpong',
+                    'account_type' => 'CASH',
+                    'balance' => 8750000,
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+        }
+
+        $banks = DB::table('company_banks')->orderBy('account_type')->orderBy('bank_name')->get();
+
+        $kpi = [
+            'total_accounts' => $banks->count(),
+            'total_balance' => $banks->where('status', 'ACTIVE')->sum('balance'),
+            'bank_count' => $banks->where('account_type', 'BANK')->count(),
+            'cash_count' => $banks->where('account_type', 'CASH')->count(),
+        ];
+
+        return view('master.banks', compact('banks', 'kpi'));
+    }
+
+    public function storeBank(Request $request)
+    {
+        $request->validate([
+            'bank_name' => 'required|string|max:60',
+            'account_number' => 'nullable|string|max:50',
+            'account_holder' => 'required|string|max:100',
+            'branch_name' => 'nullable|string|max:100',
+            'account_type' => 'required|in:BANK,CASH',
+            'balance' => 'required|numeric|min:0',
+        ]);
+
+        DB::table('company_banks')->insert([
+            'bank_name' => $request->bank_name,
+            'account_number' => $request->account_number ?: 'KAS-' . strtoupper(substr(uniqid(), -4)),
+            'account_holder' => $request->account_holder,
+            'branch_name' => $request->branch_name,
+            'account_type' => $request->account_type,
+            'balance' => $request->balance,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.banks')->with('success', "Rekening [{$request->bank_name} - {$request->account_holder}] berhasil ditambahkan.");
+    }
+
+    // ========================================================
+    // MASTER TAMBAHAN 2: VENDOR & PRINCIPAL
+    // ========================================================
+    public function vendors(Request $request)
+    {
+        if (DB::table('vendors')->count() === 0) {
+            DB::table('vendors')->insert([
+                [
+                    'code' => 'VDR-001',
+                    'name' => 'PT Telekomunikasi Selular (Telkomsel)',
+                    'category' => 'PRINCIPAL_TELCO',
+                    'contact_person' => 'Bpk. Arya Wibowo (Account Manager)',
+                    'phone' => '021-5240123',
+                    'email' => 'corporate.sales@telkomsel.co.id',
+                    'address' => 'Telkom Landmark Tower, Jl. Gatot Subroto No. 52, Jakarta Selatan',
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'code' => 'VDR-002',
+                    'name' => 'CV Mandiri Perkasa Printing',
+                    'category' => 'PRINTING_VOUCHER',
+                    'contact_person' => 'Bpk. Bambang Sutrisno',
+                    'phone' => '0812-8899-2211',
+                    'email' => 'sales@mandiriprinting.com',
+                    'address' => 'Kawasan Industri Manis Blok C No. 4, Jatiuwung, Tangerang',
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'code' => 'VDR-003',
+                    'name' => 'PT Graha Media Distribusi',
+                    'category' => 'MERCHANDISE_POSM',
+                    'contact_person' => 'Ibu Ratna Dewi',
+                    'phone' => '021-5830911',
+                    'email' => 'cs@grahamedia.co.id',
+                    'address' => 'Ruko ITC BSD Sektor 7 No. 12, Serpong, Tangerang Selatan',
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'code' => 'VDR-004',
+                    'name' => 'PT Logistik Nusantara Express',
+                    'category' => 'LOGISTIK_ARMADA',
+                    'contact_person' => 'Bpk. Dedi Kurniawan',
+                    'phone' => '0811-9022-3344',
+                    'email' => 'ops@logistiknusantara.co.id',
+                    'address' => 'Jl. Daan Mogot Km. 19 No. 88, Batuceper, Tangerang',
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+        }
+
+        $vendors = DB::table('vendors')->orderBy('code')->get();
+
+        $kpi = [
+            'total_vendors' => $vendors->count(),
+            'active_vendors' => $vendors->where('status', 'ACTIVE')->count(),
+            'principal_count' => $vendors->where('category', 'PRINCIPAL_TELCO')->count(),
+            'supplies_count' => $vendors->whereIn('category', ['PRINTING_VOUCHER', 'MERCHANDISE_POSM', 'LOGISTIK_ARMADA'])->count(),
+        ];
+
+        return view('master.vendors', compact('vendors', 'kpi'));
+    }
+
+    public function storeVendor(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:150',
+            'category' => 'required|string|max:60',
+            'contact_person' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:30',
+            'email' => 'nullable|email|max:100',
+            'address' => 'nullable|string',
+        ]);
+
+        $nextNum = DB::table('vendors')->count() + 1;
+        $code = 'VDR-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+
+        DB::table('vendors')->insert([
+            'code' => $code,
+            'name' => $request->name,
+            'category' => $request->category,
+            'contact_person' => $request->contact_person,
+            'phone' => $request->phone,
+            'email' => $request->email,
+            'address' => $request->address,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.vendors')->with('success', "Vendor [{$code} - {$request->name}] berhasil didaftarkan.");
+    }
+
+    // ========================================================
+    // MASTER TAMBAHAN 3: SKEMA HARGA (PRICE PROFILE)
+    // ========================================================
+    public function priceProfiles(Request $request)
+    {
+        if (DB::table('price_profiles')->count() === 0) {
+            DB::table('price_profiles')->insert([
+                [
+                    'code' => 'PRC-RS',
+                    'name' => 'Tier Retail Outlet (RS)',
+                    'segment' => 'RS',
+                    'discount_percentage' => 0.00,
+                    'min_order_qty' => 1,
+                    'description' => 'Skema harga normal untuk konter pulsa retail umum / outlet sell-through.',
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'code' => 'PRC-BOS',
+                    'name' => 'Tier Grosir / Bakul (BOS)',
+                    'segment' => 'BOS',
+                    'discount_percentage' => 2.50,
+                    'min_order_qty' => 50,
+                    'description' => 'Skema harga khusus pembelian grosir partai (Bakul Kuota) dengan volume order tinggi.',
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'code' => 'PRC-SD',
+                    'name' => 'Tier Sub-Distributor (SD)',
+                    'segment' => 'SD',
+                    'discount_percentage' => 4.50,
+                    'min_order_qty' => 250,
+                    'description' => 'Skema harga distributor cabang sub-wilayah dengan komitmen buffer stok wilayah cluster.',
+                    'status' => 'ACTIVE',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+        }
+
+        $profiles = DB::table('price_profiles')->orderBy('code')->get();
+
+        $kpi = [
+            'total_profiles' => $profiles->count(),
+            'active_profiles' => $profiles->where('status', 'ACTIVE')->count(),
+            'rs_count' => DB::table('customers')->where('status', 'ACTIVE')->count(),
+        ];
+
+        return view('master.price_profiles', compact('profiles', 'kpi'));
+    }
+
+    public function storePriceProfile(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|max:30|unique:price_profiles,code',
+            'name' => 'required|string|max:100',
+            'segment' => 'required|in:RS,BOS,SD',
+            'discount_percentage' => 'required|numeric|min:0|max:100',
+            'min_order_qty' => 'required|integer|min:1',
+            'description' => 'nullable|string',
+        ]);
+
+        DB::table('price_profiles')->insert([
+            'code' => strtoupper($request->code),
+            'name' => $request->name,
+            'segment' => $request->segment,
+            'discount_percentage' => $request->discount_percentage,
+            'min_order_qty' => $request->min_order_qty,
+            'description' => $request->description,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.price-profiles')->with('success', "Skema harga [{$request->code} - {$request->name}] berhasil ditambahkan.");
+    }
+
+    // ========================================================
+    // MASTER TAMBAHAN 4, 5, 6: PREVIEWS & SEGMENTS
+    // ========================================================
+    public function customerSegments()
+    {
+        return view('master.customer_segments');
+    }
+
+    public function territories()
+    {
+        return view('master.territories');
+    }
+
+    public function approvalRules()
+    {
+        return view('master.approval_rules');
+    }
 }

@@ -32,6 +32,17 @@ Route::prefix('master')->name('master.')->group(function () {
     Route::get('/users', [MasterController::class, 'users'])->name('users');
     Route::post('/users', [MasterController::class, 'storeUser'])->name('users.store');
     Route::post('/users/update/{id}', [MasterController::class, 'updateUser'])->name('users.update');
+    
+    // Master Tambahan (Bank, Vendor, Price Profile, Segmen, Wilayah, Approval Matrix)
+    Route::get('/banks', [MasterController::class, 'banks'])->name('banks');
+    Route::post('/banks', [MasterController::class, 'storeBank'])->name('banks.store');
+    Route::get('/vendors', [MasterController::class, 'vendors'])->name('vendors');
+    Route::post('/vendors', [MasterController::class, 'storeVendor'])->name('vendors.store');
+    Route::get('/price-profiles', [MasterController::class, 'priceProfiles'])->name('price-profiles');
+    Route::post('/price-profiles', [MasterController::class, 'storePriceProfile'])->name('price-profiles.store');
+    Route::get('/customer-segments', [MasterController::class, 'customerSegments'])->name('customer-segments');
+    Route::get('/territories', [MasterController::class, 'territories'])->name('territories');
+    Route::get('/approval-rules', [MasterController::class, 'approvalRules'])->name('approval-rules');
 });
 
 // Procurement (PO & GR)
