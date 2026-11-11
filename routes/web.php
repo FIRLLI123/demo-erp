@@ -11,6 +11,7 @@ use App\Http\Controllers\SalesController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TrackingController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AiAssistantController;
 
 // Dashboard
@@ -90,6 +91,12 @@ Route::prefix('tracking')->name('tracking.')->group(function () {
     Route::get('/locations', [TrackingController::class, 'locations'])->name('locations');
     Route::get('/pjp', [TrackingController::class, 'pjp'])->name('pjp');
     Route::get('/devices', [TrackingController::class, 'devices'])->name('devices');
+});
+
+// Approval Center (Pusat Persetujuan Terpadu)
+Route::prefix('approvals')->name('approvals.')->group(function () {
+    Route::get('/', [ApprovalController::class, 'index'])->name('index');
+    Route::post('/process', [ApprovalController::class, 'process'])->name('process');
 });
 
 // AI Assistant Copilot (Nisa)

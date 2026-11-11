@@ -244,6 +244,17 @@
                     </a>
                 </div>
 
+                <!-- Group: APPROVAL CENTER -->
+                <div>
+                    <a href="{{ route('approvals.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs uppercase tracking-wider font-bold transition-all {{ request()->routeIs('approvals*') ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg shadow-red-600/30 ring-1 ring-white/20' : 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="shield-check" class="w-4 h-4 {{ request()->routeIs('approvals*') ? 'text-white' : 'text-amber-400' }}"></i>
+                            <span>Pusat Persetujuan</span>
+                        </div>
+                        <span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono px-1.5 py-0.5 rounded font-bold">APPROVAL</span>
+                    </a>
+                </div>
+
                 <!-- Group: MASTER HIERARKI (Collapsible Dropdown) -->
                 <div x-data="{ open: {{ request()->routeIs('master.*') ? 'true' : 'true' }} }" class="space-y-1">
                     <button type="button" @click="open = !open" 
@@ -534,7 +545,8 @@
 
             <!-- Page Body -->
             <main class="flex-1 overflow-y-auto p-6 md:p-8">
-                {{ $slot }}
+                {{ $slot ?? '' }}
+                @yield('content')
             </main>
         </div>
     </div>
