@@ -165,4 +165,165 @@ class InventoryController extends Controller
             return redirect()->back()->with('error', 'Gagal mutasi: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Halaman Stock Adjustment (+/-)
+     */
+    public function adjustment(Request $request)
+    {
+        $adjustments = DB::table('stock_mutations')
+            ->join('warehouses', 'stock_mutations.warehouse_id', '=', 'warehouses.id')
+            ->join('products', 'stock_mutations.product_id', '=', 'products.id')
+            ->where('stock_mutations.doc_type', 'ADJ')
+            ->select(
+                'stock_mutations.*',
+                'warehouses.name as warehouse_name',
+                'warehouses.code as warehouse_code',
+                'warehouses.type as warehouse_type',
+                'products.name as product_name',
+                'products.sku',
+                'products.type as product_type'
+            )
+            ->orderByDesc('stock_mutations.id')
+            ->get();
+
+        $warehouses = DB::table('warehouses')
+            ->where('status', 'ACTIVE')
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
+
+        $products = DB::table('products')
+            ->where('status', 'ACTIVE')
+            ->orderBy('name')
+            ->get();
+
+        $balances = DB::table('stock_balances')
+            ->select('warehouse_id', 'product_id', 'quantity')
+            ->get();
+
+        $totalAdj = $adjustments->count();
+        $totalPlus = $adjustments->where('mutation_type', 'IN')->sum('quantity');
+        $totalMinus = $adjustments->where('mutation_type', 'OUT')->sum('quantity');
+        $totalWarehouseAffected = $adjustments->pluck('warehouse_id')->unique()->count();
+
+        return view('inventory.adjustment', compact(
+            'adjustments',
+            'warehouses',
+            'products',
+            'balances',
+            'totalAdj',
+            'totalPlus',
+            'totalMinus',
+            'totalWarehouseAffected'
+        ));
+    }
+
+    /**
+     * Proses Simpan Stock Adjustment (+/-) dengan Update Stok Realtime
+     */
+    public function storeAdjustment(Request $request)
+    {
+        $request->validate([
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'product_id' => 'required|exists:products,id',
+            'adjustment_type' => 'required|in:PLUS,MINUS',
+            'quantity' => 'required|integer|min:1',
+            'notes' => 'required|string|max:255',
+        ]);
+
+        $warehouseId = $request->input('warehouse_id');
+        $productId = $request->input('product_id');
+        $type = $request->input('adjustment_type');
+        $qty = (int) $request->input('quantity');
+        $notes = $request->input('notes');
+
+        DB::beginTransaction();
+        try {
+            $balance = DB::table('stock_balances')
+                ->where('warehouse_id', $warehouseId)
+                ->where('product_id', $productId)
+                ->first();
+
+            $currentStock = $balance ? (int) $balance->quantity : 0;
+
+            if ($type === 'MINUS' && $currentStock < $qty) {
+                return redirect()->back()->with('error', "Penyesuaian stok minus gagal! Stok saat ini ({$currentStock}) tidak mencukupi untuk dikurangi sebanyak {$qty}.");
+            }
+
+            if (!$balance) {
+                DB::table('stock_balances')->insert([
+                    'warehouse_id' => $warehouseId,
+                    'product_id' => $productId,
+                    'quantity' => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $count = DB::table('stock_mutations')->where('doc_type', 'ADJ')->count() + 1;
+            $docNum = 'ADJ/' . date('Ym') . '/' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+            if ($type === 'PLUS') {
+                DB::table('stock_balances')
+                    ->where('warehouse_id', $warehouseId)
+                    ->where('product_id', $productId)
+                    ->increment('quantity', $qty);
+                $mutationType = 'IN';
+            } else {
+                DB::table('stock_balances')
+                    ->where('warehouse_id', $warehouseId)
+                    ->where('product_id', $productId)
+                    ->decrement('quantity', $qty);
+                $mutationType = 'OUT';
+            }
+
+            $balanceAfter = DB::table('stock_balances')
+                ->where('warehouse_id', $warehouseId)
+                ->where('product_id', $productId)
+                ->value('quantity') ?? 0;
+
+            // Catat ke Buku Kartu Stok (stock_mutations)
+            DB::table('stock_mutations')->insert([
+                'date' => date('Y-m-d'),
+                'warehouse_id' => $warehouseId,
+                'product_id' => $productId,
+                'doc_type' => 'ADJ',
+                'doc_number' => $docNum,
+                'mutation_type' => $mutationType,
+                'quantity' => $qty,
+                'balance_after' => $balanceAfter,
+                'notes' => "[Penyesuaian Fisik " . ($type === 'PLUS' ? '+' : '-') . "] {$notes}",
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Catat ke Audit Log jika tabel ada
+            if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+                $wh = DB::table('warehouses')->where('id', $warehouseId)->first();
+                $prod = DB::table('products')->where('id', $productId)->first();
+
+                DB::table('activity_logs')->insert([
+                    'user_id' => 1,
+                    'user_name' => 'Supervisor Logistik / Admin',
+                    'user_role' => 'Warehouse Supervisor',
+                    'action' => $type === 'PLUS' ? 'STOCK_ADJUSTMENT_ADD' : 'STOCK_ADJUSTMENT_DEDUCT',
+                    'module' => 'INVENTORY',
+                    'doc_number' => $docNum,
+                    'severity' => $type === 'MINUS' ? 'WARNING' : 'INFO',
+                    'description' => "Penyesuaian stok ({$type} {$qty} pcs) untuk '{$prod->name}' di {$wh->name}. Saldo akhir: {$balanceAfter} pcs. Alasan: {$notes}",
+                    'ip_address' => $request->ip() ?? '127.0.0.1',
+                    'user_agent' => $request->userAgent() ?? 'System Desktop',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('inventory.adjustment')->with('success', "Stock Adjustment [{$docNum}] berhasil disimpan! Stok fisik langsung diperbarui menjadi {$balanceAfter} pcs dan riwayat mutasi tercatat.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal memproses penyesuaian stok: ' . $e->getMessage());
+        }
+    }
 }

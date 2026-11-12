@@ -404,4 +404,72 @@ class ProcurementController extends Controller
             return redirect()->back()->with('error', 'Gagal memproses GR: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Halaman Purchase Retur (Retur Pembelian ke Vendor/Principal)
+     */
+    public function returns(Request $request)
+    {
+        // Ambil daftar purchase order yang sudah diterima (RECEIVED) sebagai referensi retur
+        $receivedPos = DB::table('purchase_orders')
+            ->join('taps', 'purchase_orders.tap_id', '=', 'taps.id')
+            ->whereIn('purchase_orders.status', ['RECEIVED', 'COMPLETED'])
+            ->select('purchase_orders.*', 'taps.name as tap_name')
+            ->orderByDesc('purchase_orders.id')
+            ->get();
+
+        // Sample / initial records Purchase Returns untuk visualisasi Clean Corporate ERP
+        $sampleReturns = [
+            (object) [
+                'id' => 1,
+                'doc_number' => 'PR/202611/0001',
+                'return_date' => '2026-11-10',
+                'ref_po_number' => 'PO/202611/0001',
+                'vendor_name' => 'PT Telekomunikasi Selular (Telkomsel Regional)',
+                'warehouse_name' => 'Gudang Utama TAP Depok',
+                'total_qty' => 150,
+                'total_amount' => 4500000,
+                'reason' => 'Kerusakan fisik segel voucher & masa kadaluarsa batch pendek',
+                'status' => 'APPROVED',
+                'status_badge' => 'emerald',
+            ],
+            (object) [
+                'id' => 2,
+                'doc_number' => 'PR/202611/0002',
+                'return_date' => '2026-11-11',
+                'ref_po_number' => 'PO/202611/0002',
+                'vendor_name' => 'PT Distribusi Logistik Perdana',
+                'warehouse_name' => 'Gudang Utama TAP Bogor Kota',
+                'total_qty' => 50,
+                'total_amount' => 1250000,
+                'reason' => 'Chip perdana tidak terbaca sistem HLR saat sampling QC masuk',
+                'status' => 'PENDING_APPROVAL',
+                'status_badge' => 'amber',
+            ],
+            (object) [
+                'id' => 3,
+                'doc_number' => 'PR/202611/0003',
+                'return_date' => '2026-11-12',
+                'ref_po_number' => 'PO/202611/0003',
+                'vendor_name' => 'PT Sarana Distribusi Nusantara',
+                'warehouse_name' => 'Gudang Satelit TAP Cibinong',
+                'total_qty' => 25,
+                'total_amount' => 750000,
+                'reason' => 'Perbedaan barcode master karton dengan fisik barang',
+                'status' => 'DRAFT',
+                'status_badge' => 'slate',
+            ],
+        ];
+
+        $returns = collect($sampleReturns);
+
+        $kpi = [
+            'total_returns' => $returns->count(),
+            'approved_count' => $returns->where('status', 'APPROVED')->count(),
+            'pending_count' => $returns->where('status', 'PENDING_APPROVAL')->count(),
+            'total_value' => $returns->sum('total_amount'),
+        ];
+
+        return view('procurement.returns', compact('returns', 'receivedPos', 'kpi'));
+    }
 }

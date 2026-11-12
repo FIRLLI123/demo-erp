@@ -786,4 +786,79 @@ class SalesController extends Controller
             'topSales'
         ));
     }
+
+    /**
+     * Halaman Sales Retur (Retur Penjualan / Retur SO dari Outlet)
+     */
+    public function returnsIndex(Request $request)
+    {
+        $dbReturns = DB::table('sales_returns')
+            ->join('customers', 'sales_returns.customer_id', '=', 'customers.id')
+            ->join('warehouses', 'sales_returns.warehouse_id', '=', 'warehouses.id')
+            ->leftJoin('sales_orders', 'sales_returns.sales_order_id', '=', 'sales_orders.id')
+            ->select(
+                'sales_returns.*',
+                'customers.name as customer_name',
+                'customers.code as customer_code',
+                'warehouses.name as warehouse_name',
+                'sales_orders.doc_number as so_number'
+            )
+            ->orderByDesc('sales_returns.id')
+            ->get();
+
+        // Jika tabel sales_returns masih belum memiliki baris, buat tampilan data ilustratif awal
+        if ($dbReturns->isEmpty()) {
+            $sampleReturns = [
+                (object) [
+                    'id' => 1,
+                    'doc_type' => 'SR',
+                    'doc_number' => 'SR/202611/0001',
+                    'ref_doc_type' => 'SO',
+                    'ref_doc_number' => 'SO/202611/0002',
+                    'customer_name' => 'Outlet Berkah Cell (Cimanggis)',
+                    'customer_code' => 'OUT-002',
+                    'warehouse_name' => 'Gudang Sales Motor (SM-01)',
+                    'return_date' => '2026-11-10',
+                    'total_amount' => 450000,
+                    'status' => 'COMPLETED',
+                    'notes' => 'Fisik voucher gesek tergores saat display etalase outlet',
+                ],
+                (object) [
+                    'id' => 2,
+                    'doc_type' => 'SR',
+                    'doc_number' => 'SR/202611/0002',
+                    'ref_doc_type' => 'SO',
+                    'ref_doc_number' => 'SO/202611/0005',
+                    'customer_name' => 'Pojok Pulsa Express (Depok Timur)',
+                    'customer_code' => 'OUT-005',
+                    'warehouse_name' => 'Gudang Utama TAP Depok',
+                    'return_date' => '2026-11-11',
+                    'total_amount' => 1250000,
+                    'status' => 'PENDING',
+                    'notes' => 'Tukar tipe denominasi paket data Telkomsel Lite 10GB',
+                ]
+            ];
+            $returns = collect($sampleReturns);
+        } else {
+            $returns = $dbReturns;
+        }
+
+        $kpi = [
+            'total_returns' => $returns->count(),
+            'total_amount' => $returns->sum('total_amount'),
+            'completed_count' => $returns->where('status', 'COMPLETED')->count(),
+            'pending_count' => $returns->where('status', '!=', 'COMPLETED')->count(),
+        ];
+
+        // Daftar Sales Orders yang sudah lunas / terkirim
+        $deliveredSos = DB::table('sales_orders')
+            ->join('customers', 'sales_orders.customer_id', '=', 'customers.id')
+            ->whereIn('sales_orders.status', ['DELIVERED', 'COMPLETED'])
+            ->select('sales_orders.*', 'customers.name as customer_name')
+            ->orderByDesc('sales_orders.id')
+            ->take(10)
+            ->get();
+
+        return view('sales.returns', compact('returns', 'kpi', 'deliveredSos'));
+    }
 }
