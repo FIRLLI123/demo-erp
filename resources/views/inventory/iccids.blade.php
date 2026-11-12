@@ -59,10 +59,19 @@
                     <div class="flex flex-wrap items-center gap-3 bg-white/10 p-3 rounded-xl border border-white/10 backdrop-blur-xs">
                         <!-- Saldo Stok Fisik -->
                         <div class="text-right pr-3 border-r border-white/20">
-                            <span class="text-[10px] font-bold text-slate-300 block uppercase tracking-wider">Saldo Stok Fisik</span>
-                            <span class="text-xl font-extrabold font-mono text-white">
+                            <span class="text-[10px] font-bold text-slate-300 block uppercase tracking-wider">Stok Fisik Tersedia</span>
+                            <span class="text-xl font-extrabold font-mono text-emerald-400">
                                 {{ number_format($stockBalance ? $stockBalance->quantity : 0, 0, ',', '.') }}
                                 <span class="text-xs font-normal text-slate-300">pcs</span>
+                            </span>
+                        </div>
+
+                        <!-- Info Terjual -->
+                        <div class="text-right pr-3 border-r border-white/20">
+                            <span class="text-[10px] font-bold text-slate-300 block uppercase tracking-wider">Laku Terjual (SOLD)</span>
+                            <span class="text-xl font-extrabold font-mono text-slate-300">
+                                {{ number_format($kpi['sold'], 0, ',', '.') }}
+                                <span class="text-xs font-normal text-slate-400">pcs</span>
                             </span>
                         </div>
 
@@ -152,6 +161,30 @@
                 </div>
                 <span class="text-[10px] text-slate-400 block mt-1">Sudah terdistribusi ke toko</span>
             </div>
+        </div>
+
+        <!-- Quick Status Filter Bar (Pills) -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+            <span class="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1.5 shrink-0">
+                <i data-lucide="filter" class="w-3.5 h-3.5 text-slate-400"></i> Status Fisik:
+            </span>
+            <a href="{{ route('inventory.iccids', array_merge(request()->query(), ['status' => 'AVAILABLE'])) }}" 
+               class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 {{ $status === 'AVAILABLE' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
+                <span class="w-2 h-2 rounded-full {{ $status === 'AVAILABLE' ? 'bg-white' : 'bg-emerald-500' }}"></span>
+                <span>Tersedia di Gudang (AVAILABLE)</span>
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'AVAILABLE' ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600' }}">{{ $kpi['available'] }}</span>
+            </a>
+            <a href="{{ route('inventory.iccids', array_merge(request()->query(), ['status' => 'ALL'])) }}" 
+               class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 {{ ($status === 'ALL' || empty($status)) ? 'bg-slate-900 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
+                <span>Semua Riwayat Serial</span>
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ ($status === 'ALL' || empty($status)) ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600' }}">{{ $kpi['total_units'] }}</span>
+            </a>
+            <a href="{{ route('inventory.iccids', array_merge(request()->query(), ['status' => 'SOLD'])) }}" 
+               class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 {{ $status === 'SOLD' ? 'bg-slate-700 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
+                <span class="w-2 h-2 rounded-full {{ $status === 'SOLD' ? 'bg-white' : 'bg-slate-400' }}"></span>
+                <span>Laku Terjual ke Toko (SOLD)</span>
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'SOLD' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600' }}">{{ $kpi['sold'] }}</span>
+            </a>
         </div>
 
         <!-- ============================================== -->
@@ -321,3 +354,4 @@
 
     </div>
 </x-app-layout>
+

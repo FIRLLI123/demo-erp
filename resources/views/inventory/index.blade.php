@@ -338,7 +338,7 @@
                                     </td>
                                     <td class="py-3 px-4 text-center whitespace-nowrap">
                                         <template x-if="item.tracking_method === 'ICCID'">
-                                            <a :href="'{{ route('inventory.iccids') }}?warehouse_id=' + item.warehouse_id + '&product_id=' + item.product_id"
+                                            <a :href="'{{ route('inventory.iccids') }}?warehouse_id=' + item.warehouse_id + '&product_id=' + item.product_id + '&status=AVAILABLE'"
                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-bold bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-800 border border-purple-200 transition-all shadow-2xs group">
                                                 <i data-lucide="scan-barcode" class="w-3.5 h-3.5 text-purple-600 group-hover:scale-110 transition-transform"></i>
                                                 <span>Lihat Serial</span>
