@@ -65,6 +65,7 @@ Route::prefix('stock-movement')->name('stock-movement.')->group(function () {
 // Inventory (Stock, ICCID, SM, Repack)
 Route::prefix('inventory')->name('inventory.')->group(function () {
     Route::get('/', [InventoryController::class, 'index'])->name('index');
+    Route::get('/iccids', [InventoryController::class, 'iccids'])->name('iccids');
     Route::get('/adjustment', [InventoryController::class, 'adjustment'])->name('adjustment');
     Route::post('/adjustment', [InventoryController::class, 'storeAdjustment'])->name('adjustment.store');
     Route::get('/repack', [RepackController::class, 'index'])->name('repack');

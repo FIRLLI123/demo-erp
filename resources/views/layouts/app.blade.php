@@ -424,12 +424,19 @@
                             </div>
                             <span class="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold">RO-RI</span>
                         </a>
-                        <a href="{{ route('inventory.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('inventory.index*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                        <a href="{{ route('inventory.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ (request()->routeIs('inventory.index*') && !request()->routeIs('inventory.iccids*')) ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
-                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('inventory.index*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
+                                <span class="w-1.5 h-1.5 rounded-full {{ (request()->routeIs('inventory.index*') && !request()->routeIs('inventory.iccids*')) ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
                                 <span>Laporan Inventory & Stok</span>
                             </div>
                             <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">STOK</span>
+                        </a>
+                        <a href="{{ route('inventory.iccids') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('inventory.iccids*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('inventory.iccids*') ? 'bg-purple-400 ring-2 ring-purple-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Tracking Serial ICCID</span>
+                            </div>
+                            <span class="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded font-mono font-bold">ICCID</span>
                         </a>
                     </div>
                 </div>

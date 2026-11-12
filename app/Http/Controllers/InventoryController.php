@@ -326,4 +326,137 @@ class InventoryController extends Controller
             return redirect()->back()->with('error', 'Gagal memproses penyesuaian stok: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Halaman Dedicated Inspeksi Detail Nomor Serial ICCID per Produk & Gudang
+     */
+    public function iccids(Request $request)
+    {
+        $warehouseId = $request->get('warehouse_id');
+        $productId = $request->get('product_id');
+        $status = $request->get('status', 'ALL');
+        $search = $request->get('q');
+
+        $query = DB::table('iccid_units')
+            ->join('products', 'iccid_units.product_id', '=', 'products.id')
+            ->leftJoin('warehouses', 'iccid_units.warehouse_id', '=', 'warehouses.id')
+            ->leftJoin('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->leftJoin('customers', 'iccid_units.customer_id', '=', 'customers.id')
+            ->select(
+                'iccid_units.*',
+                'products.name as product_name',
+                'products.sku',
+                'products.type as product_type',
+                'products.tracking_method',
+                'warehouses.name as warehouse_name',
+                'warehouses.code as warehouse_code',
+                'warehouses.type as warehouse_type',
+                'taps.name as tap_name',
+                'customers.name as customer_name'
+            );
+
+        if ($warehouseId && $warehouseId !== 'ALL') {
+            $query->where('iccid_units.warehouse_id', $warehouseId);
+        }
+        if ($productId && $productId !== 'ALL') {
+            $query->where('iccid_units.product_id', $productId);
+        }
+        if ($status && $status !== 'ALL') {
+            $query->where('iccid_units.status', $status);
+        }
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('iccid_units.iccid_number', 'like', "%{$search}%")
+                  ->orWhere('iccid_units.last_doc_number', 'like', "%{$search}%");
+            });
+        }
+
+        $iccids = $query->orderByDesc('iccid_units.id')->paginate(50)->withQueryString();
+
+        // Info Konteks Produk & Gudang jika difilter
+        $currentWarehouse = null;
+        $currentProduct = null;
+        $stockBalance = null;
+        $serialRange = null;
+
+        if ($warehouseId && $warehouseId !== 'ALL') {
+            $currentWarehouse = DB::table('warehouses')
+                ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+                ->where('warehouses.id', $warehouseId)
+                ->select('warehouses.*', 'taps.name as tap_name')
+                ->first();
+        }
+
+        if ($productId && $productId !== 'ALL') {
+            $currentProduct = DB::table('products')->where('id', $productId)->first();
+        }
+
+        if ($currentWarehouse && $currentProduct) {
+            $stockBalance = DB::table('stock_balances')
+                ->where('warehouse_id', $warehouseId)
+                ->where('product_id', $productId)
+                ->first();
+
+            $minSerial = DB::table('iccid_units')
+                ->where('warehouse_id', $warehouseId)
+                ->where('product_id', $productId)
+                ->min('iccid_number');
+
+            $maxSerial = DB::table('iccid_units')
+                ->where('warehouse_id', $warehouseId)
+                ->where('product_id', $productId)
+                ->max('iccid_number');
+
+            if ($minSerial && $maxSerial) {
+                $serialRange = (object) [
+                    'min' => $minSerial,
+                    'max' => $maxSerial
+                ];
+            }
+        }
+
+        // Master Data untuk Filter Dropdown
+        $warehouses = DB::table('warehouses')
+            ->where('status', 'ACTIVE')
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
+
+        $products = DB::table('products')
+            ->where('tracking_method', 'ICCID')
+            ->where('status', 'ACTIVE')
+            ->orderBy('name')
+            ->get();
+
+        // KPI Ringkasan
+        $kpiBaseQuery = DB::table('iccid_units');
+        if ($warehouseId && $warehouseId !== 'ALL') {
+            $kpiBaseQuery->where('warehouse_id', $warehouseId);
+        }
+        if ($productId && $productId !== 'ALL') {
+            $kpiBaseQuery->where('product_id', $productId);
+        }
+
+        $kpi = [
+            'total_units' => (clone $kpiBaseQuery)->count(),
+            'available' => (clone $kpiBaseQuery)->where('status', 'AVAILABLE')->count(),
+            'reserved' => (clone $kpiBaseQuery)->where('status', 'RESERVED')->count(),
+            'sold' => (clone $kpiBaseQuery)->where('status', 'SOLD')->count(),
+        ];
+
+        return view('inventory.iccids', compact(
+            'iccids',
+            'warehouses',
+            'products',
+            'currentWarehouse',
+            'currentProduct',
+            'stockBalance',
+            'serialRange',
+            'kpi',
+            'warehouseId',
+            'productId',
+            'status',
+            'search'
+        ));
+    }
 }
