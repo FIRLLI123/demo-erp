@@ -353,13 +353,6 @@
                             </div>
                             <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">TIERING</span>
                         </a>
-                        <a href="{{ route('master.customer-segments') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.customer-segments*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
-                            <div class="flex items-center gap-2.5">
-                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.customer-segments*') ? 'bg-purple-400 ring-2 ring-purple-400/40' : 'bg-slate-600' }}"></span>
-                                <span>Klasifikasi Toko</span>
-                            </div>
-                            <span class="text-[9px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded font-mono font-bold">CHANNEL</span>
-                        </a>
                         <a href="{{ route('master.territories') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.territories*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.territories*') ? 'bg-cyan-400 ring-2 ring-cyan-400/40' : 'bg-slate-600' }}"></span>
