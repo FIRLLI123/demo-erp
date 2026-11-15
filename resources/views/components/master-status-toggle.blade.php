@@ -25,3 +25,4 @@
         {{ $isActive ? 'AKTIF' : 'NONAKTIF' }}
     </span>
 </div>
+

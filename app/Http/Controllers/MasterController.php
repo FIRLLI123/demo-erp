@@ -147,8 +147,14 @@ class MasterController extends Controller
     public function customers()
     {
         $customers = DB::table('customers')
-            ->join('taps', 'customers.tap_id', '=', 'taps.id')
-            ->select('customers.*', 'taps.name as tap_name')
+            ->leftJoin('taps', 'customers.tap_id', '=', 'taps.id')
+            ->leftJoin('sales', 'customers.sales_id', '=', 'sales.id')
+            ->select(
+                'customers.*',
+                'taps.name as tap_name',
+                'sales.name as sales_name',
+                'sales.code as sales_code'
+            )
             ->orderBy('customers.id')
             ->get();
 
@@ -167,8 +173,9 @@ class MasterController extends Controller
         }
 
         $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
 
-        return view('master.customers', compact('customers', 'taps'));
+        return view('master.customers', compact('customers', 'taps', 'salesList'));
     }
 
     public function storeCustomer(Request $request)
@@ -176,11 +183,19 @@ class MasterController extends Controller
         $request->validate([
             'name' => 'required|string|max:150',
             'tap_id' => 'required|exists:taps,id',
+            'sales_id' => 'nullable|exists:sales,id',
             'type' => 'required|in:RETAIL,GROSIR',
             'digipos_id' => 'nullable|string|max:50',
             'nomor_rs' => 'nullable|string|max:30',
             'phone' => 'nullable|string|max:20',
+            'customer_pic' => 'nullable|string|max:100',
+            'customer_ktp' => 'nullable|string|max:30',
+            'hari_pjp' => 'nullable|string|max:20',
             'address' => 'nullable|string',
+            'kelurahan_name' => 'nullable|string|max:100',
+            'kecamatan_name' => 'nullable|string|max:100',
+            'kota_name' => 'nullable|string|max:100',
+            'provinsi_name' => 'nullable|string|max:100',
             'credit_limit' => 'nullable|numeric|min:0',
         ]);
 
@@ -189,13 +204,21 @@ class MasterController extends Controller
 
         DB::table('customers')->insert([
             'tap_id' => $request->tap_id,
+            'sales_id' => $request->sales_id,
             'code' => $customerCode,
             'digipos_id' => $request->digipos_id ?? ('DGP-' . rand(100000, 999999)),
             'nomor_rs' => $request->nomor_rs ?? ($request->phone ?? '0812' . rand(10000000, 99999999)),
             'name' => $request->name,
             'type' => $request->type,
             'phone' => $request->phone ?? '0812' . rand(10000000, 99999999),
+            'customer_pic' => $request->customer_pic,
+            'customer_ktp' => $request->customer_ktp,
+            'hari_pjp' => $request->hari_pjp,
             'address' => $request->address ?? 'Area Operasional TAP',
+            'kelurahan_name' => $request->kelurahan_name,
+            'kecamatan_name' => $request->kecamatan_name,
+            'kota_name' => $request->kota_name,
+            'provinsi_name' => $request->provinsi_name,
             'credit_limit' => $request->credit_limit ?? 10000000,
             'status' => 'ACTIVE',
             'created_at' => now(),
@@ -210,11 +233,19 @@ class MasterController extends Controller
         $request->validate([
             'name' => 'required|string|max:150',
             'tap_id' => 'required|exists:taps,id',
+            'sales_id' => 'nullable|exists:sales,id',
             'type' => 'required|in:RETAIL,GROSIR',
             'digipos_id' => 'nullable|string|max:50',
             'nomor_rs' => 'nullable|string|max:30',
             'phone' => 'nullable|string|max:20',
+            'customer_pic' => 'nullable|string|max:100',
+            'customer_ktp' => 'nullable|string|max:30',
+            'hari_pjp' => 'nullable|string|max:20',
             'address' => 'nullable|string',
+            'kelurahan_name' => 'nullable|string|max:100',
+            'kecamatan_name' => 'nullable|string|max:100',
+            'kota_name' => 'nullable|string|max:100',
+            'provinsi_name' => 'nullable|string|max:100',
             'credit_limit' => 'nullable|numeric|min:0',
             'status' => 'required|in:ACTIVE,INACTIVE',
         ]);
@@ -222,11 +253,19 @@ class MasterController extends Controller
         DB::table('customers')->where('id', $id)->update([
             'name' => $request->name,
             'tap_id' => $request->tap_id,
+            'sales_id' => $request->sales_id,
             'type' => $request->type,
             'digipos_id' => $request->digipos_id,
             'nomor_rs' => $request->nomor_rs,
             'phone' => $request->phone,
+            'customer_pic' => $request->customer_pic,
+            'customer_ktp' => $request->customer_ktp,
+            'hari_pjp' => $request->hari_pjp,
             'address' => $request->address,
+            'kelurahan_name' => $request->kelurahan_name,
+            'kecamatan_name' => $request->kecamatan_name,
+            'kota_name' => $request->kota_name,
+            'provinsi_name' => $request->provinsi_name,
             'credit_limit' => $request->credit_limit ?? 0,
             'status' => $request->status,
             'updated_at' => now(),
