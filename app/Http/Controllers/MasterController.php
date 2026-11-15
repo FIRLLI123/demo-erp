@@ -167,15 +167,205 @@ class MasterController extends Controller
             ->get()
             ->keyBy('customer_id');
 
+        // Ambil semua nomor RS terdaftar per customer
+        $allRs = DB::table('customer_rs_numbers')
+            ->orderBy('is_primary', 'desc')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->groupBy('customer_id');
+
         foreach ($customers as $c) {
             $c->unpaid_ar_amount = $outstandingAr[$c->id]->total_unpaid ?? 0;
             $c->unpaid_ar_count = $outstandingAr[$c->id]->unpaid_count ?? 0;
+
+            $c->rs_list = $allRs[$c->id] ?? collect([]);
+            $primaryRs = $c->rs_list->firstWhere('is_primary', 1);
+            $c->primary_rs_number = $primaryRs ? $primaryRs->rs_number : ($c->nomor_rs ?? '-');
+            $c->primary_rs_name = $primaryRs ? $primaryRs->rs_name : 'RS Utama';
+            $c->total_rs_count = $c->rs_list->count();
         }
 
         $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
         $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
 
         return view('master.customers', compact('customers', 'taps', 'salesList'));
+    }
+
+    /**
+     * Ambil list nomor RS untuk 1 customer (AJAX)
+     */
+    public function getRsNumbers($customerId)
+    {
+        $customer = DB::table('customers')->where('id', $customerId)->first();
+        if (!$customer) {
+            return response()->json(['success' => false, 'message' => 'Outlet tidak ditemukan.'], 404);
+        }
+
+        $rsNumbers = DB::table('customer_rs_numbers')
+            ->where('customer_id', $customerId)
+            ->orderBy('is_primary', 'desc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'customer' => $customer,
+            'rs_numbers' => $rsNumbers,
+        ]);
+    }
+
+    /**
+     * Tambah Nomor RS / Chip Mkios baru ke Customer
+     */
+    public function storeRsNumber(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'rs_number' => 'required|string|max:30',
+            'rs_name' => 'nullable|string|max:100',
+            'chip_type' => 'nullable|string|max:30',
+            'is_primary' => 'nullable|boolean',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        $customerId = $request->customer_id;
+        $isPrimary = $request->boolean('is_primary');
+
+        // Jika nomor pertama untuk customer ini, otomatis jadikan primary
+        $existingCount = DB::table('customer_rs_numbers')->where('customer_id', $customerId)->count();
+        if ($existingCount === 0) {
+            $isPrimary = true;
+        }
+
+        if ($isPrimary) {
+            // Unset primary nomor lain milik customer ini
+            DB::table('customer_rs_numbers')->where('customer_id', $customerId)->update(['is_primary' => false]);
+            // Sinkron ke customers.nomor_rs
+            DB::table('customers')->where('id', $customerId)->update(['nomor_rs' => $request->rs_number, 'updated_at' => now()]);
+        }
+
+        $id = DB::table('customer_rs_numbers')->insertGetId([
+            'customer_id' => $customerId,
+            'rs_number' => $request->rs_number,
+            'rs_name' => $request->rs_name ?: 'Chip RS #' . ($existingCount + 1),
+            'chip_type' => $request->chip_type ?: 'ALL',
+            'is_primary' => $isPrimary,
+            'status' => 'ACTIVE',
+            'notes' => $request->notes,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $rsItem = DB::table('customer_rs_numbers')->where('id', $id)->first();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Nomor RS {$request->rs_number} berhasil ditambahkan!",
+                'item' => $rsItem,
+            ]);
+        }
+
+        return redirect()->back()->with('success', "Nomor RS {$request->rs_number} berhasil ditambahkan!");
+    }
+
+    /**
+     * Update Nomor RS
+     */
+    public function updateRsNumber(Request $request, $id)
+    {
+        $request->validate([
+            'rs_number' => 'required|string|max:30',
+            'rs_name' => 'nullable|string|max:100',
+            'chip_type' => 'nullable|string|max:30',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        $rsItem = DB::table('customer_rs_numbers')->where('id', $id)->first();
+        if (!$rsItem) {
+            return response()->json(['success' => false, 'message' => 'Data chip RS tidak ditemukan.'], 404);
+        }
+
+        DB::table('customer_rs_numbers')->where('id', $id)->update([
+            'rs_number' => $request->rs_number,
+            'rs_name' => $request->rs_name,
+            'chip_type' => $request->chip_type ?: 'ALL',
+            'status' => $request->status,
+            'notes' => $request->notes,
+            'updated_at' => now(),
+        ]);
+
+        if ($rsItem->is_primary) {
+            DB::table('customers')->where('id', $rsItem->customer_id)->update(['nomor_rs' => $request->rs_number, 'updated_at' => now()]);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Nomor RS {$request->rs_number} berhasil diperbarui!",
+            ]);
+        }
+
+        return redirect()->back()->with('success', "Nomor RS {$request->rs_number} berhasil diperbarui!");
+    }
+
+    /**
+     * Set Nomor RS sebagai Nomor RS Utama (Primary)
+     */
+    public function setPrimaryRsNumber($id)
+    {
+        $rsItem = DB::table('customer_rs_numbers')->where('id', $id)->first();
+        if (!$rsItem) {
+            return response()->json(['success' => false, 'message' => 'Data chip RS tidak ditemukan.'], 404);
+        }
+
+        // Reset semua nomor RS milik customer ini
+        DB::table('customer_rs_numbers')->where('customer_id', $rsItem->customer_id)->update(['is_primary' => false]);
+        // Set item ini jadi primary
+        DB::table('customer_rs_numbers')->where('id', $id)->update(['is_primary' => true, 'updated_at' => now()]);
+        // Sinkron ke customers.nomor_rs
+        DB::table('customers')->where('id', $rsItem->customer_id)->update(['nomor_rs' => $rsItem->rs_number, 'updated_at' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Nomor RS {$rsItem->rs_number} berhasil dijadikan sebagai Nomor RS Utama toko!",
+        ]);
+    }
+
+    /**
+     * Hapus Nomor RS
+     */
+    public function deleteRsNumber($id)
+    {
+        $rsItem = DB::table('customer_rs_numbers')->where('id', $id)->first();
+        if (!$rsItem) {
+            return response()->json(['success' => false, 'message' => 'Data chip RS tidak ditemukan.'], 404);
+        }
+
+        $customerId = $rsItem->customer_id;
+        $totalCount = DB::table('customer_rs_numbers')->where('customer_id', $customerId)->count();
+
+        if ($totalCount <= 1) {
+            return response()->json(['success' => false, 'message' => 'Gagal menghapus! Outlet minimal harus memiliki 1 nomor RS terdaftar.'], 422);
+        }
+
+        $wasPrimary = $rsItem->is_primary;
+        DB::table('customer_rs_numbers')->where('id', $id)->delete();
+
+        // Jika yang dihapus adalah primary, jadikan nomor berikutnya sebagai primary
+        if ($wasPrimary) {
+            $nextRs = DB::table('customer_rs_numbers')->where('customer_id', $customerId)->first();
+            if ($nextRs) {
+                DB::table('customer_rs_numbers')->where('id', $nextRs->id)->update(['is_primary' => true]);
+                DB::table('customers')->where('id', $customerId)->update(['nomor_rs' => $nextRs->rs_number]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Nomor RS berhasil dihapus dari outlet.",
+        ]);
     }
 
     public function storeCustomer(Request $request)
@@ -679,7 +869,7 @@ class MasterController extends Controller
     public function toggleStatus(Request $request)
     {
         $request->validate([
-            'entity' => 'required|string|in:customers,sales,products,warehouses,banks,vendors,taps,price_profiles,users',
+            'entity' => 'required|string|in:customers,sales,products,warehouses,banks,vendors,taps,price_profiles,users,customer_rs',
             'id' => 'required|integer',
         ]);
 
@@ -696,6 +886,7 @@ class MasterController extends Controller
             'taps' => ['table' => 'taps', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Kantor Cabang TAP'],
             'price_profiles' => ['table' => 'price_profiles', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Skema Harga'],
             'users' => ['table' => 'users', 'name_col' => 'name', 'status_col' => 'is_active', 'label' => 'Pengguna', 'is_boolean' => true],
+            'customer_rs' => ['table' => 'customer_rs_numbers', 'name_col' => 'rs_number', 'status_col' => 'status', 'label' => 'Nomor Chip RS'],
         ];
 
         $config = $mapping[$entity];

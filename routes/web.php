@@ -29,6 +29,13 @@ Route::prefix('master')->name('master.')->group(function () {
     Route::get('/customers', [MasterController::class, 'customers'])->name('customers');
     Route::post('/customers', [MasterController::class, 'storeCustomer'])->name('customers.store');
     Route::post('/customers/update/{id}', [MasterController::class, 'updateCustomer'])->name('customers.update');
+    
+    // Manajemen Multi Nomor RS Customer (1 Toko Multi Chip)
+    Route::get('/customers/{customerId}/rs-numbers', [MasterController::class, 'getRsNumbers'])->name('customers.rs-numbers');
+    Route::post('/customers/rs-numbers', [MasterController::class, 'storeRsNumber'])->name('customers.rs-numbers.store');
+    Route::post('/customers/rs-numbers/update/{id}', [MasterController::class, 'updateRsNumber'])->name('customers.rs-numbers.update');
+    Route::post('/customers/rs-numbers/delete/{id}', [MasterController::class, 'deleteRsNumber'])->name('customers.rs-numbers.delete');
+    Route::post('/customers/rs-numbers/set-primary/{id}', [MasterController::class, 'setPrimaryRsNumber'])->name('customers.rs-numbers.set-primary');
     Route::get('/users', [MasterController::class, 'users'])->name('users');
     Route::post('/users', [MasterController::class, 'storeUser'])->name('users.store');
     Route::post('/users/update/{id}', [MasterController::class, 'updateUser'])->name('users.update');

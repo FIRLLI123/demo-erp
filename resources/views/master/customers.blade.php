@@ -384,13 +384,31 @@
                                     @endif
                                     <span class="text-[11px] text-slate-400 block truncate max-w-xs">{{ $c->address }}</span>
                                 </td>
-                                <td class="py-3.5 px-4 font-mono text-xs">
-                                    <div class="flex items-center gap-1.5 text-slate-900 font-bold">
-                                        <i data-lucide="smartphone" class="w-3.5 h-3.5 text-rose-500"></i>
+                                <td class="py-3.5 px-4 text-xs">
+                                    <div class="flex items-center gap-1.5 text-slate-900 font-bold font-mono">
+                                        <i data-lucide="smartphone" class="w-3.5 h-3.5 text-rose-500 shrink-0"></i>
                                         <span>{{ $c->digipos_id ?? '-' }}</span>
                                     </div>
-                                    <div class="text-[11px] text-slate-500 pl-5">
-                                        RS: {{ $c->nomor_rs ?? '-' }}
+                                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                                        <span class="font-mono text-[11px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" title="Nomor RS Utama Toko">
+                                            RS: {{ $c->primary_rs_number }}
+                                        </span>
+                                        @if(($c->total_rs_count ?? 0) > 1)
+                                            <button type="button" 
+                                                    @click="openRsModal({{ json_encode($c) }})"
+                                                    class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer"
+                                                    title="Toko ini memiliki {{ $c->total_rs_count }} chip RS. Klik untuk kelola multi chip.">
+                                                <i data-lucide="layers" class="w-3 h-3"></i>
+                                                <span>+{{ $c->total_rs_count - 1 }} RS</span>
+                                            </button>
+                                        @else
+                                            <button type="button" 
+                                                    @click="openRsModal({{ json_encode($c) }})"
+                                                    class="text-slate-400 hover:text-indigo-600 p-0.5 transition cursor-pointer"
+                                                    title="Tambah / Kelola Nomor RS Toko">
+                                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        @endif
                                     </div>
                                 </td>
                                 <td class="py-3.5 px-4">
@@ -451,6 +469,182 @@
             </div>
         </div>
 
+        <!-- ============================================== -->
+        <!-- MODAL KELOLA MULTI NOMOR RS CUSTOMER           -->
+        <!-- ============================================== -->
+        <template x-if="rsModalOpen && rsCustomer">
+            <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto" @click.outside="rsModalOpen = false">
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-red-600 text-white flex items-center justify-center font-bold shadow-sm">
+                                <i data-lucide="smartphone" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-extrabold text-slate-900 text-sm" x-text="rsCustomer.name"></h3>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-800" x-text="rsCustomer.code"></span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5">
+                                    DigiPOS ID: <span class="font-mono font-bold text-slate-700" x-text="rsCustomer.digipos_id || '-'"></span> • Manajemen Multi Nomor Chip RS
+                                </p>
+                            </div>
+                        </div>
+                        <button type="button" @click="rsModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">
+                            &times;
+                        </button>
+                    </div>
+
+                    <!-- List Nomor RS Saat Ini -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="list" class="w-3.5 h-3.5 text-indigo-500"></i>
+                                <span>Daftar Nomor Chip RS Terdaftar</span>
+                            </h4>
+                            <span class="text-[11px] font-mono text-slate-400" x-text="rsList.length + ' Chip RS Terdata'"></span>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div x-show="rsLoading" class="py-6 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-500"></i>
+                            <span>Memuat data chip RS...</span>
+                        </div>
+
+                        <!-- Table Chip RS -->
+                        <div x-show="!rsLoading" class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/30">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 text-[10px] uppercase">
+                                    <tr>
+                                        <th class="py-2.5 px-3">Nomor RS / Chip</th>
+                                        <th class="py-2.5 px-3">Nama / Label Chip</th>
+                                        <th class="py-2.5 px-3 text-center">Tipe Transaksi</th>
+                                        <th class="py-2.5 px-3 text-center">Utama (Primary)</th>
+                                        <th class="py-2.5 px-3 text-center">Status</th>
+                                        <th class="py-2.5 px-3 text-center w-16">Hapus</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200/70 font-medium">
+                                    <template x-for="(rs, idx) in rsList" :key="rs.id">
+                                        <tr class="hover:bg-white transition-colors">
+                                            <td class="py-3 px-3 font-mono font-extrabold text-slate-900">
+                                                <span x-text="rs.rs_number"></span>
+                                            </td>
+                                            <td class="py-3 px-3 text-slate-700">
+                                                <span class="font-bold block" x-text="rs.rs_name || 'Chip #' + (idx+1)"></span>
+                                                <span class="text-[10px] text-slate-400" x-text="rs.notes || '-'"></span>
+                                            </td>
+                                            <td class="py-3 px-3 text-center">
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200/70 text-slate-700" x-text="rs.chip_type"></span>
+                                            </td>
+                                            <td class="py-3 px-3 text-center">
+                                                <template x-if="rs.is_primary">
+                                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                                                        <i data-lucide="star" class="w-3 h-3 text-amber-600 fill-amber-500"></i>
+                                                        <span>RS UTAMA</span>
+                                                    </span>
+                                                </template>
+                                                <template x-if="!rs.is_primary">
+                                                    <button type="button" 
+                                                            @click="setPrimaryRs(rs.id)"
+                                                            class="px-2 py-0.5 rounded text-[10px] font-bold text-slate-600 hover:text-amber-700 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 transition cursor-pointer">
+                                                        Jadikan Utama
+                                                    </button>
+                                                </template>
+                                            </td>
+                                            <td class="py-3 px-3 text-center">
+                                                <button type="button" 
+                                                        @click="window.toggleMasterStatus('customer_rs', rs.id, rs.rs_number, $el)"
+                                                        data-no-loading
+                                                        class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                                                        :class="rs.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300'"
+                                                        role="switch" 
+                                                        :aria-checked="rs.status === 'ACTIVE' ? 'true' : 'false'"
+                                                        :title="rs.status === 'ACTIVE' ? 'Klik untuk nonaktifkan' : 'Klik untuk aktifkan'">
+                                                    <span data-toggle-knob 
+                                                          class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out"
+                                                          :class="rs.status === 'ACTIVE' ? 'translate-x-4' : 'translate-x-0'"></span>
+                                                </button>
+                                            </td>
+                                            <td class="py-3 px-3 text-center">
+                                                <button type="button" 
+                                                        @click="deleteRs(rs.id)"
+                                                        :disabled="rsList.length <= 1"
+                                                        class="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 disabled:opacity-20 disabled:hover:bg-transparent transition cursor-pointer"
+                                                        title="Hapus nomor RS ini">
+                                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="rsList.length === 0">
+                                        <tr>
+                                            <td colspan="6" class="py-5 text-center text-slate-400 italic">
+                                                Belum ada nomor RS terdaftar untuk outlet ini.
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Form Tambah Nomor RS Baru -->
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                        <h4 class="text-xs font-bold text-slate-900 mb-3 flex items-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Tambah Nomor Chip RS Baru ke Outlet Ini</span>
+                        </h4>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Nomor Chip RS (MSISDN) <span class="text-rose-500">*</span></label>
+                                <input type="text" x-model="newRs.rs_number" placeholder="Contoh: 081288990022" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500/20">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Label / Nama Chip</label>
+                                <input type="text" x-model="newRs.rs_name" placeholder="Contoh: RS Kasir 2, RS Owner" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Peruntukan Transaksi</label>
+                                <select x-model="newRs.chip_type" class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    <option value="ALL">ALL (Semua Transaksi)</option>
+                                    <option value="DATA">DATA (Paket Data)</option>
+                                    <option value="PERDANA">PERDANA (Starter Pack SA)</option>
+                                    <option value="REGULER">REGULER (Pulsa Biasa)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                            <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" x-model="newRs.is_primary" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-xs text-slate-700 font-semibold">Jadikan sebagai <strong>Nomor RS Utama</strong> toko</span>
+                            </label>
+
+                            <button type="button" 
+                                    @click="submitNewRs()" 
+                                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                                <span>Tambahkan Chip RS</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                        <span class="flex items-center gap-1">
+                            <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
+                            Perubahan nomor RS utama akan otomatis tersinkron ke profil outlet & DigiPOS.
+                        </span>
+                        <button type="button" @click="rsModalOpen = false; window.location.reload();" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                            Selesai & Tutup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 
     @push('scripts')
@@ -461,9 +655,132 @@
                 editModalOpen: false,
                 editData: null,
 
+                // Modal Multi Nomor RS
+                rsModalOpen: false,
+                rsCustomer: null,
+                rsList: [],
+                rsLoading: false,
+                newRs: {
+                    rs_number: '',
+                    rs_name: '',
+                    chip_type: 'ALL',
+                    is_primary: false,
+                    notes: ''
+                },
+
                 openEditModal(customer) {
                     this.editData = Object.assign({}, customer);
                     this.editModalOpen = true;
+                },
+
+                async openRsModal(customer) {
+                    this.rsCustomer = customer;
+                    this.rsModalOpen = true;
+                    this.resetNewRs();
+                    await this.loadRsList();
+                },
+
+                resetNewRs() {
+                    this.newRs = {
+                        rs_number: '',
+                        rs_name: '',
+                        chip_type: 'ALL',
+                        is_primary: false,
+                        notes: ''
+                    };
+                },
+
+                async loadRsList() {
+                    if (!this.rsCustomer) return;
+                    this.rsLoading = true;
+                    try {
+                        const res = await fetch(`/master/customers/${this.rsCustomer.id}/rs-numbers`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.rsList = data.rs_numbers;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load RS numbers:', e);
+                    } finally {
+                        this.rsLoading = false;
+                        this.$nextTick(() => { lucide.createIcons(); });
+                    }
+                },
+
+                async submitNewRs() {
+                    if (!this.newRs.rs_number) {
+                        alert('Nomor RS wajib diisi!');
+                        return;
+                    }
+                    try {
+                        const res = await fetch('{{ route('master.customers.rs-numbers.store') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                customer_id: this.rsCustomer.id,
+                                ...this.newRs
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            window.showToast(data.message, 'success', 'Chip RS Ditambahkan');
+                            this.resetNewRs();
+                            await this.loadRsList();
+                        } else {
+                            window.showToast(data.message || 'Gagal menyimpan chip RS', 'error', 'Perhatian');
+                        }
+                    } catch (e) {
+                        window.showToast(e.message || 'Terjadi kesalahan sistem', 'error', 'Error');
+                    }
+                },
+
+                async setPrimaryRs(id) {
+                    try {
+                        const res = await fetch(`/master/customers/rs-numbers/set-primary/${id}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            window.showToast(data.message, 'success', 'RS Utama Diperbarui');
+                            await this.loadRsList();
+                        }
+                    } catch (e) {
+                        window.showToast('Gagal mengubah nomor RS utama', 'error', 'Error');
+                    }
+                },
+
+                async deleteRs(id) {
+                    if (!confirm('Hapus nomor RS ini dari outlet?')) return;
+                    try {
+                        const res = await fetch(`/master/customers/rs-numbers/delete/${id}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            window.showToast(data.message, 'success', 'Nomor RS Dihapus');
+                            await this.loadRsList();
+                        } else {
+                            window.showToast(data.message, 'error', 'Perhatian');
+                        }
+                    } catch (e) {
+                        window.showToast('Gagal menghapus nomor RS', 'error', 'Error');
+                    }
                 }
             }
         }
