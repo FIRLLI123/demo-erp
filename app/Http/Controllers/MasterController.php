@@ -469,7 +469,8 @@ class MasterController extends Controller
         $users = DB::table('users')
             ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
             ->leftJoin('sales', 'users.sales_id', '=', 'sales.id')
-            ->leftJoin('taps', 'sales.tap_id', '=', 'taps.id')
+            ->leftJoin('taps as sales_taps', 'sales.tap_id', '=', 'sales_taps.id')
+            ->leftJoin('taps as user_taps', 'users.tap_id', '=', 'user_taps.id')
             ->select(
                 'users.*',
                 'roles.name as role_name',
@@ -477,7 +478,8 @@ class MasterController extends Controller
                 'sales.code as sales_code',
                 'sales.name as sales_name',
                 'sales.phone as sales_phone',
-                'taps.name as sales_tap'
+                'sales_taps.name as sales_tap',
+                'user_taps.name as assigned_tap_name'
             )
             ->orderBy('users.id')
             ->get();
@@ -487,8 +489,9 @@ class MasterController extends Controller
             ->where('status', 'ACTIVE')
             ->orderBy('name')
             ->get();
+        $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
 
-        return view('master.users', compact('users', 'roles', 'salesList'));
+        return view('master.users', compact('users', 'roles', 'salesList', 'taps'));
     }
 
     public function storeUser(Request $request)
@@ -498,6 +501,7 @@ class MasterController extends Controller
             'email' => 'required|email|unique:users,email|max:150',
             'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
+            'tap_id' => 'nullable|exists:taps,id',
             'phone' => 'nullable|string|max:20',
             'sales_id' => 'nullable|exists:sales,id',
         ]);
@@ -507,6 +511,7 @@ class MasterController extends Controller
             'email' => $request->email,
             'password' => bcrypt($request->password),
             'role_id' => $request->role_id,
+            'tap_id' => $request->tap_id,
             'sales_id' => $request->sales_id,
             'phone' => $request->phone,
             'is_active' => 1,
@@ -530,6 +535,7 @@ class MasterController extends Controller
             'name' => 'required|string|max:150',
             'email' => 'required|email|max:150|unique:users,email,' . $id,
             'role_id' => 'required|exists:roles,id',
+            'tap_id' => 'nullable|exists:taps,id',
             'phone' => 'nullable|string|max:20',
             'sales_id' => 'nullable|exists:sales,id',
             'is_active' => 'required|in:0,1',
@@ -540,6 +546,7 @@ class MasterController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'role_id' => $request->role_id,
+            'tap_id' => $request->tap_id,
             'sales_id' => $request->sales_id,
             'phone' => $request->phone,
             'is_active' => $request->is_active,

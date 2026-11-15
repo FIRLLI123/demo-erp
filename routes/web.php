@@ -14,9 +14,18 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AiAssistantController;
+use App\Http\Controllers\AuthController;
 
-// Dashboard
-Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+// Authentication (Wahana POS)
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::post('/switch-tap', [AuthController::class, 'switchTap'])->name('switch-tap');
+
+// Dashboard & App Routes
+Route::middleware(['web'])->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+});
 
 // Master Data & Organization
 Route::prefix('master')->name('master.')->group(function () {

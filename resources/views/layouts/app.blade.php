@@ -580,16 +580,22 @@
             <!-- Bottom User & Role Profile -->
             <div class="p-4 border-t border-slate-800/80 bg-slate-950/70">
                 <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-900 border border-slate-800">
-                    <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-slate-700 to-slate-600 flex items-center justify-center text-white font-bold text-sm">
-                        AD
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-rose-600 via-red-500 to-amber-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                        {{ strtoupper(substr(Auth::user()->name ?? 'AD', 0, 2)) }}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-white truncate">Admin Demo</p>
-                        <p class="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                            Role: <span x-text="activeRole"></span>
+                        <p class="text-xs font-bold text-white truncate">{{ Auth::user()->name ?? 'Administrator' }}</p>
+                        <p class="text-[10px] text-rose-400 flex items-center gap-1 font-medium truncate">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                            <span class="truncate">{{ session('active_tap_name', 'SEMUA AREA (IT DEV)') }}</span>
                         </p>
                     </div>
+                    <form method="POST" action="{{ route('logout') }}" data-no-loading>
+                        @csrf
+                        <button type="submit" title="Keluar dari Wahana POS (Logout)" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         </aside>
@@ -616,13 +622,36 @@
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <!-- Quick Role Switcher for Demo -->
-                    <div class="hidden md:flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-                        <span class="text-slate-400 text-[11px] px-2 font-medium">Demo Role:</span>
-                        <button @click="activeRole = 'Super Admin'" :class="activeRole === 'Super Admin' ? 'bg-white shadow text-slate-900 font-bold' : 'text-slate-600 hover:text-slate-900'" class="px-2.5 py-1 rounded-lg transition-all">Super Admin</button>
-                        <button @click="activeRole = 'Finance'" :class="activeRole === 'Finance' ? 'bg-white shadow text-slate-900 font-bold' : 'text-slate-600 hover:text-slate-900'" class="px-2.5 py-1 rounded-lg transition-all">Finance</button>
-                        <button @click="activeRole = 'Warehouse'" :class="activeRole === 'Warehouse' ? 'bg-white shadow text-slate-900 font-bold' : 'text-slate-600 hover:text-slate-900'" class="px-2.5 py-1 rounded-lg transition-all">Gudang</button>
-                    </div>
+                    @php
+                        $currentUser = Auth::user();
+                        $roleSlug = $currentUser && $currentUser->role_id ? \Illuminate\Support\Facades\DB::table('roles')->where('id', $currentUser->role_id)->value('slug') : 'it_dev';
+                        $canSwitchArea = !$currentUser || is_null($currentUser->tap_id) || in_array($roleSlug, ['it_dev', 'super_admin']);
+                        $currentTapId = session('active_tap_id');
+                        $tapsList = \Illuminate\Support\Facades\DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+                    @endphp
+
+                    <!-- Area Scope Indicator / Switcher -->
+                    @if($canSwitchArea)
+                        <form method="POST" action="{{ route('switch-tap') }}" class="hidden md:flex items-center gap-1.5 bg-slate-900 text-white p-1 rounded-xl border border-slate-700/80 text-xs shadow-sm" data-no-loading>
+                            @csrf
+                            <span class="text-rose-400 text-[10px] px-2 font-bold font-mono uppercase flex items-center gap-1">
+                                <i data-lucide="shield" class="w-3.5 h-3.5 text-rose-500"></i>
+                                IT DEV Area:
+                            </span>
+                            <select name="tap_id" onchange="this.form.submit()" class="text-xs font-bold bg-slate-800 text-white border-none rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-rose-500 cursor-pointer">
+                                <option value="all" {{ empty($currentTapId) ? 'selected' : '' }}>🌟 SEMUA AREA (KONSOLIDASI)</option>
+                                @foreach($tapsList as $t)
+                                    <option value="{{ $t->id }}" {{ $currentTapId == $t->id ? 'selected' : '' }}>🏢 {{ $t->name }}</option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @else
+                        <!-- Badge Scope TAP User Biasa (Terkunci ke Cabangnya) -->
+                        <div class="hidden md:flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-amber-600"></i>
+                            <span>Wilayah: {{ session('active_tap_name', 'TAP Kantor') }}</span>
+                        </div>
+                    @endif
 
                     <!-- Notification Pill -->
                     <div class="relative">
@@ -631,6 +660,14 @@
                             <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse"></span>
                         </button>
                     </div>
+
+                    <!-- Logout Button -->
+                    <form method="POST" action="{{ route('logout') }}" class="hidden sm:block" data-no-loading>
+                        @csrf
+                        <button type="submit" title="Keluar dari Wahana POS (Logout)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center text-slate-600 transition-colors cursor-pointer">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                        </button>
+                    </form>
                 </div>
             </header>
 

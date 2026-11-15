@@ -87,6 +87,17 @@
                     </div>
 
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Penugasan TAP Kantor Cabang</label>
+                        <select name="tap_id" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                            <option value="">🌟 Akses Semua Area (IT DEV & Super Admin)</option>
+                            @foreach($taps as $tap)
+                                <option value="{{ $tap->id }}">🏢 {{ $tap->name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-[10px] text-slate-400 mt-1">Kosongkan jika akun ini adalah IT DEV yang berhak membuka seluruh area</p>
+                    </div>
+
+                    <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Pemetaan ke Tenaga Sales (Opsional)</label>
                         <select name="sales_id" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
                             <option value="">-- Bukan Akun Sales / Non-Kanvas --</option>
@@ -164,6 +175,16 @@
                             </div>
 
                             <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Penugasan TAP Wilayah Cabang</label>
+                                <select name="tap_id" x-model="editData.tap_id" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                    <option value="">🌟 Akses Semua Area (IT DEV & Super Admin)</option>
+                                    @foreach($taps as $tap)
+                                        <option value="{{ $tap->id }}">🏢 {{ $tap->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Pemetaan ke Sales Force</label>
                                 <select name="sales_id" x-model="editData.sales_id" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
                                     <option value="">-- Bukan Akun Sales / Non-Kanvas --</option>
@@ -234,8 +255,8 @@
                         <tr>
                             <th class="py-3 px-4">Pengguna (Nama & Email)</th>
                             <th class="py-3 px-4">Peran (Role)</th>
+                            <th class="py-3 px-4">Penugasan TAP Wilayah</th>
                             <th class="py-3 px-4">Pemetaan ke Sales Force</th>
-                            <th class="py-3 px-4">Wilayah TAP Sales</th>
                             <th class="py-3 px-4">No. HP / WA</th>
                             <th class="py-3 px-4 text-center">Status</th>
                             <th class="py-3 px-4 text-center w-24">Aksi</th>
@@ -257,9 +278,22 @@
                                 </td>
                                 <td class="py-3.5 px-4">
                                     <span class="px-2.5 py-1 rounded-full text-[10px] font-bold 
-                                        {{ $u->role_slug === 'super_admin' ? 'bg-rose-100 text-rose-800 border border-rose-200' : ($u->role_slug === 'sales' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : ($u->role_slug === 'finance' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-800 border border-slate-200')) }}">
+                                        {{ in_array($u->role_slug, ['it_dev', 'super_admin']) ? 'bg-rose-100 text-rose-800 border border-rose-200' : ($u->role_slug === 'sales' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : ($u->role_slug === 'finance' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-800 border border-slate-200')) }}">
                                         {{ $u->role_name ?? 'Staf' }}
                                     </span>
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    @if($u->assigned_tap_name)
+                                        <span class="inline-flex items-center gap-1 font-bold text-slate-800 text-xs">
+                                            <i data-lucide="building-2" class="w-3.5 h-3.5 text-amber-600"></i>
+                                            <span>{{ $u->assigned_tap_name }}</span>
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold text-[10px] font-mono">
+                                            <i data-lucide="shield" class="w-3 h-3 text-rose-600"></i>
+                                            <span>ALL AREAS (IT DEV)</span>
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="py-3.5 px-4">
                                     @if($u->sales_code)
@@ -272,9 +306,6 @@
                                     @else
                                         <span class="text-slate-400 italic text-[11px]">Bukan Sales Lapangan</span>
                                     @endif
-                                </td>
-                                <td class="py-3.5 px-4 text-slate-600">
-                                    {{ $u->sales_tap ?? '-' }}
                                 </td>
                                 <td class="py-3.5 px-4 font-mono text-slate-600">
                                     {{ $u->phone ?? '-' }}
