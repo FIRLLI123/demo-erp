@@ -76,9 +76,7 @@
                                 </span>
                             </td>
                             <td class="py-4 px-6 text-center">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                    {{ $prod->status }}
-                                </span>
+                                <x-master-status-toggle entity="products" :id="$prod->id" :name="$prod->name" :active="$prod->status === 'ACTIVE'" />
                             </td>
                         </tr>
                     @endforeach

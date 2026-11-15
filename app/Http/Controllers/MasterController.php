@@ -633,4 +633,93 @@ class MasterController extends Controller
     {
         return view('master.approval_rules');
     }
+
+    /**
+     * Universal Switch Toggle Status (ACTIVE <-> INACTIVE) untuk Semua Data Master
+     */
+    public function toggleStatus(Request $request)
+    {
+        $request->validate([
+            'entity' => 'required|string|in:customers,sales,products,warehouses,banks,vendors,taps,price_profiles,users',
+            'id' => 'required|integer',
+        ]);
+
+        $entity = $request->entity;
+        $id = $request->id;
+
+        $mapping = [
+            'customers' => ['table' => 'customers', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Toko / Outlet'],
+            'sales' => ['table' => 'sales', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Salesman'],
+            'products' => ['table' => 'products', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Produk'],
+            'warehouses' => ['table' => 'warehouses', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Gudang'],
+            'banks' => ['table' => 'company_banks', 'name_col' => 'bank_name', 'status_col' => 'status', 'label' => 'Rekening Bank'],
+            'vendors' => ['table' => 'vendors', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Vendor'],
+            'taps' => ['table' => 'taps', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Kantor Cabang TAP'],
+            'price_profiles' => ['table' => 'price_profiles', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Skema Harga'],
+            'users' => ['table' => 'users', 'name_col' => 'name', 'status_col' => 'is_active', 'label' => 'Pengguna', 'is_boolean' => true],
+        ];
+
+        $config = $mapping[$entity];
+        $item = DB::table($config['table'])->where('id', $id)->first();
+
+        if (!$item) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
+            }
+            return redirect()->back()->with('error', 'Data tidak ditemukan.');
+        }
+
+        $isBoolean = $config['is_boolean'] ?? false;
+        $statusCol = $config['status_col'];
+        $nameCol = $config['name_col'];
+        $itemName = $item->$nameCol ?? "ID #{$id}";
+
+        if ($isBoolean) {
+            $newVal = $item->$statusCol ? 0 : 1;
+            $newStatusText = $newVal ? 'ACTIVE' : 'INACTIVE';
+            $isActive = (bool) $newVal;
+        } else {
+            $currentVal = strtoupper($item->$statusCol ?? 'ACTIVE');
+            $newVal = ($currentVal === 'ACTIVE') ? 'INACTIVE' : 'ACTIVE';
+            $newStatusText = $newVal;
+            $isActive = ($newVal === 'ACTIVE');
+        }
+
+        DB::table($config['table'])->where('id', $id)->update([
+            $statusCol => $newVal,
+            'updated_at' => now(),
+        ]);
+
+        // Catat jejak audit log jika tabel activity_logs ada
+        if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+            DB::table('activity_logs')->insert([
+                'user_id' => 1,
+                'user_name' => 'Administrator ERP',
+                'user_role' => 'Super Admin',
+                'action' => 'TOGGLE_STATUS_' . strtoupper($entity),
+                'module' => 'MASTER',
+                'doc_number' => "MST-{$id}",
+                'severity' => $isActive ? 'INFO' : 'WARNING',
+                'description' => "Mengubah status {$config['label']} '{$itemName}' menjadi " . ($isActive ? 'AKTIF (ACTIVE/00)' : 'NON-AKTIF (INACTIVE/99)'),
+                'ip_address' => $request->ip() ?? '127.0.0.1',
+                'user_agent' => $request->userAgent() ?? 'System',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $statusLabel = $isActive ? 'AKTIF' : 'NON-AKTIF';
+        $message = "Status {$config['label']} '{$itemName}' berhasil diubah menjadi {$statusLabel}!";
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'is_active' => $isActive,
+                'status' => $newStatusText,
+                'message' => $message,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
 }

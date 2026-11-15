@@ -90,9 +90,7 @@
                                 </td>
                                 <td class="py-3.5 px-4 text-slate-500">{{ $tap->address }}</td>
                                 <td class="py-3.5 px-4">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                        {{ $tap->status }}
-                                    </span>
+                                    <x-master-status-toggle entity="taps" :id="$tap->id" :name="$tap->name" :active="$tap->status === 'ACTIVE'" />
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
                                     <span class="inline-flex gap-1 text-[10px] font-mono font-bold">

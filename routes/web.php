@@ -43,6 +43,7 @@ Route::prefix('master')->name('master.')->group(function () {
     Route::get('/customer-segments', [MasterController::class, 'customerSegments'])->name('customer-segments');
     Route::get('/territories', [MasterController::class, 'territories'])->name('territories');
     Route::get('/approval-rules', [MasterController::class, 'approvalRules'])->name('approval-rules');
+    Route::post('/toggle-status', [MasterController::class, 'toggleStatus'])->name('toggle-status');
 });
 
 // Procurement (PO & GR)

@@ -85,9 +85,7 @@
                                 @endif
                             </td>
                             <td class="py-4 px-6 text-center">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                    {{ $wh->status }}
-                                </span>
+                                <x-master-status-toggle entity="warehouses" :id="$wh->id" :name="$wh->name" :active="$wh->status === 'ACTIVE'" />
                             </td>
                         </tr>
                     @endforeach

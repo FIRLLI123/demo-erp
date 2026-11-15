@@ -131,9 +131,7 @@
                                     {{ $v->address ?: '-' }}
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        AKTIF
-                                    </span>
+                                    <x-master-status-toggle entity="vendors" :id="$v->id" :name="$v->name" :active="($v->status ?? 'ACTIVE') === 'ACTIVE'" />
                                 </td>
                             </tr>
                         @endforeach

@@ -234,15 +234,7 @@
                                     Rp {{ number_format($s->total_sales_amount, 0, ',', '.') }}
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
-                                    @if($s->status === 'ACTIVE')
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                            ACTIVE
-                                        </span>
-                                    @else
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                            INACTIVE
-                                        </span>
-                                    @endif
+                                    <x-master-status-toggle entity="sales" :id="$s->id" :name="$s->name" :active="$s->status === 'ACTIVE'" />
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
                                     <button type="button" 

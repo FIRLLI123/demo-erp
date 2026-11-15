@@ -126,9 +126,7 @@
                                 </td>
                                 <td class="py-3.5 px-4 text-slate-600 max-w-xs">{{ $p->description }}</td>
                                 <td class="py-3.5 px-4 text-center">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        AKTIF
-                                    </span>
+                                    <x-master-status-toggle entity="price_profiles" :id="$p->id" :name="$p->name" :active="($p->status ?? 'ACTIVE') === 'ACTIVE'" />
                                 </td>
                             </tr>
                         @endforeach

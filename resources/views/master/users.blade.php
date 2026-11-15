@@ -33,7 +33,7 @@
             </div>
         @endif
 
-        @if($errors->any())
+        @if(isset($errors) && $errors->any())
             <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
                 <ul class="list-disc pl-5 space-y-1">
                     @foreach($errors->all() as $error)
@@ -280,15 +280,7 @@
                                     {{ $u->phone ?? '-' }}
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
-                                    @if($u->is_active)
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                            ACTIVE
-                                        </span>
-                                    @else
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                                            INACTIVE
-                                        </span>
-                                    @endif
+                                    <x-master-status-toggle entity="users" :id="$u->id" :name="$u->name" :active="(bool)$u->is_active" />
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
                                     <button type="button" 

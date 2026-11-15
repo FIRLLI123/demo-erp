@@ -935,6 +935,78 @@
             }));
         };
 
+        // Universal Master Switch Toggle Status (ACTIVE <-> INACTIVE / 00 <-> 99)
+        window.toggleMasterStatus = async function(entity, id, name, btnEl) {
+            if (!btnEl || btnEl.disabled) return;
+            
+            btnEl.disabled = true;
+            btnEl.classList.add('opacity-60', 'cursor-wait');
+            
+            const knobEl = btnEl.querySelector('[data-toggle-knob]');
+            const labelEl = btnEl.parentElement ? btnEl.parentElement.querySelector('[data-toggle-label]') : null;
+
+            try {
+                const response = await fetch('{{ route('master.toggle-status') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ entity: entity, id: id })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const finalActive = data.is_active;
+                    btnEl.setAttribute('aria-checked', finalActive ? 'true' : 'false');
+                    
+                    if (finalActive) {
+                        btnEl.classList.remove('bg-slate-300');
+                        btnEl.classList.add('bg-emerald-500');
+                        if (knobEl) {
+                            knobEl.classList.remove('translate-x-0');
+                            knobEl.classList.add('translate-x-4');
+                        }
+                        if (labelEl) {
+                            labelEl.textContent = 'AKTIF';
+                            labelEl.classList.remove('text-slate-400');
+                            labelEl.classList.add('text-emerald-700');
+                        }
+                        btnEl.setAttribute('title', 'Klik untuk Menonaktifkan (Jadikan 99/INACTIVE)');
+                    } else {
+                        btnEl.classList.remove('bg-emerald-500');
+                        btnEl.classList.add('bg-slate-300');
+                        if (knobEl) {
+                            knobEl.classList.remove('translate-x-4');
+                            knobEl.classList.add('translate-x-0');
+                        }
+                        if (labelEl) {
+                            labelEl.textContent = 'NONAKTIF';
+                            labelEl.classList.remove('text-emerald-700');
+                            labelEl.classList.add('text-slate-400');
+                        }
+                        btnEl.setAttribute('title', 'Klik untuk Mengaktifkan (Jadikan 00/ACTIVE)');
+                    }
+
+                    window.showToast(
+                        data.message || `Status berhasil diubah menjadi ${finalActive ? 'AKTIF' : 'NON-AKTIF'}`,
+                        finalActive ? 'success' : 'error',
+                        finalActive ? 'Status Aktif (00)' : 'Status Non-Aktif (99)'
+                    );
+                } else {
+                    throw new Error(data.message || 'Gagal mengubah status di server.');
+                }
+            } catch (err) {
+                console.error('Toggle status error:', err);
+                window.showToast(err.message || 'Terjadi kesalahan sistem saat memperbarui status.', 'error', 'Gagal Memperbarui');
+            } finally {
+                btnEl.disabled = false;
+                btnEl.classList.remove('opacity-60', 'cursor-wait');
+            }
+        };
+
         document.addEventListener("DOMContentLoaded", function() {
             lucide.createIcons();
         });

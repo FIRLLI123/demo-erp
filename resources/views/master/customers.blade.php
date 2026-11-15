@@ -303,15 +303,7 @@
                                     @endif
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
-                                    @if($c->status === 'ACTIVE')
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                            ACTIVE
-                                        </span>
-                                    @else
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                            INACTIVE
-                                        </span>
-                                    @endif
+                                    <x-master-status-toggle entity="customers" :id="$c->id" :name="$c->name" :active="$c->status === 'ACTIVE'" />
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
                                     <button type="button" 
