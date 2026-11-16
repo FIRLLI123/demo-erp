@@ -56,6 +56,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/users', [MasterController::class, 'users'])->name('users');
         Route::post('/users', [MasterController::class, 'storeUser'])->name('users.store');
         Route::post('/users/update/{id}', [MasterController::class, 'updateUser'])->name('users.update');
+        Route::post('/users/mapping/{id}', [MasterController::class, 'saveUserMapping'])->name('users.save-mapping');
         
         // Master Tambahan (Bank, Vendor, Price Profile, Segmen, Wilayah, Approval Matrix)
         Route::get('/banks', [MasterController::class, 'banks'])->name('banks');

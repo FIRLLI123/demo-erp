@@ -108,12 +108,12 @@
                         </span>
                         <div>
                             <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Validasi Surat Jalan & Berkas Telkomsel</h4>
-                            <p class="text-[11px] text-slate-500">Kedua field ini wajib diisi sebelum barang fisik dapat di-input ke gudang.</p>
+                            <!-- <p class="text-[11px] text-slate-500">Kedua field ini wajib diisi sebelum barang fisik dapat di-input ke gudang.</p> -->
                         </div>
                     </div>
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+                    <!-- <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
                         * Wajib (Mandatory)
-                    </span>
+                    </span> -->
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -125,7 +125,7 @@
                                 <span>Nomor DO / Surat Jalan Telkomsel</span>
                                 <span class="text-rose-600 font-extrabold">*</span>
                             </span>
-                            <span class="text-[10px] font-mono text-slate-400">Huruf/Angka</span>
+                            <!-- <span class="text-[10px] font-mono text-slate-400">Huruf/Angka</span> -->
                         </label>
                         <input type="text" 
                                name="do_number" 

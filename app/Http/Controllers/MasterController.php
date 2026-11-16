@@ -466,11 +466,12 @@ class MasterController extends Controller
 
     public function users(Request $request)
     {
-        $users = DB::table('users')
+        $usersRaw = DB::table('users')
             ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
             ->leftJoin('sales', 'users.sales_id', '=', 'sales.id')
             ->leftJoin('taps as sales_taps', 'sales.tap_id', '=', 'sales_taps.id')
-            ->leftJoin('taps as user_taps', 'users.tap_id', '=', 'user_taps.id')
+            ->leftJoin('taps as user_taps_single', 'users.tap_id', '=', 'user_taps_single.id')
+            ->leftJoin('clusters', 'users.cluster_id', '=', 'clusters.id')
             ->select(
                 'users.*',
                 'roles.name as role_name',
@@ -479,19 +480,58 @@ class MasterController extends Controller
                 'sales.name as sales_name',
                 'sales.phone as sales_phone',
                 'sales_taps.name as sales_tap',
-                'user_taps.name as assigned_tap_name'
+                'user_taps_single.name as assigned_tap_name',
+                'clusters.name as assigned_cluster_name'
             )
             ->orderBy('users.id')
             ->get();
 
+        $userIds = $usersRaw->pluck('id')->toArray();
+
+        // Ambil mapping multi-TAP
+        $multiTaps = DB::table('user_taps')
+            ->whereIn('user_id', $userIds)
+            ->get()
+            ->groupBy('user_id');
+
+        // Ambil mapping multi-warehouse
+        $multiWhs = DB::table('user_warehouses')
+            ->whereIn('user_id', $userIds)
+            ->get()
+            ->groupBy('user_id');
+
+        $users = $usersRaw->map(function ($u) use ($multiTaps, $multiWhs) {
+            $mappedTaps = isset($multiTaps[$u->id]) ? $multiTaps[$u->id]->pluck('tap_id')->toArray() : ($u->tap_id ? [$u->tap_id] : []);
+            $mappedWhs = isset($multiWhs[$u->id]) ? $multiWhs[$u->id]->pluck('warehouse_id')->toArray() : [];
+
+            $u->mapped_tap_ids = array_map('intval', $mappedTaps);
+            $u->mapped_warehouse_ids = array_map('intval', $mappedWhs);
+            $u->taps_count = count($u->mapped_tap_ids);
+            $u->warehouses_count = count($u->mapped_warehouse_ids);
+            return $u;
+        });
+
         $roles = DB::table('roles')->orderBy('id')->get();
-        $salesList = DB::table('sales')
-            ->where('status', 'ACTIVE')
-            ->orderBy('name')
-            ->get();
+        $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $clusters = DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name')->get();
         $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
 
-        return view('master.users', compact('users', 'roles', 'salesList', 'taps'));
+        $warehouses = DB::table('warehouses')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->leftJoin('sales', 'warehouses.sales_id', '=', 'sales.id')
+            ->select(
+                'warehouses.*',
+                'taps.name as tap_name',
+                'taps.cluster_id',
+                'sales.name as sales_person_name'
+            )
+            ->where('warehouses.status', 'ACTIVE')
+            ->orderBy('taps.name')
+            ->orderBy('warehouses.type')
+            ->orderBy('warehouses.name')
+            ->get();
+
+        return view('master.users', compact('users', 'roles', 'salesList', 'clusters', 'taps', 'warehouses'));
     }
 
     public function storeUser(Request $request)
@@ -501,6 +541,7 @@ class MasterController extends Controller
             'email' => 'required|email|unique:users,email|max:150',
             'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
+            'cluster_id' => 'nullable|exists:clusters,id',
             'tap_id' => 'nullable|exists:taps,id',
             'phone' => 'nullable|string|max:20',
             'sales_id' => 'nullable|exists:sales,id',
@@ -511,13 +552,25 @@ class MasterController extends Controller
             'email' => $request->email,
             'password' => bcrypt($request->password),
             'role_id' => $request->role_id,
+            'cluster_id' => $request->cluster_id,
             'tap_id' => $request->tap_id,
             'sales_id' => $request->sales_id,
             'phone' => $request->phone,
+            'auto_include_sales_wh' => 1,
+            'is_ho_readonly' => 0,
             'is_active' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        if ($request->tap_id) {
+            DB::table('user_taps')->insert([
+                'user_id' => $userId,
+                'tap_id' => $request->tap_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         if ($request->sales_id) {
             DB::table('sales')->where('id', $request->sales_id)->update([
@@ -535,6 +588,7 @@ class MasterController extends Controller
             'name' => 'required|string|max:150',
             'email' => 'required|email|max:150|unique:users,email,' . $id,
             'role_id' => 'required|exists:roles,id',
+            'cluster_id' => 'nullable|exists:clusters,id',
             'tap_id' => 'nullable|exists:taps,id',
             'phone' => 'nullable|string|max:20',
             'sales_id' => 'nullable|exists:sales,id',
@@ -546,6 +600,7 @@ class MasterController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'role_id' => $request->role_id,
+            'cluster_id' => $request->cluster_id,
             'tap_id' => $request->tap_id,
             'sales_id' => $request->sales_id,
             'phone' => $request->phone,
@@ -559,6 +614,13 @@ class MasterController extends Controller
 
         DB::table('users')->where('id', $id)->update($updateData);
 
+        if ($request->tap_id) {
+            DB::table('user_taps')->updateOrInsert(
+                ['user_id' => $id, 'tap_id' => $request->tap_id],
+                ['created_at' => now(), 'updated_at' => now()]
+            );
+        }
+
         if ($request->sales_id) {
             DB::table('sales')->where('id', $request->sales_id)->update([
                 'user_id' => $id,
@@ -567,6 +629,71 @@ class MasterController extends Controller
         }
 
         return redirect()->route('master.users')->with('success', "Data akun pengguna [{$request->name}] berhasil diperbarui.");
+    }
+
+    /**
+     * Otorisasi Wilayah & Gudang Transaksi Pengguna
+     */
+    public function saveUserMapping(Request $request, $id)
+    {
+        $user = DB::table('users')->where('id', $id)->first();
+        if (!$user) {
+            return redirect()->route('master.users')->with('error', 'Data pengguna tidak ditemukan!');
+        }
+
+        $isHo = $request->input('is_ho_readonly') == '1';
+        $autoInclude = $request->input('auto_include_sales_wh') == '1';
+        $clusterId = $request->input('cluster_id') ?: null;
+        $tapIds = array_filter(array_map('intval', $request->input('tap_ids', [])));
+        $warehouseIds = array_filter(array_map('intval', $request->input('warehouse_ids', [])));
+
+        // 1. Update status akun pengguna
+        DB::table('users')->where('id', $id)->update([
+            'cluster_id' => $clusterId,
+            'tap_id' => !empty($tapIds) ? $tapIds[0] : null,
+            'is_ho_readonly' => $isHo ? 1 : 0,
+            'auto_include_sales_wh' => $autoInclude ? 1 : 0,
+            'updated_at' => now(),
+        ]);
+
+        // 2. Simpan daftar TAP yang diizinkan (user_taps)
+        DB::table('user_taps')->where('user_id', $id)->delete();
+        if (!empty($tapIds)) {
+            $tapData = [];
+            foreach ($tapIds as $tId) {
+                $tapData[] = [
+                    'user_id' => $id,
+                    'tap_id' => $tId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+            DB::table('user_taps')->insert($tapData);
+        }
+
+        // 3. Simpan daftar gudang kustom (user_warehouses)
+        DB::table('user_warehouses')->where('user_id', $id)->delete();
+        // Hanya simpan jika BUKAN HO dan BUKAN auto-include (artinya Custom Checklist)
+        if (!$isHo && !$autoInclude && !empty($warehouseIds)) {
+            $whData = [];
+            foreach ($warehouseIds as $wId) {
+                $whData[] = [
+                    'user_id' => $id,
+                    'warehouse_id' => $wId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+            DB::table('user_warehouses')->insert($whData);
+        }
+
+        $statusMsg = $isHo 
+            ? "Akun [{$user->name}] dikonfigurasi sebagai Akun HO / Monitoring (Read-Only: hanya melihat laporan, tanpa transaksi gudang)."
+            : ($autoInclude 
+                ? "Hak otorisasi akun [{$user->name}] berhasil disimpan: Mengakses seluruh gudang TAP terpilih & otomatis menyertakan sales baru."
+                : "Hak otorisasi akun [{$user->name}] berhasil disimpan dengan kustomisasi " . count($warehouseIds) . " gudang.");
+
+        return redirect()->route('master.users')->with('success', $statusMsg);
     }
 
     // ========================================================
