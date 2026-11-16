@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['name', 'email', 'password', 'role_id', 'cluster_id', 'tap_id', 'sales_id', 'phone', 'is_active', 'auto_include_sales_wh', 'is_ho_readonly'])]
+#[Fillable(['name', 'email', 'password', 'role_id', 'has_full_access', 'cluster_id', 'tap_id', 'sales_id', 'phone', 'is_active', 'auto_include_sales_wh', 'is_ho_readonly'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -29,6 +29,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'has_full_access' => 'boolean',
             'auto_include_sales_wh' => 'boolean',
             'is_ho_readonly' => 'boolean',
         ];
@@ -39,28 +40,45 @@ class User extends Authenticatable
      */
     public function getAllowedTaps()
     {
+        // 1. Akses Penuh: Seluruh TAP
+        if ($this->has_full_access) {
+            return DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+        }
+
         $role = DB::table('roles')->where('id', $this->role_id)->first();
         if ($role && in_array($role->slug, ['it_dev', 'super_admin'])) {
             return DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
         }
 
-        // Cek multi-TAP di tabel user_taps
-        $multiTapIds = DB::table('user_taps')->where('user_id', $this->id)->pluck('tap_id')->toArray();
-        if (!empty($multiTapIds)) {
-            return DB::table('taps')->whereIn('id', $multiTapIds)->where('status', 'ACTIVE')->orderBy('name')->get();
+        // 2. Ambil dari tabel tunggal user_has_areas_clusters_taps_warehouses
+        $tapIds = DB::table('user_has_areas_clusters_taps_warehouses')
+            ->where('user_id', $this->id)
+            ->whereNotNull('tap_id')
+            ->pluck('tap_id')
+            ->unique()
+            ->toArray();
+
+        if (!empty($tapIds)) {
+            return DB::table('taps')->whereIn('id', $tapIds)->where('status', 'ACTIVE')->orderBy('name')->get();
         }
 
-        // Cek jika penugasan per Cluster
-        if ($this->cluster_id) {
-            return DB::table('taps')->where('cluster_id', $this->cluster_id)->where('status', 'ACTIVE')->orderBy('name')->get();
+        // Cek jika ada penugasan cluster di mapping
+        $clusterIds = DB::table('user_has_areas_clusters_taps_warehouses')
+            ->where('user_id', $this->id)
+            ->whereNotNull('cluster_id')
+            ->pluck('cluster_id')
+            ->unique()
+            ->toArray();
+
+        if (!empty($clusterIds)) {
+            return DB::table('taps')->whereIn('cluster_id', $clusterIds)->where('status', 'ACTIVE')->orderBy('name')->get();
         }
 
-        // Cek single TAP
+        // Fallback tap_id profil
         if ($this->tap_id) {
             return DB::table('taps')->where('id', $this->tap_id)->where('status', 'ACTIVE')->get();
         }
 
-        // Default IT fallback
         return DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
     }
 
@@ -69,12 +87,12 @@ class User extends Authenticatable
      */
     public function getAllowedWarehouses()
     {
-        // 1. Akun HO / Monitoring: Mutlak 0 Gudang (Hanya Lihat Laporan)
+        // 1. Mode HO / Monitoring: Mutlak 0 Gudang (Hanya Lihat Laporan)
         if ($this->is_ho_readonly) {
             return collect([]);
         }
 
-        // 2. Akun Sales Kanvas: Otomatis terkunci hanya ke gudang motor miliknya sendiri
+        // 2. Akun Sales Kanvas: Otomatis terkunci ke tas motornya sendiri
         if ($this->sales_id) {
             return DB::table('warehouses')
                 ->where('sales_id', $this->sales_id)
@@ -82,28 +100,45 @@ class User extends Authenticatable
                 ->get();
         }
 
-        // 3. Mode Custom Checklist Gudang (auto_include_sales_wh = false)
-        if (!$this->auto_include_sales_wh) {
-            $mappedWhIds = DB::table('user_warehouses')
-                ->where('user_id', $this->id)
-                ->pluck('warehouse_id')
-                ->toArray();
-
-            return DB::table('warehouses')
-                ->whereIn('id', $mappedWhIds)
-                ->where('status', 'ACTIVE')
-                ->orderBy('name')
-                ->get();
+        // 3. Akses Penuh: Seluruh Gudang
+        if ($this->has_full_access) {
+            return DB::table('warehouses')->where('status', 'ACTIVE')->orderBy('type')->orderBy('name')->get();
         }
 
-        // 4. Mode Otomatis Ikut TAP (Termasuk Otomatis Seluruh Sales Baru)
-        $allowedTapIds = $this->getAllowedTaps()->pluck('id')->toArray();
-        if (empty($allowedTapIds)) {
+        // 4. Ambil dari tabel tunggal user_has_areas_clusters_taps_warehouses
+        $mappings = DB::table('user_has_areas_clusters_taps_warehouses')
+            ->where('user_id', $this->id)
+            ->get();
+
+        if ($mappings->isEmpty()) {
+            return collect([]);
+        }
+
+        $allWhIds = collect([]);
+
+        // A. TAP dengan mode is_all_warehouses = 1 (Semua gudang di TAP termasuk sales baru)
+        $autoTapIds = $mappings->where('is_all_warehouses', 1)->pluck('tap_id')->unique()->filter()->toArray();
+        if (!empty($autoTapIds)) {
+            $autoWhs = DB::table('warehouses')
+                ->whereIn('tap_id', $autoTapIds)
+                ->where('status', 'ACTIVE')
+                ->pluck('id');
+            $allWhIds = $allWhIds->merge($autoWhs);
+        }
+
+        // B. Gudang spesifik (Custom checklist)
+        $specificWhIds = $mappings->where('is_all_warehouses', 0)->pluck('warehouse_id')->unique()->filter()->toArray();
+        if (!empty($specificWhIds)) {
+            $allWhIds = $allWhIds->merge($specificWhIds);
+        }
+
+        $uniqueIds = $allWhIds->unique()->toArray();
+        if (empty($uniqueIds)) {
             return collect([]);
         }
 
         return DB::table('warehouses')
-            ->whereIn('tap_id', $allowedTapIds)
+            ->whereIn('id', $uniqueIds)
             ->where('status', 'ACTIVE')
             ->orderBy('type')
             ->orderBy('name')
