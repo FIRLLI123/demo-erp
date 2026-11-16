@@ -151,8 +151,9 @@
         <!-- MODAL EDIT PENGGUNA (PROFIL & PASSWORD)        -->
         <!-- ============================================== -->
         <template x-if="editModalOpen && editData">
-            <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl" @click.outside="editModalOpen = false">
+            <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" @click="editModalOpen = false"></div>
+                <div class="relative bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl z-10">
                     <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
                         <h3 class="font-bold text-slate-900 text-sm">Edit Profil Pengguna [<span x-text="editData.email"></span>]</h3>
                         <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600">&times;</button>
@@ -249,8 +250,9 @@
         <!-- MODAL OTORISASI WILAYAH & GUDANG TRANSAKSI     -->
         <!-- ============================================== -->
         <template x-if="mappingModalOpen && mappingUser">
-            <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-                <div class="bg-white rounded-3xl border border-slate-200 max-w-2xl w-full p-6 md:p-7 shadow-2xl overflow-hidden" @click.outside="mappingModalOpen = false">
+            <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+                <div class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs transition-opacity" @click="mappingModalOpen = false"></div>
+                <div class="relative bg-white rounded-3xl border border-slate-200 max-w-2xl w-full p-6 md:p-7 shadow-2xl overflow-hidden z-10">
                     
                     <!-- Modal Header -->
                     <div class="flex items-start justify-between pb-4 mb-5 border-b border-slate-100">
@@ -580,16 +582,16 @@
                                 <td class="py-3.5 px-4 text-center">
                                     <div class="flex items-center justify-center gap-1.5">
                                         <button type="button" 
-                                                @click="openMappingModal({{ json_encode($u) }})" 
-                                                class="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold transition-all flex items-center gap-1 shadow-2xs"
+                                                @click.stop="openMappingModal({{ $u->id }})" 
+                                                class="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
                                                 title="Atur Otorisasi Wilayah & Gudang Transaksi">
                                             <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
                                             <span>Mapping</span>
                                         </button>
 
                                         <button type="button" 
-                                                @click="openEditModal({{ json_encode($u) }})" 
-                                                class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold transition-all">
+                                                @click.stop="openEditModal({{ $u->id }})" 
+                                                class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-all cursor-pointer active:scale-95">
                                             Edit
                                         </button>
                                     </div>
@@ -612,6 +614,7 @@
                 editData: null,
                 mappingModalOpen: false,
                 mappingUser: null,
+                usersList: @json($users),
                 allWarehouses: @json($warehouses),
                 allTaps: @json($taps),
 
@@ -622,12 +625,16 @@
                 selectedTapIds: [],
                 selectedWhIds: [],
 
-                openEditModal(data) {
-                    this.editData = { ...data };
+                openEditModal(userId) {
+                    const u = this.usersList.find(x => x.id === userId);
+                    if (!u) return;
+                    this.editData = { ...u };
                     this.editModalOpen = true;
                 },
 
-                openMappingModal(u) {
+                openMappingModal(userId) {
+                    const u = this.usersList.find(x => x.id === userId);
+                    if (!u) return;
                     this.mappingUser = u;
                     this.mappingClusterId = u.cluster_id || '';
                     this.mappingIsHo = Boolean(u.is_ho_readonly);
@@ -637,7 +644,9 @@
                     this.mappingModalOpen = true;
 
                     this.$nextTick(() => {
-                        if (window.lucide) lucide.createIcons();
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
                     });
                 },
 
