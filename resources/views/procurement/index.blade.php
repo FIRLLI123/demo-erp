@@ -201,6 +201,8 @@
                     <thead class="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
                         <tr>
                             <th class="py-3 px-5">Nomor PO</th>
+                            <th class="py-3 px-4">No. DO Telkomsel</th>
+                            <th class="py-3 px-4 text-center">Bukti DO (PDF)</th>
                             <th class="py-3 px-4">Supplier</th>
                             <th class="py-3 px-4">TAP</th>
                             <th class="py-3 px-4">Tanggal</th>
@@ -227,6 +229,31 @@
                                         </span>
                                         <span :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'text-rose-950 font-extrabold' : ''">{{ $po->doc_number }}</span>
                                     </div>
+                                </td>
+
+                                <td class="py-3.5 px-4 font-mono text-xs">
+                                    @if(!empty($po->do_number))
+                                        <span class="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                            {{ $po->do_number }}
+                                        </span>
+                                    @else
+                                        <span class="text-slate-400 italic text-[11px]">-</span>
+                                    @endif
+                                </td>
+
+                                <td class="py-3.5 px-4 text-center">
+                                    @if(!empty($po->do_file_path))
+                                        <a href="{{ asset('storage/' . $po->do_file_path) }}" 
+                                           target="_blank" 
+                                           @click.stop
+                                           class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 shadow-xs transition-all"
+                                           title="Buka Berkas PDF Surat Jalan Telkomsel">
+                                            <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-600"></i>
+                                            <span>PDF</span>
+                                        </a>
+                                    @else
+                                        <span class="text-slate-400 italic text-[11px]">-</span>
+                                    @endif
                                 </td>
 
                                 <td class="py-3.5 px-4 font-bold text-slate-800">{{ $po->supplier_name }}</td>
@@ -327,6 +354,20 @@
                             <span class="text-slate-400">TAP:</span>
                             <span class="font-bold text-white" x-text="selectedPo ? selectedPo.tap_name : ''"></span>
                         </div>
+                        <template x-if="selectedPo && selectedPo.do_number">
+                            <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                                <span class="text-slate-400">No. DO:</span>
+                                <span class="font-bold font-mono text-emerald-400" x-text="selectedPo.do_number"></span>
+                            </div>
+                        </template>
+                        <template x-if="selectedPo && selectedPo.do_file_path">
+                            <a :href="'{{ asset('storage') }}/' + selectedPo.do_file_path" 
+                               target="_blank" 
+                               class="flex items-center gap-1 bg-rose-900/60 hover:bg-rose-900 px-3 py-1 rounded-lg border border-rose-700/60 text-white font-bold text-xs transition-all">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-400"></i>
+                                <span>Lihat Berkas PDF</span>
+                            </a>
+                        </template>
                         <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
                             <span class="text-slate-400">Status:</span>
                             <span class="font-bold px-1.5 py-0.5 rounded text-[10px]" 
@@ -402,12 +443,30 @@
 
                     <!-- Feedback jika PO sudah RECEIVED -->
                     <template x-if="selectedPo && selectedPo.status === 'RECEIVED'">
-                        <div class="mt-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs text-emerald-800 font-bold">
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
-                                <span>Barang Fisik Sudah Diterima Lengkap (GR Selesai)</span>
+                        <div class="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-900">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                                    <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="font-extrabold text-emerald-950 text-xs">Barang Fisik Sudah Diterima Lengkap (GR Selesai)</h5>
+                                    <div class="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-emerald-800">
+                                        <span>Dokumen GR: <strong class="font-mono" x-text="selectedPo.gr_number || 'Tercatat'"></strong></span>
+                                        <span>&bull;</span>
+                                        <span>No. DO Telkomsel: <strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-200" x-text="selectedPo.do_number || '-'"></strong></span>
+                                    </div>
+                                </div>
                             </div>
-                            <span class="font-mono text-[11px] text-emerald-700">Tercatat di Gudang MAIN</span>
+                            
+                            <template x-if="selectedPo && selectedPo.do_file_path">
+                                <a :href="'{{ asset('storage') }}/' + selectedPo.do_file_path" 
+                                   target="_blank" 
+                                   class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-all shrink-0">
+                                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                                    <span>Lihat Berkas Surat Jalan (PDF)</span>
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                </a>
+                            </template>
                         </div>
                     </template>
 

@@ -46,22 +46,164 @@
             </div>
         </div>
 
+        @if ($errors->any())
+            <div class="m-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                <div class="flex items-center gap-2 font-bold mb-1.5">
+                    <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
+                    <span>Terdapat data yang belum lengkap:</span>
+                </div>
+                <ul class="list-disc list-inside space-y-1 text-rose-700 pl-1">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('procurement.process-gr', $po->id) }}" enctype="multipart/form-data" class="p-6 md:p-8"
+              x-data="{
+                  doNumber: '{{ old('do_number', '') }}',
+                  fileName: '',
+                  fileSize: '',
+                  hasPdf: false,
+                  handleFile(e) {
+                      const file = e.target.files[0];
+                      if (file) {
+                          if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+                              alert('Mohon pilih berkas dengan format PDF (.pdf)!');
+                              e.target.value = '';
+                              this.hasPdf = false;
+                              this.fileName = '';
+                              this.fileSize = '';
+                              return;
+                          }
+                          this.hasPdf = true;
+                          this.fileName = file.name;
+                          const sizeKb = file.size / 1024;
+                          this.fileSize = sizeKb > 1024 ? (sizeKb / 1024).toFixed(2) + ' MB' : Math.round(sizeKb) + ' KB';
+                      } else {
+                          this.hasPdf = false;
+                          this.fileName = '';
+                          this.fileSize = '';
+                      }
+                  },
+                  clearFile() {
+                      this.$refs.fileInput.value = '';
+                      this.hasPdf = false;
+                      this.fileName = '';
+                      this.fileSize = '';
+                  }
+              }"
               data-loading-title="Penerimaan Barang Fisik (GR)"
               data-loading-sub="Mendaftarkan dokumen GR, memverifikasi serial ICCID & menambah stok Gudang MAIN..."
               data-doctype="GR">
             @csrf
 
-            <!-- Metadata Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pb-6 border-b border-slate-100">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Tanggal Penerimaan Fisik</label>
-                    <input type="date" name="received_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none">
+            <!-- Metadata & Dokumen Telkomsel Box -->
+            <div class="mb-8 rounded-2xl border-2 border-emerald-500/20 bg-emerald-50/30 p-5 md:p-6">
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-emerald-500/10">
+                    <div class="flex items-center gap-2">
+                        <span class="p-1.5 rounded-lg bg-emerald-600 text-white shadow-xs">
+                            <i data-lucide="file-check-2" class="w-4 h-4"></i>
+                        </span>
+                        <div>
+                            <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Validasi Surat Jalan & Berkas Telkomsel</h4>
+                            <p class="text-[11px] text-slate-500">Kedua field ini wajib diisi sebelum barang fisik dapat di-input ke gudang.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+                        * Wajib (Mandatory)
+                    </span>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Catatan / No. Surat Jalan Ekspedisi</label>
-                    <input type="text" name="notes" placeholder="Contoh: SJ-TELKOMSEL-9812 / Diterima utuh tanpa cacat" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- 1. Input Nomor DO -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="hash" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>Nomor DO / Surat Jalan Telkomsel</span>
+                                <span class="text-rose-600 font-extrabold">*</span>
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-400">Huruf/Angka</span>
+                        </label>
+                        <input type="text" 
+                               name="do_number" 
+                               x-model="doNumber" 
+                               required 
+                               placeholder="Contoh: DO-TSEL-202611-9812 / SJ/BGR/26/001" 
+                               class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-xs">
+                        <p class="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                            <i data-lucide="info" class="w-3 h-3 text-slate-400"></i>
+                            <span>Nomor surat jalan resmi dari pihak Telkomsel saat mengantar barang.</span>
+                        </p>
+                    </div>
+
+                    <!-- 2. Upload Berkas Fisik (PDF) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="file-up" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>Upload Bukti Berkas Penerimaan</span>
+                                <span class="text-rose-600 font-extrabold">* (Wajib PDF)</span>
+                            </span>
+                            <span class="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Maks 10MB</span>
+                        </label>
+
+                        <!-- Hidden File Input -->
+                        <input type="file" 
+                               name="do_file" 
+                               x-ref="fileInput" 
+                               @change="handleFile($event)" 
+                               accept=".pdf,application/pdf" 
+                               required 
+                               class="hidden">
+
+                        <!-- Dropzone / Picker State -->
+                        <div x-show="!hasPdf" 
+                             @click="$refs.fileInput.click()" 
+                             class="border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-white hover:bg-emerald-50/40 rounded-xl p-3.5 text-center cursor-pointer transition-all group">
+                            <div class="flex items-center justify-center gap-2 text-slate-600 group-hover:text-emerald-700">
+                                <i data-lucide="upload-cloud" class="w-5 h-5 text-slate-400 group-hover:text-emerald-600 transition-colors"></i>
+                                <span class="text-xs font-bold">Pilih Berkas PDF Surat Jalan</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 block mt-0.5">Klik di sini untuk upload dokumen scan/PDF dari Telkomsel</span>
+                        </div>
+
+                        <!-- File Selected Preview State -->
+                        <div x-show="hasPdf" x-cloak class="bg-white border-2 border-emerald-500/40 rounded-xl p-3 flex items-center justify-between shadow-xs">
+                            <div class="flex items-center gap-2.5 overflow-hidden">
+                                <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 font-bold text-[10px]">
+                                    PDF
+                                </div>
+                                <div class="truncate">
+                                    <span class="text-xs font-bold text-slate-900 block truncate" x-text="fileName"></span>
+                                    <span class="text-[10px] text-slate-500 font-mono" x-text="fileSize"></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button type="button" @click="$refs.fileInput.click()" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg transition-all">
+                                    Ganti
+                                </button>
+                                <button type="button" @click="clearFile()" class="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-all" title="Hapus">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Row: Tanggal & Catatan -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4 pt-4 border-t border-emerald-500/10">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Tanggal Penerimaan Fisik di Kantor TAP</label>
+                        <input type="date" name="received_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Catatan Tambahan / Kondisi Fisik Paket</label>
+                        <input type="text" name="notes" placeholder="Contoh: Diterima utuh tanpa cacat segel / box rapi" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
                 </div>
             </div>
 
@@ -156,15 +298,25 @@
             </div>
 
             <!-- Submit Action -->
-            <div class="flex items-center justify-between pt-4 border-t border-slate-100">
-                <a href="{{ route('procurement.index') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-slate-100 gap-3">
+                <a href="{{ route('procurement.index') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs text-center">
                     Batal
                 </a>
 
-                <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all active:scale-95">
-                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-                    <span>Konfirmasi Penerimaan & Terbitkan GR</span>
-                </button>
+                <div class="flex flex-wrap items-center justify-end gap-3">
+                    <span x-show="!doNumber.trim() || !hasPdf" class="text-[11px] font-bold text-amber-600 flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0"></i>
+                        <span>Wajib isi No. DO & upload berkas PDF Surat Jalan</span>
+                    </span>
+
+                    <button type="submit" 
+                            :class="(!doNumber.trim() || !hasPdf) ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20 active:scale-95'"
+                            :disabled="!doNumber.trim() || !hasPdf"
+                            class="px-6 py-3 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>Konfirmasi Penerimaan & Terbitkan GR</span>
+                    </button>
+                </div>
             </div>
         </form>
     </div>

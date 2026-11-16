@@ -12,7 +12,15 @@ class ProcurementController extends Controller
     {
         $ordersRaw = DB::table('purchase_orders')
             ->join('taps', 'purchase_orders.tap_id', '=', 'taps.id')
-            ->select('purchase_orders.*', 'taps.name as tap_name')
+            ->leftJoin('goods_receipts', 'goods_receipts.purchase_order_id', '=', 'purchase_orders.id')
+            ->select(
+                'purchase_orders.*',
+                'taps.name as tap_name',
+                'goods_receipts.doc_number as gr_number',
+                'goods_receipts.do_number',
+                'goods_receipts.do_file_path',
+                'goods_receipts.received_date as gr_received_date'
+            )
             ->orderBy('purchase_orders.id', 'desc')
             ->get();
 
@@ -196,6 +204,18 @@ class ProcurementController extends Controller
 
     public function processGr(Request $request, $id)
     {
+        $request->validate([
+            'do_number' => 'required|string|max:100',
+            'do_file' => 'required|file|mimes:pdf|max:10240',
+            'received_date' => 'required|date',
+        ], [
+            'do_number.required' => 'Nomor DO / Surat Jalan Telkomsel wajib diisi!',
+            'do_file.required' => 'Wajib mengunggah berkas bukti Surat Jalan fisik (PDF)!',
+            'do_file.mimes' => 'Format berkas bukti harus berupa dokumen PDF (.pdf)!',
+            'do_file.max' => 'Ukuran berkas PDF maksimal 10MB!',
+            'received_date.required' => 'Tanggal penerimaan fisik wajib diisi!',
+        ]);
+
         $po = DB::table('purchase_orders')->where('id', $id)->first();
         if (!$po) {
             return redirect()->route('procurement.index')->with('error', 'Data PO tidak ditemukan!');
@@ -203,6 +223,15 @@ class ProcurementController extends Controller
 
         if ($po->status === 'RECEIVED') {
             return redirect()->route('procurement.index')->with('error', 'PO ini sudah pernah diterima (RECEIVED)!');
+        }
+
+        // Upload berkas DO (PDF)
+        $doFilePath = null;
+        if ($request->hasFile('do_file')) {
+            $file = $request->file('do_file');
+            $cleanDo = preg_replace('/[^A-Za-z0-9_-]/', '_', $request->input('do_number'));
+            $filename = 'DO_' . $cleanDo . '_' . date('Ymd_His') . '.' . $file->getClientOriginalExtension();
+            $doFilePath = $file->storeAs('attachments/gr', $filename, 'public');
         }
 
         $mainWh = DB::table('warehouses')
@@ -227,6 +256,8 @@ class ProcurementController extends Controller
                 'doc_number' => $grNumber,
                 'ref_doc_type' => 'PO',
                 'ref_doc_number' => $po->doc_number,
+                'do_number' => trim($request->input('do_number')),
+                'do_file_path' => $doFilePath,
                 'purchase_order_id' => $po->id,
                 'tap_id' => $po->tap_id,
                 'warehouse_id' => $mainWh->id,
