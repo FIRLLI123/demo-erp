@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Dashboard' }} | PT Wahana Putra Yudha - Telco Distribution Management</title>
+    <title>{{ $title ?? 'Dashboard' }} | Telco Distribution Management</title>
 
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -212,7 +212,7 @@
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="font-extrabold text-sm text-white tracking-tight truncate max-w-[155px]">PT WAHANA PUTRA YUDHA</span>
+                            <span class="font-extrabold text-sm text-white tracking-tight truncate max-w-[155px]">DISTRIBUTION ERP</span>
                         </div>
                         <p class="text-[10px] text-rose-400 font-bold tracking-wide">TELKOMSEL AUTHORIZED PARTNER</p>
                     </div>
@@ -314,7 +314,7 @@
                     <div x-show="openMenus.master" x-collapse.duration.300ms class="ml-4 pl-3.5 my-1.5 space-y-1 border-l-2 border-slate-800">
                         <a href="{{ route('master.organization') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.organization*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.organization*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
-                            <span>Area, Cluster, TAP</span>
+                            <span>Area, Cluster, TAP, Gudang</span>
                         </a>
                         <a href="{{ route('master.products') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.products*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.products*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
@@ -592,7 +592,7 @@
                     </div>
                     <form method="POST" action="{{ route('logout') }}" data-no-loading>
                         @csrf
-                        <button type="submit" title="Keluar dari Wahana POS (Logout)" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer">
+                        <button type="submit" title="Keluar dari Sistem (Logout)" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer">
                             <i data-lucide="log-out" class="w-4 h-4"></i>
                         </button>
                     </form>
@@ -617,7 +617,7 @@
                                 </span>
                             @endif
                         </h1>
-                        <p class="text-[11px] text-slate-500 font-medium hidden sm:block">PT Wahana Putra Yudha &bull; Telkomsel Distribution Management System</p>
+                        <p class="text-[11px] text-slate-500 font-medium hidden sm:block">Enterprise Telco Distribution Management System</p>
                     </div>
                 </div>
 
@@ -664,7 +664,7 @@
                     <!-- Logout Button -->
                     <form method="POST" action="{{ route('logout') }}" class="hidden sm:block" data-no-loading>
                         @csrf
-                        <button type="submit" title="Keluar dari Wahana POS (Logout)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center text-slate-600 transition-colors cursor-pointer">
+                        <button type="submit" title="Keluar dari Sistem (Logout)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center text-slate-600 transition-colors cursor-pointer">
                             <i data-lucide="log-out" class="w-4 h-4"></i>
                         </button>
                     </form>
@@ -739,7 +739,7 @@
                     <div class="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-tl-xs shadow-xs text-slate-800 max-w-[85%] leading-relaxed">
                         <p class="font-semibold text-slate-900 mb-1">Halo! Saya <span class="text-rose-600 font-extrabold">Nisa</span> 👋</p>
                         <p class="text-[11px] text-slate-600">
-                            Asisten pintar ERP PT Wahana Putra Yudha. Butuh info penjualan sales, stok gudang, piutang toko, kas belum setor, atau tracking GPS? Tanyakan saja ya!
+                            Asisten pintar ERP Distribusi. Butuh info penjualan sales, stok gudang, piutang toko, kas belum setor, atau tracking GPS? Tanyakan saja ya!
                         </p>
                     </div>
                 </div>
@@ -843,7 +843,7 @@
                 </div>
                 <div class="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 px-1">
                     <span>✨ AI Virtual Copilot</span>
-                    <span class="font-mono">PT Wahana Putra Yudha</span>
+                    <span class="font-mono">Distribution Management</span>
                 </div>
             </div>
         </div>

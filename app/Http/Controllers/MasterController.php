@@ -9,15 +9,38 @@ class MasterController extends Controller
 {
     public function organization()
     {
-        $areas = DB::table('areas')->get();
+        $areas = DB::table('areas')->orderBy('id')->get();
         $clusters = DB::table('clusters')->join('areas', 'clusters.area_id', '=', 'areas.id')
-            ->select('clusters.*', 'areas.name as area_name')->get();
+            ->select('clusters.*', 'areas.name as area_name')
+            ->orderBy('clusters.id')
+            ->get();
         $taps = DB::table('taps')->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
-            ->select('taps.*', 'clusters.name as cluster_name')->get();
+            ->join('areas', 'clusters.area_id', '=', 'areas.id')
+            ->select('taps.*', 'clusters.name as cluster_name', 'areas.name as area_name')
+            ->orderBy('taps.id')
+            ->get();
+        $warehouses = DB::table('warehouses')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->join('areas', 'clusters.area_id', '=', 'areas.id')
+            ->leftJoin('sales', 'warehouses.sales_id', '=', 'sales.id')
+            ->select(
+                'warehouses.*',
+                'taps.name as tap_name',
+                'taps.code as tap_code',
+                'clusters.name as cluster_name',
+                'areas.name as area_name',
+                'sales.name as sales_name',
+                'sales.code as sales_code'
+            )
+            ->orderBy('warehouses.id')
+            ->get();
         $sales = DB::table('sales')->join('taps', 'sales.tap_id', '=', 'taps.id')
-            ->select('sales.*', 'taps.name as tap_name')->get();
+            ->select('sales.*', 'taps.name as tap_name')
+            ->orderBy('sales.id')
+            ->get();
 
-        return view('master.organization', compact('areas', 'clusters', 'taps', 'sales'));
+        return view('master.organization', compact('areas', 'clusters', 'taps', 'warehouses', 'sales'));
     }
 
     public function products()
@@ -628,6 +651,83 @@ class MasterController extends Controller
     }
 
     /**
+     * Halaman Dedicated: Otorisasi Wilayah & Gudang Pengguna
+     */
+    public function userMapping($id)
+    {
+        $user = DB::table('users')
+            ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+            ->select('users.*', 'roles.name as role_name', 'roles.slug as role_slug')
+            ->where('users.id', $id)
+            ->first();
+
+        if (!$user) {
+            return redirect()->route('master.users')->with('error', 'Pengguna tidak ditemukan!');
+        }
+
+        $userMappings = DB::table('user_has_areas_clusters_taps_warehouses')
+            ->where('user_id', $id)
+            ->get();
+
+        $mappedAreaIds = $userMappings->pluck('area_id')->filter()->unique()->values()->map('intval')->toArray();
+        $mappedClusterIds = $userMappings->pluck('cluster_id')->filter()->unique()->values()->map('intval')->toArray();
+        $mappedTapIds = $userMappings->pluck('tap_id')->filter()->unique()->values()->map('intval')->toArray();
+        $autoTapIds = $userMappings->where('is_all_warehouses', 1)->pluck('tap_id')->filter()->unique()->values()->map('intval')->toArray();
+        $customWhIds = $userMappings->where('is_all_warehouses', 0)->pluck('warehouse_id')->filter()->unique()->values()->map('intval')->toArray();
+
+        // Buat struktur pohon wilayah: Area -> Cluster -> TAP -> Warehouses
+        $areas = DB::table('areas')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $clusters = DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name')->get()->groupBy('area_id');
+        $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get()->groupBy('cluster_id');
+        $warehouses = DB::table('warehouses')
+            ->leftJoin('sales', 'warehouses.sales_id', '=', 'sales.id')
+            ->select('warehouses.*', 'sales.name as sales_person_name')
+            ->where('warehouses.status', 'ACTIVE')
+            ->orderBy('warehouses.type')
+            ->orderBy('warehouses.name')
+            ->get()
+            ->groupBy('tap_id');
+
+        $territoryTree = $areas->map(function ($area) use ($clusters, $taps, $warehouses) {
+            $areaClusters = $clusters->get($area->id, collect([]))->map(function ($cluster) use ($taps, $warehouses) {
+                $clusterTaps = $taps->get($cluster->id, collect([]))->map(function ($tap) use ($warehouses) {
+                    $tapWhs = $warehouses->get($tap->id, collect([]))->values();
+                    return [
+                        'id' => (int)$tap->id,
+                        'name' => $tap->name,
+                        'code' => $tap->code,
+                        'warehouses' => $tapWhs,
+                    ];
+                })->values();
+
+                return [
+                    'id' => (int)$cluster->id,
+                    'name' => $cluster->name,
+                    'code' => $cluster->code,
+                    'taps' => $clusterTaps,
+                ];
+            })->values();
+
+            return [
+                'id' => (int)$area->id,
+                'name' => $area->name,
+                'code' => $area->code,
+                'clusters' => $areaClusters,
+            ];
+        })->values();
+
+        return view('master.user-mapping', compact(
+            'user',
+            'territoryTree',
+            'mappedAreaIds',
+            'mappedClusterIds',
+            'mappedTapIds',
+            'autoTapIds',
+            'customWhIds'
+        ));
+    }
+
+    /**
      * Otorisasi Wilayah & Gudang Transaksi (Pohon Cascading Tree)
      */
     public function saveUserMapping(Request $request, $id)
@@ -727,7 +827,7 @@ class MasterController extends Controller
                 ? "Akun [{$user->name}] dikonfigurasi sebagai Mode Monitoring (Read-Only: hanya melihat laporan wilayah)."
                 : "Hak akses wilayah dan gudang untuk akun [{$user->name}] berhasil diperbarui.");
 
-        return redirect()->route('master.users')->with('success', $statusMsg);
+        return redirect()->route('master.users.mapping', $id)->with('success', $statusMsg);
     }
 
     // ========================================================

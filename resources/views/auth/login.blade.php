@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>Login Masuk &bull; Wahana POS</title>
+    <title>Login Masuk &bull; DistriPOS ERP</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,9 +75,9 @@
                 <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/25 mx-auto mb-3.5 transition-transform hover:scale-105 duration-300">
                     <i data-lucide="layers" class="w-7 h-7"></i>
                 </div>
-                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Wahana POS</h1>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">DistriPOS ERP</h1>
                 <p class="text-xs text-slate-400 font-medium mt-1">
-                    PT Wahana Putra Yudha &bull; Telkomsel Partner
+                    Telkomsel Authorized Partner &bull; Enterprise ERP
                 </p>
             </div>
 
@@ -114,7 +114,7 @@
                                x-model="email" 
                                required 
                                autofocus
-                               placeholder="nama@wahanapos.com" 
+                               placeholder="nama@distripos.com" 
                                class="w-full text-xs font-semibold bg-slate-50/80 border border-slate-200 rounded-xl pl-10 pr-3.5 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-500/20 transition">
                     </div>
                 </div>
@@ -182,38 +182,37 @@
                 </span>
                 <div class="grid grid-cols-2 gap-2">
                     <button type="button" 
-                            @click="setPreset('itdev@wahanapos.com', 'password123')"
-                            :class="email === 'itdev@wahanapos.com' ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold'"
+                            @click="setPreset('it@distripos.com', 'password')"
+                            :class="email === 'it@distripos.com' ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold'"
                             class="px-2.5 py-1.5 rounded-lg border text-[11px] transition text-center cursor-pointer">
-                        ⚡ IT DEV (All Area)
+                        ⚡ IT Dev (Semua Akses)
                     </button>
 
                     <button type="button" 
-                            @click="setPreset('admin.pasarminggu@wahanapos.com', 'password123')"
-                            :class="email === 'admin.pasarminggu@wahanapos.com' ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold'"
+                            @click="setPreset('admin1@distripos.com', 'password')"
+                            :class="email === 'admin1@distripos.com' ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold'"
                             class="px-2.5 py-1.5 rounded-lg border text-[11px] transition text-center cursor-pointer">
-                        🏢 TAP Ps. Minggu
+                        🏢 Admin 1 (Operasional)
                     </button>
 
                     <button type="button" 
-                            @click="setPreset('admin.blokm@wahanapos.com', 'password123')"
-                            :class="email === 'admin.blokm@wahanapos.com' ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold'"
+                            @click="setPreset('admin2@distripos.com', 'password')"
+                            :class="email === 'admin2@distripos.com' ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold'"
                             class="px-2.5 py-1.5 rounded-lg border text-[11px] transition text-center cursor-pointer">
-                        🏢 TAP Blok M
+                        🏢 Admin 2 (Operasional)
                     </button>
 
                     <button type="button" 
-                            @click="setPreset('rian@wahanaputrayudha.co.id', 'password123')"
-                            :class="email === 'rian@wahanaputrayudha.co.id' ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold'"
-                            class="px-2.5 py-1.5 rounded-lg border text-[11px] transition text-center cursor-pointer">
-                        🛵 Sales Force
+                            @click="setPreset('it@distripos.com', 'password')"
+                            class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold text-[11px] transition text-center cursor-pointer">
+                        🔑 Akun Default
                     </button>
                 </div>
             </div>
 
             <!-- Footer -->
             <div class="mt-5 text-center text-[11px] text-slate-400">
-                &copy; 2026 PT Wahana Putra Yudha
+                &copy; 2026 Enterprise Distribution System
             </div>
 
         </div>
@@ -223,8 +222,8 @@
     <script>
         function cleanLoginApp() {
             return {
-                email: '{{ old('email', 'itdev@wahanapos.com') }}',
-                password: 'password123',
+                email: '{{ old('email', 'it@distripos.com') }}',
+                password: 'password',
                 showPassword: false,
                 isSubmitting: false,
 
