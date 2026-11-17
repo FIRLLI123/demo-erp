@@ -84,6 +84,8 @@ class MasterController extends Controller
     {
         $salesList = DB::table('sales')
             ->join('taps', 'sales.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->join('areas', 'clusters.area_id', '=', 'areas.id')
             ->leftJoin('warehouses', function ($join) {
                 $join->on('sales.id', '=', 'warehouses.sales_id')
                      ->where('warehouses.type', '=', 'SALES');
@@ -91,6 +93,11 @@ class MasterController extends Controller
             ->select(
                 'sales.*',
                 'taps.name as tap_name',
+                'taps.code as tap_code',
+                'taps.cluster_id',
+                'clusters.name as cluster_name',
+                'clusters.area_id',
+                'areas.name as area_name',
                 'warehouses.name as warehouse_name',
                 'warehouses.id as warehouse_id'
             )
@@ -109,9 +116,11 @@ class MasterController extends Controller
             $s->total_sales_amount = $soCounts[$s->id]->total_sales_amount ?? 0;
         }
 
+        $areas = DB::table('areas')->orderBy('id')->get();
+        $clusters = DB::table('clusters')->orderBy('name')->get();
         $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
 
-        return view('master.sales', compact('salesList', 'taps'));
+        return view('master.sales', compact('salesList', 'areas', 'clusters', 'taps'));
     }
 
     public function storeSales(Request $request)
@@ -120,10 +129,18 @@ class MasterController extends Controller
             'name' => 'required|string|max:100',
             'tap_id' => 'required|exists:taps,id',
             'phone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:100',
+            'address' => 'nullable|string|max:255',
+            'sales_limit' => 'nullable|numeric|min:0',
+            'sales_type' => 'nullable|string|max:50',
+            'sales_level' => 'nullable|string|max:30',
+            'bakulku_phone' => 'nullable|string|max:20',
+            'ngrs_type' => 'nullable|string|max:30',
         ]);
 
         $nextId = DB::table('sales')->count() + 1;
         $salesCode = 'SLS-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        $limit = $request->sales_limit ?? 20000000;
 
         DB::beginTransaction();
         try {
@@ -131,7 +148,16 @@ class MasterController extends Controller
                 'tap_id' => $request->tap_id,
                 'code' => $salesCode,
                 'name' => $request->name,
+                'email' => $request->email,
                 'phone' => $request->phone ?? '0812' . rand(10000000, 99999999),
+                'address' => $request->address,
+                'sales_limit' => $limit,
+                'sisa_limit' => $limit,
+                'sales_type' => $request->sales_type ?? 'CANVASSER',
+                'sales_level' => $request->sales_level ?? 'SF',
+                'bakulku_phone' => $request->bakulku_phone,
+                'ngrs_type' => $request->ngrs_type ?? 'Digipos',
+                'hadir' => $request->has('hadir') ? (bool)$request->hadir : true,
                 'status' => 'ACTIVE',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -163,16 +189,40 @@ class MasterController extends Controller
             'name' => 'required|string|max:100',
             'tap_id' => 'required|exists:taps,id',
             'phone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:100',
+            'address' => 'nullable|string|max:255',
+            'sales_limit' => 'nullable|numeric|min:0',
+            'sales_type' => 'nullable|string|max:50',
+            'sales_level' => 'nullable|string|max:30',
+            'bakulku_phone' => 'nullable|string|max:20',
+            'ngrs_type' => 'nullable|string|max:30',
             'status' => 'required|in:ACTIVE,INACTIVE',
         ]);
 
-        DB::table('sales')->where('id', $id)->update([
+        $updateData = [
             'name' => $request->name,
             'tap_id' => $request->tap_id,
             'phone' => $request->phone,
+            'email' => $request->email,
+            'address' => $request->address,
+            'sales_type' => $request->sales_type ?? 'CANVASSER',
+            'sales_level' => $request->sales_level ?? 'SF',
+            'bakulku_phone' => $request->bakulku_phone,
+            'ngrs_type' => $request->ngrs_type ?? 'Digipos',
+            'hadir' => $request->has('hadir') ? (bool)$request->hadir : true,
             'status' => $request->status,
             'updated_at' => now(),
-        ]);
+        ];
+
+        if ($request->filled('sales_limit')) {
+            $updateData['sales_limit'] = $request->sales_limit;
+            $current = DB::table('sales')->where('id', $id)->first();
+            if ($current && $current->sisa_limit > $request->sales_limit) {
+                $updateData['sisa_limit'] = $request->sales_limit;
+            }
+        }
+
+        DB::table('sales')->where('id', $id)->update($updateData);
 
         return redirect()->route('master.sales-team')->with('success', "Data Sales [{$request->name}] berhasil diperbarui.");
     }
