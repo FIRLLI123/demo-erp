@@ -3,6 +3,7 @@
     'title' => 'Belum Ada Data',
     'subtitle' => 'Data untuk kriteria ini belum tersedia atau belum diinput.',
     'actionUrl' => null,
+    'actionClick' => null,
     'actionLabel' => null,
     'actionIcon' => 'plus',
 ])
@@ -19,16 +20,27 @@
         <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">{{ $subtitle }}</p>
     @endif
 
-    <!-- Optional Action Button -->
-    @if($actionUrl && $actionLabel)
+    <!-- Optional Action Button (URL or Alpine @click) -->
+    @if(($actionUrl || $actionClick) && $actionLabel)
         <div class="mt-4">
-            <a href="{{ $actionUrl }}" 
-               class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-300 hover:border-rose-400 text-slate-700 hover:text-rose-600 font-bold text-xs shadow-xs hover:shadow-sm transition-all active:scale-95">
-                @if($actionIcon)
-                    <i data-lucide="{{ $actionIcon }}" class="w-3.5 h-3.5"></i>
-                @endif
-                <span>{{ $actionLabel }}</span>
-            </a>
+            @if($actionClick)
+                <button type="button" 
+                        @click="{{ $actionClick }}" 
+                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-300 hover:border-rose-400 text-slate-700 hover:text-rose-600 font-bold text-xs shadow-xs hover:shadow-sm transition-all active:scale-95 cursor-pointer">
+                    @if($actionIcon)
+                        <i data-lucide="{{ $actionIcon }}" class="w-3.5 h-3.5"></i>
+                    @endif
+                    <span>{{ $actionLabel }}</span>
+                </button>
+            @else
+                <a href="{{ $actionUrl }}" 
+                   class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-300 hover:border-rose-400 text-slate-700 hover:text-rose-600 font-bold text-xs shadow-xs hover:shadow-sm transition-all active:scale-95">
+                    @if($actionIcon)
+                        <i data-lucide="{{ $actionIcon }}" class="w-3.5 h-3.5"></i>
+                    @endif
+                    <span>{{ $actionLabel }}</span>
+                </a>
+            @endif
         </div>
     @endif
 </div>

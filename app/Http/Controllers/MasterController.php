@@ -7,69 +7,32 @@ use Illuminate\Support\Facades\DB;
 
 class MasterController extends Controller
 {
-    public function organization(Request $request)
+    public function organization()
     {
-        $activeTab = $request->input('tab', 'warehouses');
-        $areaId = $request->input('area_id');
-        $clusterId = $request->input('cluster_id');
-        $tapId = $request->input('tap_id');
-        $whType = $request->input('wh_type');
+        // Ambil data utuh untuk client-side filtering instan (tanpa reload / loading berulang)
+        $areas = DB::table('areas')->orderBy('id')->get();
 
-        // Master dasar untuk dropdown filter (dropdown options)
-        $allAreas = DB::table('areas')->orderBy('id')->get();
-
-        // Dropdown clusters: jika areaId dipilih, sesuaikan hanya cluster di area tsb
-        $clusterOptionsQuery = DB::table('clusters')->orderBy('name');
-        if ($areaId) {
-            $clusterOptionsQuery->where('area_id', $areaId);
-        }
-        $clusterOptions = $clusterOptionsQuery->get();
-
-        // Dropdown taps: jika clusterId dipilih, sesuaikan; jika hanya areaId, sesuaikan per area
-        $tapOptionsQuery = DB::table('taps')
-            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
-            ->select('taps.*')
-            ->orderBy('taps.name');
-        if ($clusterId) {
-            $tapOptionsQuery->where('taps.cluster_id', $clusterId);
-        } elseif ($areaId) {
-            $tapOptionsQuery->where('clusters.area_id', $areaId);
-        }
-        $tapOptions = $tapOptionsQuery->get();
-
-        // 1. Data Area
-        $areas = $allAreas;
-
-        // 2. Data Cluster (Total & Filtered)
-        $totalClusters = DB::table('clusters')->count();
-        $clustersQuery = DB::table('clusters')
+        $clusters = DB::table('clusters')
             ->join('areas', 'clusters.area_id', '=', 'areas.id')
             ->select('clusters.*', 'areas.name as area_name', 'areas.code as area_code')
-            ->orderBy('clusters.id');
-        if ($areaId) {
-            $clustersQuery->where('clusters.area_id', $areaId);
-        }
-        $clusters = $clustersQuery->get();
-        $filteredClustersCount = $clusters->count();
+            ->orderBy('clusters.id')
+            ->get();
 
-        // 3. Data TAP (Total & Filtered)
-        $totalTaps = DB::table('taps')->count();
-        $tapsQuery = DB::table('taps')
+        $taps = DB::table('taps')
             ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
             ->join('areas', 'clusters.area_id', '=', 'areas.id')
-            ->select('taps.*', 'clusters.name as cluster_name', 'clusters.code as cluster_code', 'areas.name as area_name', 'areas.code as area_code')
-            ->orderBy('taps.id');
-        if ($clusterId) {
-            $tapsQuery->where('taps.cluster_id', $clusterId);
-        } elseif ($areaId) {
-            $tapsQuery->where('clusters.area_id', $areaId);
-        }
-        $taps = $tapsQuery->get();
-        $filteredTapsCount = $taps->count();
+            ->select(
+                'taps.*',
+                'clusters.name as cluster_name',
+                'clusters.code as cluster_code',
+                'clusters.area_id',
+                'areas.name as area_name',
+                'areas.code as area_code'
+            )
+            ->orderBy('taps.id')
+            ->get();
 
-        // 4. Data Warehouses (Total & Filtered)
-        $totalWarehouses = DB::table('warehouses')->count();
-        $warehousesQuery = DB::table('warehouses')
+        $warehouses = DB::table('warehouses')
             ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
             ->join('areas', 'clusters.area_id', '=', 'areas.id')
@@ -78,50 +41,19 @@ class MasterController extends Controller
                 'warehouses.*',
                 'taps.name as tap_name',
                 'taps.code as tap_code',
+                'taps.cluster_id',
                 'clusters.name as cluster_name',
                 'clusters.code as cluster_code',
+                'clusters.area_id',
                 'areas.name as area_name',
                 'areas.code as area_code',
                 'sales.name as sales_name',
                 'sales.code as sales_code'
             )
-            ->orderBy('warehouses.id');
+            ->orderBy('warehouses.id')
+            ->get();
 
-        if ($tapId) {
-            $warehousesQuery->where('warehouses.tap_id', $tapId);
-        } elseif ($clusterId) {
-            $warehousesQuery->where('taps.cluster_id', $clusterId);
-        } elseif ($areaId) {
-            $warehousesQuery->where('clusters.area_id', $areaId);
-        }
-
-        if ($whType && $whType !== 'ALL') {
-            $warehousesQuery->where('warehouses.type', $whType);
-        }
-
-        $warehouses = $warehousesQuery->get();
-        $filteredWarehousesCount = $warehouses->count();
-
-        return view('master.organization', compact(
-            'activeTab',
-            'areaId',
-            'clusterId',
-            'tapId',
-            'whType',
-            'allAreas',
-            'clusterOptions',
-            'tapOptions',
-            'areas',
-            'clusters',
-            'totalClusters',
-            'filteredClustersCount',
-            'taps',
-            'totalTaps',
-            'filteredTapsCount',
-            'warehouses',
-            'totalWarehouses',
-            'filteredWarehousesCount'
-        ));
+        return view('master.organization', compact('areas', 'clusters', 'taps', 'warehouses'));
     }
 
     public function products()
