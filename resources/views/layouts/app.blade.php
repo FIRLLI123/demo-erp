@@ -318,24 +318,28 @@
                         </a>
                         <a href="{{ route('master.products') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.products*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.products*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
-                            <span>Katalog Produk (SA/Voucher)</span>
+                            <span>Produk</span>
+                        </a>
+                        <a href="{{ route('master.programs') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.programs*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.programs*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
+                            <span>Program Event</span>
                         </a>
                         <a href="{{ route('master.warehouses') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.warehouses*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.warehouses*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
-                            <span>Gudang (Main, Inv, Sales)</span>
+                            <span>Gudang</span>
                         </a>
                         <a href="{{ route('master.sales-team') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.sales-team*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.sales-team*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
-                            <span>Tim Sales Force (Kanvas)</span>
+                            <span>Sales</span>
                         </a>
                         <a href="{{ route('master.customers') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.customers*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.customers*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
-                            <span>Master Toko / Outlet</span>
+                            <span>Outlet</span>
                         </a>
                         <a href="{{ route('master.banks') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.banks*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.banks*') ? 'bg-blue-400 ring-2 ring-blue-400/40' : 'bg-slate-600' }}"></span>
-                                <span>Rekening Bank & Kas PT</span>
+                                <span>Rekening Bank</span>
                             </div>
                             <span class="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-mono font-bold">FINANCE</span>
                         </a>
@@ -346,13 +350,13 @@
                             </div>
                             <span class="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">VENDOR</span>
                         </a>
-                        <a href="{{ route('master.price-profiles') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.price-profiles*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                        <!-- <a href="{{ route('master.price-profiles') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.price-profiles*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.price-profiles*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
                                 <span>Skema Harga & Tiering</span>
                             </div>
                             <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">TIERING</span>
-                        </a>
+                        </a> -->
                         <a href="{{ route('master.territories') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.territories*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.territories*') ? 'bg-cyan-400 ring-2 ring-cyan-400/40' : 'bg-slate-600' }}"></span>
@@ -360,13 +364,13 @@
                             </div>
                             <span class="text-[9px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono font-bold">GEO</span>
                         </a>
-                        <a href="{{ route('master.approval-rules') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.approval-rules*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                        <!-- <a href="{{ route('master.approval-rules') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.approval-rules*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.approval-rules*') ? 'bg-rose-400 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
                                 <span>Matriks Limit Otorisasi</span>
                             </div>
                             <span class="text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">MATRIX</span>
-                        </a>
+                        </a> -->
                         <a href="{{ route('master.users') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.users*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.users*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
                             <span>Master Pengguna & Akun</span>

@@ -121,12 +121,590 @@ class MasterController extends Controller
 
     public function products()
     {
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
+
         $products = DB::table('products')
             ->leftJoin('product_categories', 'products.category_id', '=', 'product_categories.id')
-            ->select('products.*', 'product_categories.name as category_name')
+            ->select(
+                'products.*',
+                'product_categories.name as category_name',
+                'product_categories.code as category_code'
+            )
+            ->orderBy('products.id', 'desc')
             ->get();
 
-        return view('master.products', compact('products'));
+        $productTypes = DB::table('product_categories')
+            ->leftJoin('products', 'product_categories.id', '=', 'products.category_id')
+            ->select(
+                'product_categories.*',
+                DB::raw('count(products.id) as products_count')
+            )
+            ->groupBy(
+                'product_categories.id',
+                'product_categories.name',
+                'product_categories.code',
+                'product_categories.description',
+                'product_categories.status',
+                'product_categories.created_at',
+                'product_categories.updated_at'
+            )
+            ->orderBy('product_categories.name')
+            ->get();
+
+        $productPrices = DB::table('product_prices')
+            ->join('products', 'product_prices.product_id', '=', 'products.id')
+            ->leftJoin('areas', 'product_prices.area_id', '=', 'areas.id')
+            ->leftJoin('clusters', 'product_prices.cluster_id', '=', 'clusters.id')
+            ->leftJoin('taps', 'product_prices.tap_id', '=', 'taps.id')
+            ->select(
+                'product_prices.*',
+                'products.sku as product_sku',
+                'products.name as product_name',
+                'products.cost_price as default_cost_price',
+                'products.selling_price as default_selling_price',
+                'areas.name as area_name',
+                'clusters.name as cluster_name',
+                'clusters.area_id as cluster_area_id',
+                'taps.name as tap_name',
+                'taps.cluster_id as tap_cluster_id'
+            )
+            ->orderBy('product_prices.id', 'desc')
+            ->get();
+
+        $areas = DB::table('areas')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $clusters = DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $taps = DB::table('taps')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->where('taps.status', 'ACTIVE')
+            ->select('taps.*', 'clusters.area_id')
+            ->orderBy('taps.name')
+            ->get();
+
+        return view('master.products', compact(
+            'products',
+            'productTypes',
+            'productPrices',
+            'areas',
+            'clusters',
+            'taps',
+            'iccidEnabled'
+        ));
+    }
+
+    public function storeProduct(Request $request)
+    {
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
+
+        $request->validate([
+            'sku' => 'required|string|max:60|unique:products,sku',
+            'item_code_telkomsel' => 'nullable|string|max:100',
+            'name' => 'required|string|max:180',
+            'category_id' => 'nullable|exists:product_categories,id',
+            'type' => 'nullable|string|max:50',
+            'denom' => 'nullable|string|max:60',
+            'description' => 'nullable|string|max:1000',
+            'tracking_method' => 'nullable|in:ICCID,QUANTITY',
+            'cost_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+            'special_price' => 'nullable|numeric|min:0',
+            'uom' => 'required|string|max:20',
+            'min_stock' => 'nullable|integer|min:0',
+            'tax_alias' => 'nullable|string|max:150',
+            'activation_date' => 'nullable|date',
+            'expired_date' => 'nullable|date',
+        ]);
+
+        // Ambil kode tipe dari product_categories jika category_id dipilih
+        $typeCode = $request->type ?: 'SA';
+        if ($request->filled('category_id')) {
+            $cat = DB::table('product_categories')->where('id', $request->category_id)->first();
+            if ($cat) {
+                $typeCode = $cat->code;
+            }
+        }
+
+        // Kunci ICCID sesuai feature flag .env (ERP_ENABLE_ICCID)
+        $trackingMethod = $iccidEnabled
+            ? ($request->input('tracking_method', 'QUANTITY') ?: 'QUANTITY')
+            : 'QUANTITY';
+
+        DB::table('products')->insert([
+            'category_id' => $request->category_id,
+            'sku' => strtoupper(trim($request->sku)),
+            'item_code_telkomsel' => $request->item_code_telkomsel,
+            'name' => trim($request->name),
+            'type' => $typeCode,
+            'denom' => $request->denom,
+            'description' => $request->description,
+            'tracking_method' => $trackingMethod,
+            'cost_price' => $request->cost_price,
+            'selling_price' => $request->selling_price,
+            'special_price' => $request->special_price ?? 0,
+            'uom' => strtoupper(trim($request->uom)),
+            'is_consignment' => $request->boolean('is_consignment'),
+            'is_virtual' => $request->boolean('is_virtual'),
+            'is_ppn' => $request->boolean('is_ppn'),
+            'tax_alias' => $request->tax_alias,
+            'min_stock' => $request->min_stock ?? 0,
+            'activation_date' => $request->activation_date ?: null,
+            'expired_date' => $request->expired_date ?: null,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.products')->with('success', "Produk [{$request->sku}] {$request->name} berhasil ditambahkan.");
+    }
+
+    public function updateProduct(Request $request, $id)
+    {
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
+
+        $request->validate([
+            'sku' => "required|string|max:60|unique:products,sku,{$id}",
+            'item_code_telkomsel' => 'nullable|string|max:100',
+            'name' => 'required|string|max:180',
+            'category_id' => 'nullable|exists:product_categories,id',
+            'type' => 'nullable|string|max:50',
+            'denom' => 'nullable|string|max:60',
+            'description' => 'nullable|string|max:1000',
+            'tracking_method' => 'nullable|in:ICCID,QUANTITY',
+            'cost_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+            'special_price' => 'nullable|numeric|min:0',
+            'uom' => 'required|string|max:20',
+            'min_stock' => 'nullable|integer|min:0',
+            'tax_alias' => 'nullable|string|max:150',
+            'activation_date' => 'nullable|date',
+            'expired_date' => 'nullable|date',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+        ]);
+
+        $typeCode = $request->type ?: 'SA';
+        if ($request->filled('category_id')) {
+            $cat = DB::table('product_categories')->where('id', $request->category_id)->first();
+            if ($cat) {
+                $typeCode = $cat->code;
+            }
+        }
+
+        $updateData = [
+            'category_id' => $request->category_id,
+            'sku' => strtoupper(trim($request->sku)),
+            'item_code_telkomsel' => $request->item_code_telkomsel,
+            'name' => trim($request->name),
+            'type' => $typeCode,
+            'denom' => $request->denom,
+            'description' => $request->description,
+            'cost_price' => $request->cost_price,
+            'selling_price' => $request->selling_price,
+            'special_price' => $request->special_price ?? 0,
+            'uom' => strtoupper(trim($request->uom)),
+            'is_consignment' => $request->boolean('is_consignment'),
+            'is_virtual' => $request->boolean('is_virtual'),
+            'is_ppn' => $request->boolean('is_ppn'),
+            'tax_alias' => $request->tax_alias,
+            'min_stock' => $request->min_stock ?? 0,
+            'activation_date' => $request->activation_date ?: null,
+            'expired_date' => $request->expired_date ?: null,
+            'status' => $request->status,
+            'updated_at' => now(),
+        ];
+
+        // Kunci ICCID jika feature flag OFF
+        $updateData['tracking_method'] = $iccidEnabled
+            ? ($request->input('tracking_method', 'QUANTITY') ?: 'QUANTITY')
+            : 'QUANTITY';
+
+        DB::table('products')->where('id', $id)->update($updateData);
+
+        return redirect()->route('master.products')->with('success', "Produk [{$request->sku}] {$request->name} berhasil diperbarui.");
+    }
+
+    public function storeProductType(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|max:30|unique:product_categories,code',
+            'name' => 'required|string|max:120',
+            'description' => 'nullable|string|max:255',
+        ]);
+
+        DB::table('product_categories')->insert([
+            'code' => strtoupper(trim($request->code)),
+            'name' => trim($request->name),
+            'description' => $request->description,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.products', ['tab' => 'types'])->with('success', "Tipe Produk [{$request->code}] {$request->name} berhasil ditambahkan.");
+    }
+
+    public function updateProductType(Request $request, $id)
+    {
+        $request->validate([
+            'code' => "required|string|max:30|unique:product_categories,code,{$id}",
+            'name' => 'required|string|max:120',
+            'description' => 'nullable|string|max:255',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+        ]);
+
+        DB::table('product_categories')->where('id', $id)->update([
+            'code' => strtoupper(trim($request->code)),
+            'name' => trim($request->name),
+            'description' => $request->description,
+            'status' => $request->status,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.products', ['tab' => 'types'])->with('success', "Tipe Produk [{$request->code}] berhasil diperbarui.");
+    }
+
+    public function storeProductPrice(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'area_id' => 'nullable|exists:areas,id',
+            'cluster_id' => 'nullable|exists:clusters,id',
+            'tap_id' => 'nullable|exists:taps,id',
+            'cost_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+            'special_price' => 'nullable|numeric|min:0',
+        ]);
+
+        if (!$request->filled('area_id') && !$request->filled('cluster_id') && !$request->filled('tap_id')) {
+            return redirect()->route('master.products', ['tab' => 'prices'])->with('error', 'Pilih minimal satu wilayah (Area, Cluster, atau TAP).');
+        }
+
+        $areaId = $request->area_id ?: null;
+        $clusterId = $request->cluster_id ?: null;
+        $tapId = $request->tap_id ?: null;
+
+        // Auto-lengkapi parent wilayah agar konsisten
+        if ($tapId && !$clusterId) {
+            $tap = DB::table('taps')->where('id', $tapId)->first();
+            if ($tap) $clusterId = $tap->cluster_id;
+        }
+        if ($clusterId && !$areaId) {
+            $cls = DB::table('clusters')->where('id', $clusterId)->first();
+            if ($cls) $areaId = $cls->area_id;
+        }
+
+        DB::table('product_prices')->insert([
+            'product_id' => $request->product_id,
+            'area_id' => $areaId,
+            'cluster_id' => $clusterId,
+            'tap_id' => $tapId,
+            'cost_price' => $request->cost_price,
+            'selling_price' => $request->selling_price,
+            'special_price' => $request->special_price ?? 0,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.products', ['tab' => 'prices'])->with('success', 'Setting harga wilayah berhasil ditambahkan.');
+    }
+
+    public function updateProductPrice(Request $request, $id)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'area_id' => 'nullable|exists:areas,id',
+            'cluster_id' => 'nullable|exists:clusters,id',
+            'tap_id' => 'nullable|exists:taps,id',
+            'cost_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+            'special_price' => 'nullable|numeric|min:0',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+        ]);
+
+        $areaId = $request->area_id ?: null;
+        $clusterId = $request->cluster_id ?: null;
+        $tapId = $request->tap_id ?: null;
+
+        if ($tapId && !$clusterId) {
+            $tap = DB::table('taps')->where('id', $tapId)->first();
+            if ($tap) $clusterId = $tap->cluster_id;
+        }
+        if ($clusterId && !$areaId) {
+            $cls = DB::table('clusters')->where('id', $clusterId)->first();
+            if ($cls) $areaId = $cls->area_id;
+        }
+
+        DB::table('product_prices')->where('id', $id)->update([
+            'product_id' => $request->product_id,
+            'area_id' => $areaId,
+            'cluster_id' => $clusterId,
+            'tap_id' => $tapId,
+            'cost_price' => $request->cost_price,
+            'selling_price' => $request->selling_price,
+            'special_price' => $request->special_price ?? 0,
+            'status' => $request->status,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.products', ['tab' => 'prices'])->with('success', 'Setting harga wilayah berhasil diperbarui.');
+    }
+
+    public function deleteProductPrice($id)
+    {
+        DB::table('product_prices')->where('id', $id)->delete();
+        return redirect()->route('master.products', ['tab' => 'prices'])->with('success', 'Setting harga wilayah berhasil dihapus.');
+    }
+
+    /**
+     * Master Program Harga (Menu Terpisah - 2 Tab: Daftar Program & Setting Harga Item Program)
+     */
+    public function programs()
+    {
+        $programs = DB::table('programs')
+            ->leftJoin('areas', 'programs.area_id', '=', 'areas.id')
+            ->leftJoin('clusters', 'programs.cluster_id', '=', 'clusters.id')
+            ->leftJoin('taps', 'programs.tap_id', '=', 'taps.id')
+            ->leftJoin('program_items', 'programs.id', '=', 'program_items.program_id')
+            ->select(
+                'programs.*',
+                'areas.name as area_name',
+                'clusters.name as cluster_name',
+                'taps.name as tap_name',
+                DB::raw('count(program_items.id) as items_count')
+            )
+            ->groupBy(
+                'programs.id',
+                'programs.code',
+                'programs.name',
+                'programs.area_id',
+                'programs.cluster_id',
+                'programs.tap_id',
+                'programs.start_date',
+                'programs.end_date',
+                'programs.description',
+                'programs.status',
+                'programs.created_at',
+                'programs.updated_at',
+                'areas.name',
+                'clusters.name',
+                'taps.name'
+            )
+            ->orderBy('programs.id', 'desc')
+            ->get();
+
+        $programItems = DB::table('program_items')
+            ->join('programs', 'program_items.program_id', '=', 'programs.id')
+            ->join('products', 'program_items.product_id', '=', 'products.id')
+            ->select(
+                'program_items.*',
+                'programs.code as program_code',
+                'programs.name as program_name',
+                'programs.cluster_id as program_cluster_id',
+                'programs.tap_id as program_tap_id',
+                'programs.area_id as program_area_id',
+                'products.sku as product_sku',
+                'products.name as product_name',
+                'products.selling_price as default_selling_price',
+                'products.cost_price as default_cost_price'
+            )
+            ->orderBy('program_items.id', 'desc')
+            ->get();
+
+        // Hitung harga normal efektif sesuai wilayah program untuk perbandingan langsung di UI
+        $allClusterPrices = DB::table('product_prices')->where('status', 'ACTIVE')->get();
+        foreach ($programItems as $item) {
+            $normalPrice = (float) $item->default_selling_price;
+            $override = null;
+            if ($item->program_tap_id) {
+                $override = $allClusterPrices->first(fn($p) => $p->product_id == $item->product_id && $p->tap_id == $item->program_tap_id);
+            }
+            if (!$override && $item->program_cluster_id) {
+                $override = $allClusterPrices->first(fn($p) => $p->product_id == $item->product_id && $p->cluster_id == $item->program_cluster_id && !$p->tap_id);
+            }
+            if (!$override && $item->program_area_id) {
+                $override = $allClusterPrices->first(fn($p) => $p->product_id == $item->product_id && $p->area_id == $item->program_area_id && !$p->cluster_id && !$p->tap_id);
+            }
+            if ($override) {
+                $normalPrice = (float) $override->selling_price;
+            }
+            $item->normal_selling_price = $normalPrice;
+
+            if ($item->price_mode === 'FIXED') {
+                $item->final_price = (float) $item->price_value;
+            } elseif ($item->price_mode === 'DISCOUNT_NOMINAL') {
+                $item->final_price = max(0, $normalPrice - (float) $item->price_value);
+            } else {
+                $item->final_price = $normalPrice + (float) $item->price_value;
+            }
+            $item->price_diff = $item->final_price - $normalPrice;
+        }
+
+        $products = DB::table('products')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $areas = DB::table('areas')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $clusters = DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $taps = DB::table('taps')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->where('taps.status', 'ACTIVE')
+            ->select('taps.*', 'clusters.area_id')
+            ->orderBy('taps.name')
+            ->get();
+
+        return view('master.programs', compact('programs', 'programItems', 'products', 'areas', 'clusters', 'taps'));
+    }
+
+    public function storeProgram(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|max:30|unique:programs,code',
+            'name' => 'required|string|max:150',
+            'area_id' => 'nullable|exists:areas,id',
+            'cluster_id' => 'nullable|exists:clusters,id',
+            'tap_id' => 'nullable|exists:taps,id',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        $areaId = $request->area_id ?: null;
+        $clusterId = $request->cluster_id ?: null;
+        $tapId = $request->tap_id ?: null;
+
+        if ($tapId && !$clusterId) {
+            $tap = DB::table('taps')->where('id', $tapId)->first();
+            if ($tap) $clusterId = $tap->cluster_id;
+        }
+        if ($clusterId && !$areaId) {
+            $cls = DB::table('clusters')->where('id', $clusterId)->first();
+            if ($cls) $areaId = $cls->area_id;
+        }
+
+        DB::table('programs')->insert([
+            'code' => strtoupper(trim($request->code)),
+            'name' => trim($request->name),
+            'area_id' => $areaId,
+            'cluster_id' => $clusterId,
+            'tap_id' => $tapId,
+            'start_date' => $request->start_date ?: null,
+            'end_date' => $request->end_date ?: null,
+            'description' => $request->description,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.programs')->with('success', "Program [{$request->code}] {$request->name} berhasil ditambahkan.");
+    }
+
+    public function updateProgram(Request $request, $id)
+    {
+        $request->validate([
+            'code' => "required|string|max:30|unique:programs,code,{$id}",
+            'name' => 'required|string|max:150',
+            'area_id' => 'nullable|exists:areas,id',
+            'cluster_id' => 'nullable|exists:clusters,id',
+            'tap_id' => 'nullable|exists:taps,id',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'description' => 'nullable|string|max:1000',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+        ]);
+
+        $areaId = $request->area_id ?: null;
+        $clusterId = $request->cluster_id ?: null;
+        $tapId = $request->tap_id ?: null;
+
+        if ($tapId && !$clusterId) {
+            $tap = DB::table('taps')->where('id', $tapId)->first();
+            if ($tap) $clusterId = $tap->cluster_id;
+        }
+        if ($clusterId && !$areaId) {
+            $cls = DB::table('clusters')->where('id', $clusterId)->first();
+            if ($cls) $areaId = $cls->area_id;
+        }
+
+        DB::table('programs')->where('id', $id)->update([
+            'code' => strtoupper(trim($request->code)),
+            'name' => trim($request->name),
+            'area_id' => $areaId,
+            'cluster_id' => $clusterId,
+            'tap_id' => $tapId,
+            'start_date' => $request->start_date ?: null,
+            'end_date' => $request->end_date ?: null,
+            'description' => $request->description,
+            'status' => $request->status,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.programs')->with('success', "Program [{$request->code}] berhasil diperbarui.");
+    }
+
+    public function storeProgramItem(Request $request)
+    {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'product_id' => 'required|exists:products,id',
+            'price_mode' => 'required|in:FIXED,DISCOUNT_NOMINAL,MARKUP_NOMINAL',
+            'price_value' => 'required|numeric|min:0',
+            'min_qty' => 'nullable|integer|min:1',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        $exists = DB::table('program_items')
+            ->where('program_id', $request->program_id)
+            ->where('product_id', $request->product_id)
+            ->exists();
+
+        if ($exists) {
+            return redirect()->route('master.programs', ['tab' => 'items', 'program_id' => $request->program_id])
+                ->with('error', 'Produk tersebut sudah terdaftar di program ini. Silakan edit baris yang sudah ada.');
+        }
+
+        DB::table('program_items')->insert([
+            'program_id' => $request->program_id,
+            'product_id' => $request->product_id,
+            'price_mode' => $request->price_mode,
+            'price_value' => $request->price_value,
+            'min_qty' => $request->min_qty ?? 1,
+            'notes' => $request->notes,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.programs', ['tab' => 'items', 'program_id' => $request->program_id])
+            ->with('success', 'Item harga program berhasil ditambahkan.');
+    }
+
+    public function updateProgramItem(Request $request, $id)
+    {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'product_id' => 'required|exists:products,id',
+            'price_mode' => 'required|in:FIXED,DISCOUNT_NOMINAL,MARKUP_NOMINAL',
+            'price_value' => 'required|numeric|min:0',
+            'min_qty' => 'nullable|integer|min:1',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        DB::table('program_items')->where('id', $id)->update([
+            'product_id' => $request->product_id,
+            'price_mode' => $request->price_mode,
+            'price_value' => $request->price_value,
+            'min_qty' => $request->min_qty ?? 1,
+            'notes' => $request->notes,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.programs', ['tab' => 'items', 'program_id' => $request->program_id])
+            ->with('success', 'Item harga program berhasil diperbarui.');
+    }
+
+    public function deleteProgramItem(Request $request, $id)
+    {
+        $item = DB::table('program_items')->where('id', $id)->first();
+        $programId = $item ? $item->program_id : $request->input('program_id');
+        DB::table('program_items')->where('id', $id)->delete();
+
+        return redirect()->route('master.programs', ['tab' => 'items', 'program_id' => $programId])
+            ->with('success', 'Item harga program berhasil dihapus.');
     }
 
     public function warehouses()
@@ -1495,7 +2073,7 @@ class MasterController extends Controller
     public function toggleStatus(Request $request)
     {
         $request->validate([
-            'entity' => 'required|string|in:customers,sales,products,warehouses,banks,vendors,taps,price_profiles,users,customer_rs,sales_types,sales_levels',
+            'entity' => 'required|string|in:customers,sales,products,product_categories,product_prices,programs,warehouses,banks,vendors,taps,price_profiles,users,customer_rs,sales_types,sales_levels',
             'id' => 'required|integer',
         ]);
 
@@ -1506,6 +2084,9 @@ class MasterController extends Controller
             'customers' => ['table' => 'customers', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Toko / Outlet'],
             'sales' => ['table' => 'sales', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Salesman'],
             'products' => ['table' => 'products', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Produk'],
+            'product_categories' => ['table' => 'product_categories', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Tipe Produk'],
+            'product_prices' => ['table' => 'product_prices', 'name_col' => 'id', 'status_col' => 'status', 'label' => 'Harga Wilayah'],
+            'programs' => ['table' => 'programs', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Program Harga'],
             'warehouses' => ['table' => 'warehouses', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Gudang'],
             'banks' => ['table' => 'company_banks', 'name_col' => 'bank_name', 'status_col' => 'status', 'label' => 'Rekening Bank'],
             'vendors' => ['table' => 'vendors', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Vendor'],

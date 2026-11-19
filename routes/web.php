@@ -39,6 +39,19 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('master')->name('master.')->group(function () {
         Route::get('/organization', [MasterController::class, 'organization'])->name('organization');
         Route::get('/products', [MasterController::class, 'products'])->name('products');
+        Route::post('/products', [MasterController::class, 'storeProduct'])->name('products.store');
+        Route::post('/products/update/{id}', [MasterController::class, 'updateProduct'])->name('products.update');
+        Route::post('/product-types', [MasterController::class, 'storeProductType'])->name('product-types.store');
+        Route::post('/product-types/update/{id}', [MasterController::class, 'updateProductType'])->name('product-types.update');
+        Route::post('/product-prices', [MasterController::class, 'storeProductPrice'])->name('product-prices.store');
+        Route::post('/product-prices/update/{id}', [MasterController::class, 'updateProductPrice'])->name('product-prices.update');
+        Route::post('/product-prices/delete/{id}', [MasterController::class, 'deleteProductPrice'])->name('product-prices.delete');
+        Route::get('/programs', [MasterController::class, 'programs'])->name('programs');
+        Route::post('/programs', [MasterController::class, 'storeProgram'])->name('programs.store');
+        Route::post('/programs/update/{id}', [MasterController::class, 'updateProgram'])->name('programs.update');
+        Route::post('/program-items', [MasterController::class, 'storeProgramItem'])->name('program-items.store');
+        Route::post('/program-items/update/{id}', [MasterController::class, 'updateProgramItem'])->name('program-items.update');
+        Route::post('/program-items/delete/{id}', [MasterController::class, 'deleteProgramItem'])->name('program-items.delete');
         Route::get('/warehouses', [MasterController::class, 'warehouses'])->name('warehouses');
         Route::post('/warehouses', [MasterController::class, 'storeWarehouse'])->name('warehouses.store');
         Route::post('/warehouses/update/{id}', [MasterController::class, 'updateWarehouse'])->name('warehouses.update');
