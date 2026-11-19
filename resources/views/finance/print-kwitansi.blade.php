@@ -162,15 +162,24 @@
         @endif
 
         <!-- Tanda Tangan Kasir & Customer -->
+        @php
+            $cashierUser = \App\Models\User::where('name', $payment->cashier_name)->first() ?? auth()->user();
+        @endphp
         <div class="grid grid-cols-2 gap-8 pt-4 text-center border-t border-slate-200">
             <div>
-                <p class="text-slate-500 font-medium mb-16">Penyetor / Toko Pelanggan,</p>
+                <p class="text-slate-500 font-medium mb-2">Penyetor / Toko Pelanggan,</p>
+                <div class="h-16 flex items-center justify-center"></div>
                 <div class="border-b border-slate-400 w-44 mx-auto"></div>
                 <p class="font-bold text-slate-800 mt-1">( {{ $payment->customer_name }} )</p>
             </div>
 
             <div>
-                <p class="text-slate-500 font-medium mb-16">Kasir / Finance Penerima,</p>
+                <p class="text-slate-500 font-medium mb-2">Kasir / Finance Penerima,</p>
+                <div class="h-16 flex items-center justify-center">
+                    @if($cashierUser && $cashierUser->signature && file_exists(public_path($cashierUser->signature)))
+                        <img src="{{ asset($cashierUser->signature) }}" alt="Tanda Tangan Kasir" class="max-h-14 max-w-[140px] object-contain">
+                    @endif
+                </div>
                 <div class="border-b border-slate-400 w-44 mx-auto"></div>
                 <p class="font-bold text-slate-800 mt-1">( {{ $payment->cashier_name }} )</p>
             </div>

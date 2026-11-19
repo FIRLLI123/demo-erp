@@ -40,9 +40,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/organization', [MasterController::class, 'organization'])->name('organization');
         Route::get('/products', [MasterController::class, 'products'])->name('products');
         Route::get('/warehouses', [MasterController::class, 'warehouses'])->name('warehouses');
+        Route::post('/warehouses', [MasterController::class, 'storeWarehouse'])->name('warehouses.store');
+        Route::post('/warehouses/update/{id}', [MasterController::class, 'updateWarehouse'])->name('warehouses.update');
         Route::get('/sales-team', [MasterController::class, 'sales'])->name('sales-team');
         Route::post('/sales-team', [MasterController::class, 'storeSales'])->name('sales-team.store');
         Route::post('/sales-team/update/{id}', [MasterController::class, 'updateSales'])->name('sales-team.update');
+        Route::post('/sales-types', [MasterController::class, 'storeSalesType'])->name('sales-types.store');
+        Route::post('/sales-types/update/{id}', [MasterController::class, 'updateSalesType'])->name('sales-types.update');
+        Route::post('/sales-types/delete/{id}', [MasterController::class, 'deleteSalesType'])->name('sales-types.delete');
+        Route::post('/sales-levels', [MasterController::class, 'storeSalesLevel'])->name('sales-levels.store');
+        Route::post('/sales-levels/update/{id}', [MasterController::class, 'updateSalesLevel'])->name('sales-levels.update');
+        Route::post('/sales-levels/delete/{id}', [MasterController::class, 'deleteSalesLevel'])->name('sales-levels.delete');
         Route::get('/customers', [MasterController::class, 'customers'])->name('customers');
         Route::post('/customers', [MasterController::class, 'storeCustomer'])->name('customers.store');
         Route::post('/customers/update/{id}', [MasterController::class, 'updateCustomer'])->name('customers.update');

@@ -103,23 +103,53 @@
         </div>
 
         <!-- Kolom Tanda Tangan 3 Pihak -->
+        @php
+            $authSignUser = auth()->user();
+            $financeSignUser = \Illuminate\Support\Facades\DB::table('users')
+                ->join('roles', 'users.role_id', '=', 'roles.id')
+                ->where('roles.slug', 'finance')
+                ->whereNotNull('users.signature')
+                ->select('users.*')
+                ->first();
+            $headSignUser = \Illuminate\Support\Facades\DB::table('users')
+                ->join('roles', 'users.role_id', '=', 'roles.id')
+                ->whereIn('roles.slug', ['super_admin', 'branch_manager', 'director'])
+                ->whereNotNull('users.signature')
+                ->select('users.*')
+                ->first();
+        @endphp
         <div class="grid grid-cols-3 gap-6 pt-6 text-center border-t border-slate-200">
             <div>
-                <p class="text-slate-500 font-medium mb-16">Dibuat Oleh (Admin Operasional),</p>
+                <p class="text-slate-500 font-medium mb-2">Dibuat Oleh (Admin Operasional),</p>
+                <div class="h-14 flex items-center justify-center">
+                    @if($authSignUser && $authSignUser->signature && file_exists(public_path($authSignUser->signature)))
+                        <img src="{{ asset($authSignUser->signature) }}" class="max-h-14 max-w-full object-contain" alt="TTD {{ $authSignUser->name }}">
+                    @endif
+                </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
-                <p class="font-bold text-slate-800 mt-1">( Admin TAP )</p>
+                <p class="font-bold text-slate-800 mt-1">( {{ $authSignUser ? $authSignUser->name : 'Admin TAP' }} )</p>
             </div>
 
             <div>
-                <p class="text-slate-500 font-medium mb-16">Diperiksa Oleh (Finance/Akunting),</p>
+                <p class="text-slate-500 font-medium mb-2">Diperiksa Oleh (Finance/Akunting),</p>
+                <div class="h-14 flex items-center justify-center">
+                    @if($financeSignUser && file_exists(public_path($financeSignUser->signature)))
+                        <img src="{{ asset($financeSignUser->signature) }}" class="max-h-14 max-w-full object-contain" alt="TTD Finance">
+                    @endif
+                </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
-                <p class="font-bold text-slate-800 mt-1">( Finance TAP )</p>
+                <p class="font-bold text-slate-800 mt-1">( {{ $financeSignUser ? $financeSignUser->name : 'Finance TAP' }} )</p>
             </div>
 
             <div>
-                <p class="text-slate-500 font-medium mb-16">Disetujui Oleh (Pimpinan Cabang),</p>
+                <p class="text-slate-500 font-medium mb-2">Disetujui Oleh (Pimpinan Cabang),</p>
+                <div class="h-14 flex items-center justify-center">
+                    @if($headSignUser && file_exists(public_path($headSignUser->signature)))
+                        <img src="{{ asset($headUser->signature ?? $headSignUser->signature) }}" class="max-h-14 max-w-full object-contain" alt="TTD Pimpinan">
+                    @endif
+                </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
-                <p class="font-bold text-slate-800 mt-1">( Pimpinan PT Wahana Putra Yudha )</p>
+                <p class="font-bold text-slate-800 mt-1">( {{ $headSignUser ? $headSignUser->name : 'Pimpinan Cabang' }} )</p>
             </div>
         </div>
 

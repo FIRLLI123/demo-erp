@@ -118,23 +118,38 @@
         </div>
 
         <!-- Tanda Tangan 3 Kolom -->
+        @php
+            $salesUser = \App\Models\User::where('name', $so->sales_name)->orWhere('sales_id', $so->sales_id)->first();
+            $tapUser = auth()->user();
+        @endphp
         <div class="grid grid-cols-3 gap-6 pt-6 text-center border-t border-slate-200">
             <div>
-                <p class="text-slate-500 font-medium mb-16">Penerima Toko / Outlet,</p>
+                <p class="text-slate-500 font-medium mb-2">Penerima Toko / Outlet,</p>
+                <div class="h-16 flex items-center justify-center"></div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
                 <p class="font-bold text-slate-800 mt-1">( {{ $so->customer_name }} )</p>
             </div>
 
             <div>
-                <p class="text-slate-500 font-medium mb-16">Sales Kanvaser,</p>
+                <p class="text-slate-500 font-medium mb-2">Sales Kanvaser,</p>
+                <div class="h-16 flex items-center justify-center">
+                    @if($salesUser && $salesUser->signature && file_exists(public_path($salesUser->signature)))
+                        <img src="{{ asset($salesUser->signature) }}" alt="Ttd Sales" class="max-h-14 max-w-[120px] object-contain">
+                    @endif
+                </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
                 <p class="font-bold text-slate-800 mt-1">( {{ $so->sales_name }} )</p>
             </div>
 
             <div>
-                <p class="text-slate-500 font-medium mb-16">Gudang / Petugas TAP,</p>
+                <p class="text-slate-500 font-medium mb-2">Gudang / Petugas TAP,</p>
+                <div class="h-16 flex items-center justify-center">
+                    @if($tapUser && $tapUser->signature && file_exists(public_path($tapUser->signature)))
+                        <img src="{{ asset($tapUser->signature) }}" alt="Ttd TAP" class="max-h-14 max-w-[120px] object-contain">
+                    @endif
+                </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
-                <p class="font-bold text-slate-800 mt-1">( Admin TAP )</p>
+                <p class="font-bold text-slate-800 mt-1">( {{ $tapUser->name ?? 'Admin TAP' }} )</p>
             </div>
         </div>
 

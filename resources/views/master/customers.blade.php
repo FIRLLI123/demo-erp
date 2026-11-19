@@ -152,6 +152,16 @@
                         <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Lengkap Toko</label>
                         <input type="text" name="address" placeholder="Nama Jalan, No. Bangunan, Patokan" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                     </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Latitude</label>
+                        <input type="number" step="any" name="latitude" placeholder="Contoh: -6.2087634" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Longitude</label>
+                        <input type="number" step="any" name="longitude" placeholder="Contoh: 106.845599" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                    </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
@@ -291,6 +301,17 @@
                                     </select>
                                 </div>
                             </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Latitude</label>
+                                    <input type="number" step="any" name="latitude" x-model="editData.latitude" placeholder="Contoh: -6.2087634" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Longitude</label>
+                                    <input type="number" step="any" name="longitude" x-model="editData.longitude" placeholder="Contoh: 106.845599" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                </div>
+                            </div>
                         </div>
 
                         <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
@@ -307,39 +328,24 @@
         </template>
 
         <!-- ============================================== -->
-        <!-- KPI METRICS SUMMARY                            -->
+        <!-- FILTER WILAYAH, TIPE & PENCARIAN (REUSABLE UI) -->
         <!-- ============================================== -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
-                <div>
-                    <span class="text-[11px] font-bold text-slate-400 block uppercase">Total Toko Terdaftar:</span>
-                    <span class="text-2xl font-extrabold font-mono text-slate-900">{{ count($customers) }} Toko</span>
-                </div>
-                <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
-                    <i data-lucide="store" class="w-6 h-6"></i>
-                </div>
-            </div>
-
-            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
-                <div>
-                    <span class="text-[11px] font-bold text-slate-400 block uppercase">Outlet Status Aktif:</span>
-                    <span class="text-2xl font-extrabold font-mono text-emerald-600">{{ $customers->where('status', 'ACTIVE')->count() }} Outlet</span>
-                </div>
-                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                    <i data-lucide="check-circle" class="w-6 h-6"></i>
-                </div>
-            </div>
-
-            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
-                <div>
-                    <span class="text-[11px] font-bold text-slate-400 block uppercase">Total Piutang Berjalan:</span>
-                    <span class="text-2xl font-extrabold font-mono text-rose-600">Rp {{ number_format($customers->sum('unpaid_ar_amount'), 0, ',', '.') }}</span>
-                </div>
-                <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
-                    <i data-lucide="receipt" class="w-6 h-6"></i>
-                </div>
-            </div>
-        </div>
+        <x-filter-territory
+            tab="customers"
+            :server-side="true"
+            :action="route('master.customers')"
+            :show-area="true"
+            :show-cluster="true"
+            :show-tap="true"
+            :show-type="true"
+            type-mode="customer"
+            :show-search="true"
+            search-placeholder="Cari toko, kode, RS, Digipos, PIC..."
+            :areas="$areas"
+            :clusters="$clusters"
+            :taps="$taps"
+            :customers-count="$customers->count()"
+            :total-count="$customers->total()" />
 
         <!-- ============================================== -->
         <!-- TABEL MASTER TOKO                              -->
@@ -347,7 +353,7 @@
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <span class="text-xs font-extrabold text-slate-800">Daftar Toko & Outlet Pelanggan</span>
-                <span class="text-xs text-slate-500 font-mono">{{ count($customers) }} Toko</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] bg-slate-200 text-slate-700 font-mono font-bold">{{ number_format($customers->total()) }} Toko</span>
             </div>
 
             <div class="overflow-x-auto">
@@ -367,7 +373,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 font-medium">
-                        @foreach($customers as $c)
+                        @forelse($customers as $c)
                             <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="py-3.5 px-4 font-mono font-bold text-amber-900">
                                     {{ $c->code }}
@@ -432,6 +438,12 @@
                                             {{ $c->kecamatan_name ? 'Kec. ' . $c->kecamatan_name : '' }}{{ $c->kecamatan_name && $c->kota_name ? ', ' : '' }}{{ $c->kota_name }}
                                         </span>
                                     @endif
+                                    @if($c->latitude && $c->longitude)
+                                        <a href="https://maps.google.com/?q={{ $c->latitude }},{{ $c->longitude }}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-mono text-indigo-600 hover:underline mt-0.5">
+                                            <i data-lucide="map-pin" class="w-3 h-3"></i>
+                                            <span>{{ number_format($c->latitude, 5) }}, {{ number_format($c->longitude, 5) }}</span>
+                                        </a>
+                                    @endif
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
                                     <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold 
@@ -463,9 +475,89 @@
                                     </button>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="10" class="py-10 text-center text-slate-400">
+                                    <div class="flex flex-col items-center justify-center gap-1.5">
+                                        <i data-lucide="store" class="w-7 h-7 text-slate-300"></i>
+                                        <span class="text-xs font-semibold">Tidak ada data outlet yang sesuai dengan filter atau pencarian.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Server-Side Pagination Bar -->
+            <div class="p-4 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
+                <div class="flex items-center gap-3">
+                    <div>
+                        Menampilkan <strong class="text-slate-800">{{ number_format($customers->firstItem() ?? 0) }}</strong> - <strong class="text-slate-800">{{ number_format($customers->lastItem() ?? 0) }}</strong> dari <strong class="text-slate-800">{{ number_format($customers->total()) }}</strong> data Toko
+                    </div>
+                    <span class="text-slate-300">|</span>
+                    <label class="flex items-center gap-1.5 text-xs">
+                        <span>Baris:</span>
+                        <select x-model="perPage" @change="$nextTick(() => $refs.filterForm.submit())" class="border border-slate-200 rounded-lg px-2 py-1 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </label>
+                </div>
+
+                @if($customers->hasPages())
+                    @php
+                        $current = $customers->currentPage();
+                        $last = $customers->lastPage();
+                        $pages = [];
+                        if ($last <= 7) {
+                            $pages = range(1, $last);
+                        } elseif ($current <= 4) {
+                            $pages = [1, 2, 3, 4, 5, '...', $last];
+                        } elseif ($current >= $last - 3) {
+                            $pages = [1, '...', $last - 4, $last - 3, $last - 2, $last - 1, $last];
+                        } else {
+                            $pages = [1, '...', $current - 1, $current, $current + 1, '...', $last];
+                        }
+                    @endphp
+                    <div class="flex items-center gap-1">
+                        @if($customers->onFirstPage())
+                            <span class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 opacity-50 cursor-not-allowed text-xs font-bold flex items-center gap-1">
+                                <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                                <span>Prev</span>
+                            </span>
+                        @else
+                            <a href="{{ $customers->previousPageUrl() }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all flex items-center gap-1">
+                                <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                                <span>Prev</span>
+                            </a>
+                        @endif
+
+                        @foreach($pages as $p)
+                            @if($p === '...')
+                                <span class="min-w-[30px] h-7 px-1.5 flex items-center justify-center text-xs text-slate-400 cursor-default">...</span>
+                            @elseif($p === $current)
+                                <span class="min-w-[30px] h-7 px-1.5 rounded-lg border border-amber-600 bg-amber-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">{{ $p }}</span>
+                            @else
+                                <a href="{{ $customers->url($p) }}" class="min-w-[30px] h-7 px-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 font-semibold text-xs flex items-center justify-center transition-all">{{ $p }}</a>
+                            @endif
+                        @endforeach
+
+                        @if($customers->hasMorePages())
+                            <a href="{{ $customers->nextPageUrl() }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all flex items-center gap-1">
+                                <span>Next</span>
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                            </a>
+                        @else
+                            <span class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 opacity-50 cursor-not-allowed text-xs font-bold flex items-center gap-1">
+                                <span>Next</span>
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                            </span>
+                        @endif
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -654,6 +746,63 @@
                 createOpen: false,
                 editModalOpen: false,
                 editData: null,
+
+                // Cascading Filter & Pagination Server-Side (Sinkron dengan x-filter-territory)
+                allClusters: @json($clusters),
+                allTaps: @json($taps),
+                selectedArea: '{{ request('area_id', '') }}',
+                selectedCluster: '{{ request('cluster_id', '') }}',
+                selectedTap: '{{ request('tap_id', '') }}',
+                selectedType: '{{ request('type', 'ALL') ?: 'ALL' }}',
+                searchQuery: @json(request('search', '')),
+                perPage: '{{ $perPage }}',
+
+                get clusterOptions() {
+                    if (!this.selectedArea) return this.allClusters;
+                    return this.allClusters.filter(c => String(c.area_id) === String(this.selectedArea));
+                },
+
+                get tapOptions() {
+                    if (this.selectedCluster) {
+                        return this.allTaps.filter(t => String(t.cluster_id) === String(this.selectedCluster));
+                    }
+                    if (this.selectedArea) {
+                        const clsIds = this.clusterOptions.map(c => String(c.id));
+                        return this.allTaps.filter(t => clsIds.includes(String(t.cluster_id)));
+                    }
+                    return this.allTaps;
+                },
+
+                onAreaChange() {
+                    this.selectedCluster = '';
+                    this.selectedTap = '';
+                    this.$nextTick(() => this.$refs.filterForm.submit());
+                },
+
+                onClusterChange() {
+                    this.selectedTap = '';
+                    this.$nextTick(() => this.$refs.filterForm.submit());
+                },
+
+                onTapChange() {
+                    this.$nextTick(() => this.$refs.filterForm.submit());
+                },
+
+                onTypeChange() {
+                    this.$nextTick(() => this.$refs.filterForm.submit());
+                },
+
+                onSearchClear() {
+                    this.$nextTick(() => this.$refs.filterForm.submit());
+                },
+
+                hasActiveFilter() {
+                    return Boolean(this.selectedArea || this.selectedCluster || this.selectedTap || (this.selectedType && this.selectedType !== 'ALL') || this.searchQuery);
+                },
+
+                resetFilter() {
+                    window.location.href = '{{ route('master.customers') }}' + '?per_page=' + encodeURIComponent(this.perPage);
+                },
 
                 // Modal Multi Nomor RS
                 rsModalOpen: false,

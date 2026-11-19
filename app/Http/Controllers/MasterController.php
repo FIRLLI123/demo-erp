@@ -53,7 +53,70 @@ class MasterController extends Controller
             ->orderBy('warehouses.id')
             ->get();
 
-        return view('master.organization', compact('areas', 'clusters', 'taps', 'warehouses'));
+        $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
+
+        return view('master.organization', compact('areas', 'clusters', 'taps', 'warehouses', 'salesList'));
+    }
+
+    public function storeWarehouse(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|max:50|unique:warehouses,code',
+            'name' => 'required|string|max:150',
+            'type' => 'required|in:MAIN,INVENTORY,SALES',
+            'tap_id' => 'required|exists:taps,id',
+            'sales_id' => 'nullable|required_if:type,SALES|exists:sales,id',
+            'address' => 'nullable|string|max:500',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+        ]);
+
+        DB::table('warehouses')->insert([
+            'code' => strtoupper(trim($request->code)),
+            'name' => trim($request->name),
+            'type' => $request->type,
+            'tap_id' => $request->tap_id,
+            'sales_id' => $request->type === 'SALES' ? $request->sales_id : null,
+            'address' => $request->address ? trim($request->address) : null,
+            'status' => $request->status ?? 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.organization', ['tab' => 'warehouses'])
+            ->with('success', 'Gudang baru ' . $request->name . ' (' . strtoupper(trim($request->code)) . ') berhasil ditambahkan!');
+    }
+
+    public function updateWarehouse(Request $request, $id)
+    {
+        $warehouse = DB::table('warehouses')->where('id', $id)->first();
+        if (!$warehouse) {
+            return redirect()->route('master.organization', ['tab' => 'warehouses'])
+                ->with('error', 'Gudang tidak ditemukan!');
+        }
+
+        $request->validate([
+            'code' => 'required|string|max:50|unique:warehouses,code,' . $id,
+            'name' => 'required|string|max:150',
+            'type' => 'required|in:MAIN,INVENTORY,SALES',
+            'tap_id' => 'required|exists:taps,id',
+            'sales_id' => 'nullable|required_if:type,SALES|exists:sales,id',
+            'address' => 'nullable|string|max:500',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+        ]);
+
+        DB::table('warehouses')->where('id', $id)->update([
+            'code' => strtoupper(trim($request->code)),
+            'name' => trim($request->name),
+            'type' => $request->type,
+            'tap_id' => $request->tap_id,
+            'sales_id' => $request->type === 'SALES' ? $request->sales_id : null,
+            'address' => $request->address ? trim($request->address) : null,
+            'status' => $request->status,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.organization', ['tab' => 'warehouses'])
+            ->with('success', 'Data gudang ' . $request->name . ' berhasil diperbarui!');
     }
 
     public function products()
@@ -119,8 +182,118 @@ class MasterController extends Controller
         $areas = DB::table('areas')->orderBy('id')->get();
         $clusters = DB::table('clusters')->orderBy('name')->get();
         $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $salesTypes = DB::table('sales_types')->orderBy('id')->get();
+        $salesLevels = DB::table('sales_levels')->orderBy('id')->get();
 
-        return view('master.sales', compact('salesList', 'areas', 'clusters', 'taps'));
+        return view('master.sales', compact('salesList', 'areas', 'clusters', 'taps', 'salesTypes', 'salesLevels'));
+    }
+
+    public function storeSalesType(Request $request)
+    {
+        $request->validate([
+            'type_name' => 'required|string|max:50|unique:sales_types,type_name',
+            'type_desc' => 'nullable|string|max:150',
+        ]);
+
+        DB::table('sales_types')->insert([
+            'type_name' => trim($request->type_name),
+            'type_desc' => $request->type_desc ? trim($request->type_desc) : null,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.sales-team', ['tab' => 'types'])
+            ->with('success', 'Tipe sales baru "' . $request->type_name . '" berhasil ditambahkan!');
+    }
+
+    public function updateSalesType(Request $request, $id)
+    {
+        $request->validate([
+            'type_name' => 'required|string|max:50|unique:sales_types,type_name,' . $id,
+            'type_desc' => 'nullable|string|max:150',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+        ]);
+
+        DB::table('sales_types')->where('id', $id)->update([
+            'type_name' => trim($request->type_name),
+            'type_desc' => $request->type_desc ? trim($request->type_desc) : null,
+            'status' => $request->status,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.sales-team', ['tab' => 'types'])
+            ->with('success', 'Tipe sales "' . $request->type_name . '" berhasil diperbarui!');
+    }
+
+    public function deleteSalesType($id)
+    {
+        $type = DB::table('sales_types')->where('id', $id)->first();
+        if ($type) {
+            $inUse = DB::table('sales')->where('sales_type', $type->type_name)->count();
+            if ($inUse > 0) {
+                return redirect()->route('master.sales-team', ['tab' => 'types'])
+                    ->with('error', 'Tipe sales "' . $type->type_name . '" tidak dapat dihapus karena sedang digunakan oleh ' . $inUse . ' sales force.');
+            }
+            DB::table('sales_types')->where('id', $id)->delete();
+        }
+
+        return redirect()->route('master.sales-team', ['tab' => 'types'])
+            ->with('success', 'Tipe sales berhasil dihapus!');
+    }
+
+    public function storeSalesLevel(Request $request)
+    {
+        $request->validate([
+            'level_name' => 'required|string|max:30|unique:sales_levels,level_name',
+            'level_desc' => 'nullable|string|max:100',
+        ]);
+
+        DB::table('sales_levels')->insert([
+            'level_name' => strtoupper(trim($request->level_name)),
+            'level_desc' => $request->level_desc ? strtoupper(trim($request->level_desc)) : null,
+            'status' => 'ACTIVE',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.sales-team', ['tab' => 'levels'])
+            ->with('success', 'Level sales baru "' . strtoupper(trim($request->level_name)) . '" berhasil ditambahkan!');
+    }
+
+    public function updateSalesLevel(Request $request, $id)
+    {
+        $request->validate([
+            'level_name' => 'required|string|max:30|unique:sales_levels,level_name,' . $id,
+            'level_desc' => 'nullable|string|max:100',
+            'status' => 'required|in:ACTIVE,INACTIVE',
+        ]);
+
+        DB::table('sales_levels')->where('id', $id)->update([
+            'level_name' => strtoupper(trim($request->level_name)),
+            'level_desc' => $request->level_desc ? strtoupper(trim($request->level_desc)) : null,
+            'status' => $request->status,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('master.sales-team', ['tab' => 'levels'])
+            ->with('success', 'Level sales "' . strtoupper(trim($request->level_name)) . '" berhasil diperbarui!');
+    }
+
+    public function deleteSalesLevel($id)
+    {
+        $level = DB::table('sales_levels')->where('id', $id)->first();
+        if ($level) {
+            $inUse = DB::table('sales')->where('sales_level', $level->level_name)->count();
+            if ($inUse > 0) {
+                return redirect()->route('master.sales-team', ['tab' => 'levels'])
+                    ->with('error', 'Level sales "' . $level->level_name . '" tidak dapat dihapus karena sedang digunakan oleh ' . $inUse . ' sales force.');
+            }
+            DB::table('sales_levels')->where('id', $id)->delete();
+        }
+
+        return redirect()->route('master.sales-team', ['tab' => 'levels'])
+            ->with('success', 'Level sales berhasil dihapus!');
     }
 
     public function storeSales(Request $request)
@@ -230,35 +403,83 @@ class MasterController extends Controller
     /**
      * Master Pelanggan / Toko Outlet (PT Wahana Putra Yudha)
      */
-    public function customers()
+    public function customers(Request $request)
     {
-        $customers = DB::table('customers')
+        $query = DB::table('customers')
             ->leftJoin('taps', 'customers.tap_id', '=', 'taps.id')
+            ->leftJoin('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->leftJoin('areas', 'clusters.area_id', '=', 'areas.id')
             ->leftJoin('sales', 'customers.sales_id', '=', 'sales.id')
             ->select(
                 'customers.*',
                 'taps.name as tap_name',
+                'clusters.id as cluster_id',
+                'clusters.name as cluster_name',
+                'areas.id as area_id',
+                'areas.name as area_name',
                 'sales.name as sales_name',
                 'sales.code as sales_code'
-            )
-            ->orderBy('customers.id')
-            ->get();
+            );
 
-        // Hitung outstanding piutang untuk tiap customer
-        $outstandingAr = DB::table('accounts_receivable')
-            ->where('status', '!=', 'PAID')
-            ->where('balance_amount', '>', 0)
-            ->select('customer_id', DB::raw('sum(balance_amount) as total_unpaid'), DB::raw('count(*) as unpaid_count'))
-            ->groupBy('customer_id')
-            ->get()
-            ->keyBy('customer_id');
+        if ($request->filled('area_id')) {
+            $query->where('clusters.area_id', $request->area_id);
+        }
+        if ($request->filled('cluster_id')) {
+            $query->where('taps.cluster_id', $request->cluster_id);
+        }
+        if ($request->filled('tap_id')) {
+            $query->where('customers.tap_id', $request->tap_id);
+        }
+        if ($request->filled('type') && $request->type !== 'ALL') {
+            $query->where('customers.type', $request->type);
+        }
+        if ($request->filled('search')) {
+            $q = trim($request->search);
+            $query->where(function ($sub) use ($q) {
+                $sub->where('customers.name', 'like', "%{$q}%")
+                    ->orWhere('customers.code', 'like', "%{$q}%")
+                    ->orWhere('customers.digipos_id', 'like', "%{$q}%")
+                    ->orWhere('customers.nomor_rs', 'like', "%{$q}%")
+                    ->orWhere('customers.phone', 'like', "%{$q}%")
+                    ->orWhere('customers.customer_pic', 'like', "%{$q}%")
+                    ->orWhere('customers.address', 'like', "%{$q}%")
+                    ->orWhere('sales.name', 'like', "%{$q}%")
+                    ->orWhere('taps.name', 'like', "%{$q}%")
+                    ->orWhereExists(function ($rsSub) use ($q) {
+                        $rsSub->select(DB::raw(1))
+                            ->from('customer_rs_numbers')
+                            ->whereColumn('customer_rs_numbers.customer_id', 'customers.id')
+                            ->where('customer_rs_numbers.rs_number', 'like', "%{$q}%");
+                    });
+            });
+        }
 
-        // Ambil semua nomor RS terdaftar per customer
-        $allRs = DB::table('customer_rs_numbers')
-            ->orderBy('is_primary', 'desc')
-            ->orderBy('id', 'asc')
-            ->get()
-            ->groupBy('customer_id');
+        $perPage = in_array((int) $request->input('per_page'), [10, 25, 50, 100]) ? (int) $request->input('per_page') : 10;
+        $customers = $query->orderBy('customers.id')->paginate($perPage)->withQueryString();
+
+        $customerIds = $customers->pluck('id')->all();
+
+        // Hitung outstanding piutang hanya untuk customer di halaman aktif
+        $outstandingAr = !empty($customerIds)
+            ? DB::table('accounts_receivable')
+                ->whereIn('customer_id', $customerIds)
+                ->where('status', '!=', 'PAID')
+                ->where('balance_amount', '>', 0)
+                ->select('customer_id', DB::raw('sum(balance_amount) as total_unpaid'), DB::raw('count(*) as unpaid_count'))
+                ->groupBy('customer_id')
+                ->get()
+                ->keyBy('customer_id')
+            : collect();
+
+        // Ambil nomor RS hanya untuk customer di halaman aktif
+        $allRs = !empty($customerIds)
+            ? DB::table('customer_rs_numbers')
+                ->whereIn('customer_id', $customerIds)
+                ->orderBy('is_primary', 'desc')
+                ->orderBy('id', 'asc')
+                ->get()
+                ->groupBy('customer_id')
+            : collect();
 
         foreach ($customers as $c) {
             $c->unpaid_ar_amount = $outstandingAr[$c->id]->total_unpaid ?? 0;
@@ -271,10 +492,12 @@ class MasterController extends Controller
             $c->total_rs_count = $c->rs_list->count();
         }
 
+        $areas = DB::table('areas')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $clusters = DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name')->get();
         $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
         $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
 
-        return view('master.customers', compact('customers', 'taps', 'salesList'));
+        return view('master.customers', compact('customers', 'areas', 'clusters', 'taps', 'salesList', 'perPage'));
     }
 
     /**
@@ -472,6 +695,8 @@ class MasterController extends Controller
             'kecamatan_name' => 'nullable|string|max:100',
             'kota_name' => 'nullable|string|max:100',
             'provinsi_name' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'credit_limit' => 'nullable|numeric|min:0',
         ]);
 
@@ -491,6 +716,8 @@ class MasterController extends Controller
             'customer_ktp' => $request->customer_ktp,
             'hari_pjp' => $request->hari_pjp,
             'address' => $request->address ?? 'Area Operasional TAP',
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
             'kelurahan_name' => $request->kelurahan_name,
             'kecamatan_name' => $request->kecamatan_name,
             'kota_name' => $request->kota_name,
@@ -522,6 +749,8 @@ class MasterController extends Controller
             'kecamatan_name' => 'nullable|string|max:100',
             'kota_name' => 'nullable|string|max:100',
             'provinsi_name' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'credit_limit' => 'nullable|numeric|min:0',
             'status' => 'required|in:ACTIVE,INACTIVE',
         ]);
@@ -538,6 +767,8 @@ class MasterController extends Controller
             'customer_ktp' => $request->customer_ktp,
             'hari_pjp' => $request->hari_pjp,
             'address' => $request->address,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
             'kelurahan_name' => $request->kelurahan_name,
             'kecamatan_name' => $request->kecamatan_name,
             'kota_name' => $request->kota_name,
@@ -649,7 +880,10 @@ class MasterController extends Controller
             'role_id' => 'required|exists:roles,id',
             'phone' => 'nullable|string|max:20',
             'sales_id' => 'nullable|exists:sales,id',
+            'signature_file' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
         ]);
+
+        $signaturePath = $this->handleSignatureUpload($request);
 
         $userId = DB::table('users')->insertGetId([
             'name' => $request->name,
@@ -658,6 +892,7 @@ class MasterController extends Controller
             'role_id' => $request->role_id,
             'sales_id' => $request->sales_id,
             'phone' => $request->phone,
+            'signature' => $signaturePath,
             'has_full_access' => 0,
             'is_ho_readonly' => 0,
             'is_active' => 1,
@@ -677,6 +912,11 @@ class MasterController extends Controller
 
     public function updateUser(Request $request, $id)
     {
+        $user = DB::table('users')->where('id', $id)->first();
+        if (!$user) {
+            return redirect()->route('master.users')->with('error', 'Pengguna tidak ditemukan.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:150',
             'email' => 'required|email|max:150|unique:users,email,' . $id,
@@ -685,7 +925,10 @@ class MasterController extends Controller
             'sales_id' => 'nullable|exists:sales,id',
             'is_active' => 'required|in:0,1',
             'password' => 'nullable|string|min:6',
+            'signature_file' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
         ]);
+
+        $signaturePath = $this->handleSignatureUpload($request, $user->signature);
 
         $updateData = [
             'name' => $request->name,
@@ -693,6 +936,7 @@ class MasterController extends Controller
             'role_id' => $request->role_id,
             'sales_id' => $request->sales_id,
             'phone' => $request->phone,
+            'signature' => $signaturePath,
             'is_active' => $request->is_active,
             'updated_at' => now(),
         ];
@@ -711,6 +955,57 @@ class MasterController extends Controller
         }
 
         return redirect()->route('master.users')->with('success', "Data profil akun [{$request->name}] berhasil diperbarui.");
+    }
+
+    /**
+     * Helper untuk upload file tanda tangan atau simpan base64 canvas
+     */
+    private function handleSignatureUpload(Request $request, $existingSignature = null)
+    {
+        // 1. Opsi Hapus Tanda Tangan
+        if ($request->input('signature_remove') == '1') {
+            if ($existingSignature && file_exists(public_path($existingSignature))) {
+                @unlink(public_path($existingSignature));
+            }
+            return null;
+        }
+
+        $directory = public_path('uploads/signatures');
+        if (!file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        // 2. Opsi Upload Berkas Gambar (PNG, JPG)
+        if ($request->hasFile('signature_file')) {
+            $file = $request->file('signature_file');
+            $filename = 'sign_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $file->move($directory, $filename);
+
+            if ($existingSignature && file_exists(public_path($existingSignature))) {
+                @unlink(public_path($existingSignature));
+            }
+
+            return 'uploads/signatures/' . $filename;
+        }
+
+        // 3. Opsi Goresan Canvas (Base64 PNG)
+        if ($request->filled('signature_canvas') && str_starts_with($request->signature_canvas, 'data:image')) {
+            $dataUri = $request->signature_canvas;
+            $encodedData = substr($dataUri, strpos($dataUri, ',') + 1);
+            $decodedData = base64_decode($encodedData);
+            if ($decodedData) {
+                $filename = 'sign_' . time() . '_' . uniqid() . '.png';
+                file_put_contents($directory . '/' . $filename, $decodedData);
+
+                if ($existingSignature && file_exists(public_path($existingSignature))) {
+                    @unlink(public_path($existingSignature));
+                }
+
+                return 'uploads/signatures/' . $filename;
+            }
+        }
+
+        return $existingSignature;
     }
 
     /**
@@ -1200,7 +1495,7 @@ class MasterController extends Controller
     public function toggleStatus(Request $request)
     {
         $request->validate([
-            'entity' => 'required|string|in:customers,sales,products,warehouses,banks,vendors,taps,price_profiles,users,customer_rs',
+            'entity' => 'required|string|in:customers,sales,products,warehouses,banks,vendors,taps,price_profiles,users,customer_rs,sales_types,sales_levels',
             'id' => 'required|integer',
         ]);
 
@@ -1218,6 +1513,8 @@ class MasterController extends Controller
             'price_profiles' => ['table' => 'price_profiles', 'name_col' => 'name', 'status_col' => 'status', 'label' => 'Skema Harga'],
             'users' => ['table' => 'users', 'name_col' => 'name', 'status_col' => 'is_active', 'label' => 'Pengguna', 'is_boolean' => true],
             'customer_rs' => ['table' => 'customer_rs_numbers', 'name_col' => 'rs_number', 'status_col' => 'status', 'label' => 'Nomor Chip RS'],
+            'sales_types' => ['table' => 'sales_types', 'name_col' => 'type_name', 'status_col' => 'status', 'label' => 'Tipe Sales'],
+            'sales_levels' => ['table' => 'sales_levels', 'name_col' => 'level_name', 'status_col' => 'status', 'label' => 'Level Sales'],
         ];
 
         $config = $mapping[$entity];
