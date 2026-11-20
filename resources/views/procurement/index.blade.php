@@ -219,12 +219,77 @@
             </form>
         </div>
 
-        <!-- ============================================== -->
-        <!-- KOMPONEN UI: FILTER TANGGAL & FILTER WILAYAH   -->
-        <!-- ============================================== -->
+        <!-- ============================================================== -->
+        <!-- KOMPONEN UI: FILTER CLIENT-SIDE (TANGGAL, WILAYAH & SEARCH)    -->
+        <!-- ============================================================== -->
         <div class="space-y-3 mb-5">
-            <x-filter-date-range :action="route('procurement.index')" label="Periode PO" />
+            <!-- Filter Tanggal Client-Side (100% Cepat Tanpa Reload Halaman) -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-2xs">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mr-1">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-rose-600"></i>
+                            <span>Periode Tanggal:</span>
+                        </span>
+                        <!-- Preset Tanggal Client-Side -->
+                        <div class="inline-flex items-center p-0.5 bg-slate-100 rounded-xl gap-0.5">
+                            <button type="button"
+                                    @click="setClientDatePreset('all')"
+                                    :class="!startDate && !endDate ? 'bg-slate-900 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Semua
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('today')"
+                                    :class="isPresetActive('today') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Hari Ini
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('7days')"
+                                    :class="isPresetActive('7days') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                7 Hari
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('this_month')"
+                                    :class="isPresetActive('this_month') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Bulan Ini
+                            </button>
+                        </div>
+                    </div>
 
+                    <!-- Input Tanggal Custom (Client-Side) -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
+                            <span class="text-[11px] text-slate-400 font-semibold">Dari:</span>
+                            <input type="date"
+                                   x-model="startDate"
+                                   @change="poPage = 1; syncSelectedPo(); refreshIcons()"
+                                   class="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer">
+                        </div>
+                        <span class="text-slate-300 text-xs">-</span>
+                        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
+                            <span class="text-[11px] text-slate-400 font-semibold">Sampai:</span>
+                            <input type="date"
+                                   x-model="endDate"
+                                   @change="poPage = 1; syncSelectedPo(); refreshIcons()"
+                                   class="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer">
+                        </div>
+                        <button type="button"
+                                x-show="startDate || endDate"
+                                @click="setClientDatePreset('all')"
+                                title="Reset Filter Tanggal"
+                                class="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 transition-colors cursor-pointer">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            <span>Reset Tanggal</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Wilayah & Search (Sinkron Client-Side dengan x-filter-territory) -->
             <x-filter-territory
                 tab="po"
                 :show-area="true"
@@ -242,11 +307,32 @@
         <!-- BAGIAN 1: HEADER TABLE (DAFTAR PO)             -->
         <!-- ============================================== -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
-            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h3 class="font-extrabold text-slate-900 text-xs flex items-center gap-2">
-                    <span>Daftar Purchase Order (PO)</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold font-mono" x-text="filteredOrders.length"></span>
-                </h3>
+            <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+                <div class="flex items-center gap-2.5">
+                    <h3 class="font-extrabold text-slate-900 text-xs flex items-center gap-2">
+                        <span>Daftar Purchase Order (PO)</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold font-mono" x-text="filteredOrders.length + ' data'"></span>
+                    </h3>
+                </div>
+
+                <!-- Kontrol Checkbox Void & Counter Client-Side -->
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none text-xs font-bold"
+                           :class="showVoid ? 'bg-rose-50 border-rose-300 text-rose-800 shadow-2xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
+                        <input type="checkbox"
+                               x-model="showVoid"
+                               @change="onVoidFilterChange()"
+                               class="rounded text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer border-slate-300">
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="ban" class="w-3.5 h-3.5" :class="showVoid ? 'text-rose-600' : 'text-slate-400'"></i>
+                            <span>Tampilkan PO yang Di-VOID</span>
+                        </span>
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold"
+                              :class="showVoid ? 'bg-rose-200/80 text-rose-900' : 'bg-slate-100 text-slate-500'"
+                              x-text="voidCount + ' Void'">
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -616,7 +702,7 @@
             const rawOrders = @json($orders);
             return {
                 createPoOpen: false,
-                selectedPo: (rawOrders && rawOrders.length > 0) ? rawOrders[0] : null,
+                selectedPo: null,
                 allOrders: rawOrders,
                 allProducts: @json($products),
                 allClusters: @json($clusters),
@@ -629,15 +715,22 @@
                 ],
                 grandTotal: 0,
 
-                // Filter Wilayah & Search (Sinkron dengan x-filter-territory)
+                // Filter Client-Side: Void, Tanggal, Wilayah & Search
+                showVoid: false, // Default false: sembunyikan PO yang di-VOID agar PO aktif tampil rapi
+                startDate: '{{ request('start_date', '') }}',
+                endDate: '{{ request('end_date', '') }}',
                 selectedArea: '',
                 selectedCluster: '',
                 selectedTap: '',
                 searchPo: '',
 
-                // Pagination PO
+                // Pagination PO (Murni Client-Side)
                 poPage: 1,
                 poPerPage: '10',
+
+                get voidCount() {
+                    return this.allOrders.filter(po => po.status === 'CANCELLED').length;
+                },
 
                 get selectedTapMainWh() {
                     const t = this.allTaps.find(x => String(x.id) === String(this.formTapId));
@@ -653,11 +746,81 @@
                 },
 
                 initData() {
-                    if (this.allOrders.length > 0) {
+                    // Pilih PO aktif pertama yang sesuai dengan filter default
+                    if (this.filteredOrders.length > 0) {
+                        this.selectedPo = this.filteredOrders[0];
+                    } else if (this.allOrders.length > 0) {
                         this.selectedPo = this.allOrders[0];
                     }
-                    this.$watch('searchPo', () => { this.poPage = 1; this.refreshIcons(); });
+                    this.$watch('searchPo', () => { this.poPage = 1; this.syncSelectedPo(); this.refreshIcons(); });
                     this.refreshIcons();
+                },
+
+                // Preset Tanggal Client-Side (Tanpa Reload Form)
+                setClientDatePreset(type) {
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+                    if (type === 'all') {
+                        this.startDate = '';
+                        this.endDate = '';
+                    } else if (type === 'today') {
+                        const todayStr = fmt(now);
+                        this.startDate = todayStr;
+                        this.endDate = todayStr;
+                    } else if (type === '7days') {
+                        const past = new Date();
+                        past.setDate(past.getDate() - 6);
+                        this.startDate = fmt(past);
+                        this.endDate = fmt(now);
+                    } else if (type === 'this_month') {
+                        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        this.startDate = fmt(firstDay);
+                        this.endDate = fmt(lastDay);
+                    }
+                    this.poPage = 1;
+                    this.syncSelectedPo();
+                    this.refreshIcons();
+                },
+
+                isPresetActive(type) {
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                    if (type === 'today') {
+                        const todayStr = fmt(now);
+                        return this.startDate === todayStr && this.endDate === todayStr;
+                    }
+                    if (type === '7days') {
+                        const past = new Date();
+                        past.setDate(past.getDate() - 6);
+                        return this.startDate === fmt(past) && this.endDate === fmt(now);
+                    }
+                    if (type === 'this_month') {
+                        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        return this.startDate === fmt(firstDay) && this.endDate === fmt(lastDay);
+                    }
+                    return false;
+                },
+
+                onVoidFilterChange() {
+                    this.poPage = 1;
+                    this.syncSelectedPo();
+                    this.refreshIcons();
+                },
+
+                syncSelectedPo() {
+                    this.$nextTick(() => {
+                        // Jika PO yang sedang dipilih tidak terlihat karena filter, pindah ke PO pertama yang terlihat
+                        if (this.selectedPo && !this.isOrderVisible(this.selectedPo)) {
+                            this.selectedPo = this.filteredOrders.length > 0 ? this.filteredOrders[0] : null;
+                        } else if (!this.selectedPo && this.filteredOrders.length > 0) {
+                            this.selectedPo = this.filteredOrders[0];
+                        }
+                    });
                 },
 
                 // Searchable Product Combobox Helpers
@@ -711,27 +874,31 @@
                     this.selectedCluster = '';
                     this.selectedTap = '';
                     this.poPage = 1;
+                    this.syncSelectedPo();
                     this.refreshIcons();
                 },
 
                 onClusterChange() {
                     this.selectedTap = '';
                     this.poPage = 1;
+                    this.syncSelectedPo();
                     this.refreshIcons();
                 },
 
                 onTapChange() {
                     this.poPage = 1;
+                    this.syncSelectedPo();
                     this.refreshIcons();
                 },
 
                 onSearchChange() {
                     this.poPage = 1;
+                    this.syncSelectedPo();
                     this.refreshIcons();
                 },
 
                 hasActiveFilter() {
-                    return Boolean(this.selectedArea || this.selectedCluster || this.selectedTap || this.searchPo);
+                    return Boolean(this.selectedArea || this.selectedCluster || this.selectedTap || this.searchPo || this.startDate || this.endDate || this.showVoid);
                 },
 
                 resetFilter() {
@@ -739,16 +906,36 @@
                     this.selectedCluster = '';
                     this.selectedTap = '';
                     this.searchPo = '';
+                    this.startDate = '';
+                    this.endDate = '';
+                    this.showVoid = false;
                     this.poPage = 1;
+                    this.syncSelectedPo();
                     this.refreshIcons();
                 },
 
                 isOrderVisible(po) {
+                    // Filter Void: jika showVoid false, sembunyikan PO berstatus CANCELLED
+                    if (!this.showVoid && po.status === 'CANCELLED') return false;
+
+                    // Filter Wilayah
                     if (this.selectedArea && String(po.area_id) !== String(this.selectedArea)) return false;
                     if (this.selectedCluster && String(po.cluster_id) !== String(this.selectedCluster)) return false;
                     if (this.selectedTap && String(po.tap_id) !== String(this.selectedTap)) return false;
+
+                    // Filter Tanggal Client-Side
+                    if (this.startDate) {
+                        const poDate = po.order_date ? String(po.order_date).substring(0, 10) : '';
+                        if (poDate && poDate < this.startDate) return false;
+                    }
+                    if (this.endDate) {
+                        const poDate = po.order_date ? String(po.order_date).substring(0, 10) : '';
+                        if (poDate && poDate > this.endDate) return false;
+                    }
+
+                    // Filter Search Text
                     if (this.searchPo) {
-                        const q = this.searchPo.toLowerCase();
+                        const q = this.searchPo.toLowerCase().trim();
                         const match = (po.doc_number && po.doc_number.toLowerCase().includes(q)) ||
                                       (po.do_number && po.do_number.toLowerCase().includes(q)) ||
                                       (po.vendor_display && po.vendor_display.toLowerCase().includes(q)) ||
