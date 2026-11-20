@@ -198,6 +198,11 @@
         </button>
     </div>
 
+    <!-- ========================================== -->
+    <!-- GLOBAL CONFIRMATION MODAL COMPONENT        -->
+    <!-- ========================================== -->
+    <x-confirm-modal />
+
     <div class="min-h-full flex">
         <!-- Sidebar for Desktop & Mobile Overlay -->
         <aside 
@@ -579,6 +584,17 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- Menu Paling Bawah: MASTER UI SHOWCASE & TEST LAB -->
+                <div class="pt-3 mt-3 border-t border-slate-800/80">
+                    <a href="{{ route('ui.showcase') }}" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all {{ request()->routeIs('ui.showcase*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-indigo-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white font-semibold' }}">
+                        <div class="flex items-center gap-2.5">
+                            <i data-lucide="layout-template" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Master UI Components</span>
+                        </div>
+                        <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono font-bold">TEST LAB</span>
+                    </a>
+                </div>
             </nav>
 
             <!-- Bottom User & Role Profile -->
@@ -942,11 +958,15 @@
                         this.showToast(@json(session('error')), 'error', 'Perhatian');
                     @endif
 
-                    // Otomatis intercept semua form submit untuk menampilkan loading modern (kecuali chat AI & no-loading)
+                    // Otomatis intercept semua form submit untuk menampilkan loading modern (kecuali chat AI, no-loading, atau yang dibatalkan)
                     document.addEventListener('submit', (e) => {
+                        if (e.defaultPrevented) return;
                         const form = e.target;
                         if (form && form.tagName && form.tagName.toLowerCase() === 'form') {
                             if (form.closest('[x-data*="aiAssistantWidget"]') || form.hasAttribute('data-no-loading')) {
+                                return;
+                            }
+                            if (form.hasAttribute('data-confirm') && form.dataset.confirmed !== 'true') {
                                 return;
                             }
                             const customTitle = form.getAttribute('data-loading-title') || 'Memproses Transaksi...';

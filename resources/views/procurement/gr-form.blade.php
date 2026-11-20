@@ -46,19 +46,9 @@
             </div>
         </div>
 
-        @if ($errors->any())
-            <div class="m-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
-                <div class="flex items-center gap-2 font-bold mb-1.5">
-                    <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
-                    <span>Terdapat data yang belum lengkap:</span>
-                </div>
-                <ul class="list-disc list-inside space-y-1 text-rose-700 pl-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        <div class="px-6 pt-6">
+            <x-alert />
+        </div>
 
         <form method="POST" action="{{ route('procurement.process-gr', $po->id) }}" enctype="multipart/form-data" class="p-6 md:p-8"
               x-data="{
@@ -94,8 +84,13 @@
                       this.fileSize = '';
                   }
               }"
+              data-confirm="Konfirmasi Penerimaan Barang Fisik (GR)"
+              data-confirm-text="Apakah Anda yakin fisik barang dan berkas Surat Jalan (DO) sudah sesuai? Stok akan langsung ditambahkan ke gudang tujuan."
+              data-confirm-type="emerald"
+              data-confirm-btn="Ya, Konfirmasi & Terbitkan GR"
+              data-cancel-btn="Tidak, Periksa Lagi"
               data-loading-title="Penerimaan Barang Fisik (GR)"
-              data-loading-sub="Mendaftarkan dokumen GR, memverifikasi serial ICCID & menambah stok Gudang MAIN..."
+              data-loading-sub="Mendaftarkan dokumen GR & menambah stok ke gudang tujuan..."
               data-doctype="GR">
             @csrf
 
@@ -193,16 +188,30 @@
                     </div>
                 </div>
 
-                <!-- Secondary Row: Tanggal & Catatan -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4 pt-4 border-t border-emerald-500/10">
+                <!-- Secondary Row: Gudang Tujuan, Tanggal & Catatan -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4 pt-4 border-t border-emerald-500/10">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Tanggal Penerimaan Fisik di Kantor TAP</label>
-                        <input type="date" name="received_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                        <label class="block text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                            <i data-lucide="warehouse" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            <span>Gudang Tujuan Penerimaan <span class="text-rose-600">*</span></span>
+                        </label>
+                        <select name="warehouse_id" required class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                            @foreach($allowedWarehouses as $wh)
+                                <option value="{{ $wh->id }}" {{ old('warehouse_id', $mainWh->id) == $wh->id ? 'selected' : '' }}>
+                                    [{{ $wh->type }}] {{ $wh->name }} ({{ $wh->code }})
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Catatan Tambahan / Kondisi Fisik Paket</label>
-                        <input type="text" name="notes" placeholder="Contoh: Diterima utuh tanpa cacat segel / box rapi" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Tanggal Penerimaan Fisik</label>
+                        <input type="date" name="received_date" value="{{ old('received_date', date('Y-m-d')) }}" required class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Catatan Kondisi Fisik Paket</label>
+                        <input type="text" name="notes" value="{{ old('notes') }}" placeholder="Contoh: Diterima utuh tanpa cacat segel" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                     </div>
                 </div>
             </div>
@@ -233,12 +242,12 @@
                             </div>
                         </div>
 
-                        <!-- If Quantity Based (Voucher / Modem) -->
-                        @if($item->tracking_method !== 'ICCID')
+                        <!-- If Quantity Based (atau ERP_ENABLE_ICCID=false) -->
+                        @if(!$iccidEnabled || $item->tracking_method !== 'ICCID')
                             <div class="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 text-xs">
                                 <span class="text-slate-600 font-semibold flex items-center gap-2">
                                     <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
-                                    Kuantitas otomatis dialokasikan ke saldo persediaan Gudang MAIN:
+                                    Kuantitas otomatis masuk ke saldo stok gudang tujuan yang dipilih:
                                 </span>
                                 <span class="font-extrabold font-mono text-emerald-700 text-sm">+{{ number_format($item->quantity) }} pcs</span>
                             </div>

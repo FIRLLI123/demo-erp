@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TerritoryScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -9,51 +10,63 @@ class MasterController extends Controller
 {
     public function organization()
     {
-        // Ambil data utuh untuk client-side filtering instan (tanpa reload / loading berulang)
-        $areas = DB::table('areas')->orderBy('id')->get();
+        // Ambil data sesuai cakupan wilayah & gudang user (user_has_areas_clusters_taps_warehouses)
+        $areas = TerritoryScope::applyAreaScope(
+            DB::table('areas')->orderBy('id'),
+            'areas.id'
+        )->get();
 
-        $clusters = DB::table('clusters')
-            ->join('areas', 'clusters.area_id', '=', 'areas.id')
-            ->select('clusters.*', 'areas.name as area_name', 'areas.code as area_code')
-            ->orderBy('clusters.id')
-            ->get();
+        $clusters = TerritoryScope::applyClusterScope(
+            DB::table('clusters')
+                ->join('areas', 'clusters.area_id', '=', 'areas.id')
+                ->select('clusters.*', 'areas.name as area_name', 'areas.code as area_code')
+                ->orderBy('clusters.id'),
+            'clusters.id'
+        )->get();
 
-        $taps = DB::table('taps')
-            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
-            ->join('areas', 'clusters.area_id', '=', 'areas.id')
-            ->select(
-                'taps.*',
-                'clusters.name as cluster_name',
-                'clusters.code as cluster_code',
-                'clusters.area_id',
-                'areas.name as area_name',
-                'areas.code as area_code'
-            )
-            ->orderBy('taps.id')
-            ->get();
+        $taps = TerritoryScope::applyTapScope(
+            DB::table('taps')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->join('areas', 'clusters.area_id', '=', 'areas.id')
+                ->select(
+                    'taps.*',
+                    'clusters.name as cluster_name',
+                    'clusters.code as cluster_code',
+                    'clusters.area_id',
+                    'areas.name as area_name',
+                    'areas.code as area_code'
+                )
+                ->orderBy('taps.id'),
+            'taps.id'
+        )->get();
 
-        $warehouses = DB::table('warehouses')
-            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
-            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
-            ->join('areas', 'clusters.area_id', '=', 'areas.id')
-            ->leftJoin('sales', 'warehouses.sales_id', '=', 'sales.id')
-            ->select(
-                'warehouses.*',
-                'taps.name as tap_name',
-                'taps.code as tap_code',
-                'taps.cluster_id',
-                'clusters.name as cluster_name',
-                'clusters.code as cluster_code',
-                'clusters.area_id',
-                'areas.name as area_name',
-                'areas.code as area_code',
-                'sales.name as sales_name',
-                'sales.code as sales_code'
-            )
-            ->orderBy('warehouses.id')
-            ->get();
+        $warehouses = TerritoryScope::applyWarehouseScope(
+            DB::table('warehouses')
+                ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->join('areas', 'clusters.area_id', '=', 'areas.id')
+                ->leftJoin('sales', 'warehouses.sales_id', '=', 'sales.id')
+                ->select(
+                    'warehouses.*',
+                    'taps.name as tap_name',
+                    'taps.code as tap_code',
+                    'taps.cluster_id',
+                    'clusters.name as cluster_name',
+                    'clusters.code as cluster_code',
+                    'clusters.area_id',
+                    'areas.name as area_name',
+                    'areas.code as area_code',
+                    'sales.name as sales_name',
+                    'sales.code as sales_code'
+                )
+                ->orderBy('warehouses.id'),
+            'warehouses.id'
+        )->get();
 
-        $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $salesList = TerritoryScope::applyTapScope(
+            DB::table('sales')->where('status', 'ACTIVE')->orderBy('name'),
+            'sales.tap_id'
+        )->get();
 
         return view('master.organization', compact('areas', 'clusters', 'taps', 'warehouses', 'salesList'));
     }
@@ -69,6 +82,11 @@ class MasterController extends Controller
             'address' => 'nullable|string|max:500',
             'status' => 'required|in:ACTIVE,INACTIVE',
         ]);
+
+        if (!TerritoryScope::canAccessTap((int) $request->tap_id)) {
+            return redirect()->route('master.organization', ['tab' => 'warehouses'])
+                ->with('error', 'Akses ditolak: Anda tidak memiliki otorisasi wilayah untuk TAP tersebut.');
+        }
 
         DB::table('warehouses')->insert([
             'code' => strtoupper(trim($request->code)),
@@ -94,6 +112,11 @@ class MasterController extends Controller
                 ->with('error', 'Gudang tidak ditemukan!');
         }
 
+        if (!TerritoryScope::canAccessWarehouse((int) $id)) {
+            return redirect()->route('master.organization', ['tab' => 'warehouses'])
+                ->with('error', 'Akses ditolak: Gudang ini di luar cakupan wilayah Anda.');
+        }
+
         $request->validate([
             'code' => 'required|string|max:50|unique:warehouses,code,' . $id,
             'name' => 'required|string|max:150',
@@ -103,6 +126,11 @@ class MasterController extends Controller
             'address' => 'nullable|string|max:500',
             'status' => 'required|in:ACTIVE,INACTIVE',
         ]);
+
+        if (!TerritoryScope::canAccessTap((int) $request->tap_id)) {
+            return redirect()->route('master.organization', ['tab' => 'warehouses'])
+                ->with('error', 'Akses ditolak: Anda tidak memiliki otorisasi untuk TAP tujuan.');
+        }
 
         DB::table('warehouses')->where('id', $id)->update([
             'code' => strtoupper(trim($request->code)),
@@ -151,7 +179,9 @@ class MasterController extends Controller
             ->orderBy('product_categories.name')
             ->get();
 
-        $productPrices = DB::table('product_prices')
+        $scope = TerritoryScope::for();
+
+        $priceQuery = DB::table('product_prices')
             ->join('products', 'product_prices.product_id', '=', 'products.id')
             ->leftJoin('areas', 'product_prices.area_id', '=', 'areas.id')
             ->leftJoin('clusters', 'product_prices.cluster_id', '=', 'clusters.id')
@@ -167,18 +197,54 @@ class MasterController extends Controller
                 'clusters.area_id as cluster_area_id',
                 'taps.name as tap_name',
                 'taps.cluster_id as tap_cluster_id'
-            )
-            ->orderBy('product_prices.id', 'desc')
-            ->get();
+            );
 
-        $areas = DB::table('areas')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $clusters = DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $taps = DB::table('taps')
-            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
-            ->where('taps.status', 'ACTIVE')
-            ->select('taps.*', 'clusters.area_id')
-            ->orderBy('taps.name')
-            ->get();
+        if (!$scope['is_full_access']) {
+            $priceQuery->where(function ($q) use ($scope) {
+                $hasAny = false;
+                if (!empty($scope['tap_ids'])) {
+                    $q->orWhereIn('product_prices.tap_id', $scope['tap_ids']);
+                    $hasAny = true;
+                }
+                if (!empty($scope['cluster_ids'])) {
+                    $q->orWhere(function ($sub) use ($scope) {
+                        $sub->whereNull('product_prices.tap_id')
+                            ->whereIn('product_prices.cluster_id', $scope['cluster_ids']);
+                    });
+                    $hasAny = true;
+                }
+                if (!empty($scope['area_ids'])) {
+                    $q->orWhere(function ($sub) use ($scope) {
+                        $sub->whereNull('product_prices.tap_id')
+                            ->whereNull('product_prices.cluster_id')
+                            ->whereIn('product_prices.area_id', $scope['area_ids']);
+                    });
+                    $hasAny = true;
+                }
+                if (!$hasAny) {
+                    $q->whereRaw('1 = 0');
+                }
+            });
+        }
+
+        $productPrices = $priceQuery->orderBy('product_prices.id', 'desc')->get();
+
+        $areas = TerritoryScope::applyAreaScope(
+            DB::table('areas')->where('status', 'ACTIVE')->orderBy('name'),
+            'areas.id'
+        )->get();
+        $clusters = TerritoryScope::applyClusterScope(
+            DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name'),
+            'clusters.id'
+        )->get();
+        $taps = TerritoryScope::applyTapScope(
+            DB::table('taps')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->where('taps.status', 'ACTIVE')
+                ->select('taps.*', 'clusters.area_id')
+                ->orderBy('taps.name'),
+            'taps.id'
+        )->get();
 
         return view('master.products', compact(
             'products',
@@ -391,6 +457,10 @@ class MasterController extends Controller
             if ($cls) $areaId = $cls->area_id;
         }
 
+        if (!TerritoryScope::canAccessTerritory($areaId ? (int) $areaId : null, $clusterId ? (int) $clusterId : null, $tapId ? (int) $tapId : null)) {
+            return redirect()->route('master.products', ['tab' => 'prices'])->with('error', 'Akses ditolak: Wilayah yang dipilih di luar otorisasi Anda.');
+        }
+
         DB::table('product_prices')->insert([
             'product_id' => $request->product_id,
             'area_id' => $areaId,
@@ -433,6 +503,10 @@ class MasterController extends Controller
             if ($cls) $areaId = $cls->area_id;
         }
 
+        if (!TerritoryScope::canAccessTerritory($areaId ? (int) $areaId : null, $clusterId ? (int) $clusterId : null, $tapId ? (int) $tapId : null)) {
+            return redirect()->route('master.products', ['tab' => 'prices'])->with('error', 'Akses ditolak: Wilayah yang dipilih di luar otorisasi Anda.');
+        }
+
         DB::table('product_prices')->where('id', $id)->update([
             'product_id' => $request->product_id,
             'area_id' => $areaId,
@@ -450,6 +524,15 @@ class MasterController extends Controller
 
     public function deleteProductPrice($id)
     {
+        $price = DB::table('product_prices')->where('id', $id)->first();
+        if ($price && !TerritoryScope::canAccessTerritory(
+            $price->area_id ? (int) $price->area_id : null,
+            $price->cluster_id ? (int) $price->cluster_id : null,
+            $price->tap_id ? (int) $price->tap_id : null
+        )) {
+            return redirect()->route('master.products', ['tab' => 'prices'])->with('error', 'Akses ditolak: Setting harga ini berada di luar wilayah Anda.');
+        }
+
         DB::table('product_prices')->where('id', $id)->delete();
         return redirect()->route('master.products', ['tab' => 'prices'])->with('success', 'Setting harga wilayah berhasil dihapus.');
     }
@@ -459,7 +542,9 @@ class MasterController extends Controller
      */
     public function programs()
     {
-        $programs = DB::table('programs')
+        $scope = TerritoryScope::for();
+
+        $programQuery = DB::table('programs')
             ->leftJoin('areas', 'programs.area_id', '=', 'areas.id')
             ->leftJoin('clusters', 'programs.cluster_id', '=', 'clusters.id')
             ->leftJoin('taps', 'programs.tap_id', '=', 'taps.id')
@@ -470,7 +555,36 @@ class MasterController extends Controller
                 'clusters.name as cluster_name',
                 'taps.name as tap_name',
                 DB::raw('count(program_items.id) as items_count')
-            )
+            );
+
+        // User non-full-access: lihat program Nasional (tanpa wilayah) + program di wilayahnya sendiri
+        if (!$scope['is_full_access']) {
+            $programQuery->where(function ($q) use ($scope) {
+                $q->where(function ($nat) {
+                    $nat->whereNull('programs.area_id')
+                        ->whereNull('programs.cluster_id')
+                        ->whereNull('programs.tap_id');
+                });
+                if (!empty($scope['tap_ids'])) {
+                    $q->orWhereIn('programs.tap_id', $scope['tap_ids']);
+                }
+                if (!empty($scope['cluster_ids'])) {
+                    $q->orWhere(function ($sub) use ($scope) {
+                        $sub->whereNull('programs.tap_id')
+                            ->whereIn('programs.cluster_id', $scope['cluster_ids']);
+                    });
+                }
+                if (!empty($scope['area_ids'])) {
+                    $q->orWhere(function ($sub) use ($scope) {
+                        $sub->whereNull('programs.tap_id')
+                            ->whereNull('programs.cluster_id')
+                            ->whereIn('programs.area_id', $scope['area_ids']);
+                    });
+                }
+            });
+        }
+
+        $programs = $programQuery
             ->groupBy(
                 'programs.id',
                 'programs.code',
@@ -491,23 +605,28 @@ class MasterController extends Controller
             ->orderBy('programs.id', 'desc')
             ->get();
 
-        $programItems = DB::table('program_items')
-            ->join('programs', 'program_items.program_id', '=', 'programs.id')
-            ->join('products', 'program_items.product_id', '=', 'products.id')
-            ->select(
-                'program_items.*',
-                'programs.code as program_code',
-                'programs.name as program_name',
-                'programs.cluster_id as program_cluster_id',
-                'programs.tap_id as program_tap_id',
-                'programs.area_id as program_area_id',
-                'products.sku as product_sku',
-                'products.name as product_name',
-                'products.selling_price as default_selling_price',
-                'products.cost_price as default_cost_price'
-            )
-            ->orderBy('program_items.id', 'desc')
-            ->get();
+        $visibleProgramIds = $programs->pluck('id')->all();
+
+        $programItems = !empty($visibleProgramIds)
+            ? DB::table('program_items')
+                ->join('programs', 'program_items.program_id', '=', 'programs.id')
+                ->join('products', 'program_items.product_id', '=', 'products.id')
+                ->whereIn('program_items.program_id', $visibleProgramIds)
+                ->select(
+                    'program_items.*',
+                    'programs.code as program_code',
+                    'programs.name as program_name',
+                    'programs.cluster_id as program_cluster_id',
+                    'programs.tap_id as program_tap_id',
+                    'programs.area_id as program_area_id',
+                    'products.sku as product_sku',
+                    'products.name as product_name',
+                    'products.selling_price as default_selling_price',
+                    'products.cost_price as default_cost_price'
+                )
+                ->orderBy('program_items.id', 'desc')
+                ->get()
+            : collect([]);
 
         // Hitung harga normal efektif sesuai wilayah program untuk perbandingan langsung di UI
         $allClusterPrices = DB::table('product_prices')->where('status', 'ACTIVE')->get();
@@ -539,14 +658,22 @@ class MasterController extends Controller
         }
 
         $products = DB::table('products')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $areas = DB::table('areas')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $clusters = DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $taps = DB::table('taps')
-            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
-            ->where('taps.status', 'ACTIVE')
-            ->select('taps.*', 'clusters.area_id')
-            ->orderBy('taps.name')
-            ->get();
+        $areas = TerritoryScope::applyAreaScope(
+            DB::table('areas')->where('status', 'ACTIVE')->orderBy('name'),
+            'areas.id'
+        )->get();
+        $clusters = TerritoryScope::applyClusterScope(
+            DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name'),
+            'clusters.id'
+        )->get();
+        $taps = TerritoryScope::applyTapScope(
+            DB::table('taps')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->where('taps.status', 'ACTIVE')
+                ->select('taps.*', 'clusters.area_id')
+                ->orderBy('taps.name'),
+            'taps.id'
+        )->get();
 
         return view('master.programs', compact('programs', 'programItems', 'products', 'areas', 'clusters', 'taps'));
     }
@@ -575,6 +702,16 @@ class MasterController extends Controller
         if ($clusterId && !$areaId) {
             $cls = DB::table('clusters')->where('id', $clusterId)->first();
             if ($cls) $areaId = $cls->area_id;
+        }
+
+        $scope = TerritoryScope::for();
+        if (!$scope['is_full_access']) {
+            if (!$areaId && !$clusterId && !$tapId) {
+                return redirect()->route('master.programs')->with('error', 'Hanya Super Admin / Full Access yang dapat membuat program Nasional. Silakan pilih wilayah Anda.');
+            }
+            if (!TerritoryScope::canAccessTerritory($areaId ? (int) $areaId : null, $clusterId ? (int) $clusterId : null, $tapId ? (int) $tapId : null)) {
+                return redirect()->route('master.programs')->with('error', 'Akses ditolak: Wilayah program di luar cakupan otorisasi Anda.');
+            }
         }
 
         DB::table('programs')->insert([
@@ -619,6 +756,16 @@ class MasterController extends Controller
         if ($clusterId && !$areaId) {
             $cls = DB::table('clusters')->where('id', $clusterId)->first();
             if ($cls) $areaId = $cls->area_id;
+        }
+
+        $scope = TerritoryScope::for();
+        if (!$scope['is_full_access']) {
+            if (!$areaId && !$clusterId && !$tapId) {
+                return redirect()->route('master.programs')->with('error', 'Hanya Super Admin / Full Access yang dapat mengubah program Nasional.');
+            }
+            if (!TerritoryScope::canAccessTerritory($areaId ? (int) $areaId : null, $clusterId ? (int) $clusterId : null, $tapId ? (int) $tapId : null)) {
+                return redirect()->route('master.programs')->with('error', 'Akses ditolak: Wilayah program di luar cakupan otorisasi Anda.');
+            }
         }
 
         DB::table('programs')->where('id', $id)->update([
@@ -709,11 +856,13 @@ class MasterController extends Controller
 
     public function warehouses()
     {
-        $warehouses = DB::table('warehouses')
-            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
-            ->leftJoin('sales', 'warehouses.sales_id', '=', 'sales.id')
-            ->select('warehouses.*', 'taps.name as tap_name', 'sales.name as sales_name')
-            ->get();
+        $warehouses = TerritoryScope::applyWarehouseScope(
+            DB::table('warehouses')
+                ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+                ->leftJoin('sales', 'warehouses.sales_id', '=', 'sales.id')
+                ->select('warehouses.*', 'taps.name as tap_name', 'sales.name as sales_name'),
+            'warehouses.id'
+        )->get();
 
         return view('master.warehouses', compact('warehouses'));
     }
@@ -723,27 +872,29 @@ class MasterController extends Controller
      */
     public function sales()
     {
-        $salesList = DB::table('sales')
-            ->join('taps', 'sales.tap_id', '=', 'taps.id')
-            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
-            ->join('areas', 'clusters.area_id', '=', 'areas.id')
-            ->leftJoin('warehouses', function ($join) {
-                $join->on('sales.id', '=', 'warehouses.sales_id')
-                     ->where('warehouses.type', '=', 'SALES');
-            })
-            ->select(
-                'sales.*',
-                'taps.name as tap_name',
-                'taps.code as tap_code',
-                'taps.cluster_id',
-                'clusters.name as cluster_name',
-                'clusters.area_id',
-                'areas.name as area_name',
-                'warehouses.name as warehouse_name',
-                'warehouses.id as warehouse_id'
-            )
-            ->orderBy('sales.id')
-            ->get();
+        $salesList = TerritoryScope::applyTapScope(
+            DB::table('sales')
+                ->join('taps', 'sales.tap_id', '=', 'taps.id')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->join('areas', 'clusters.area_id', '=', 'areas.id')
+                ->leftJoin('warehouses', function ($join) {
+                    $join->on('sales.id', '=', 'warehouses.sales_id')
+                         ->where('warehouses.type', '=', 'SALES');
+                })
+                ->select(
+                    'sales.*',
+                    'taps.name as tap_name',
+                    'taps.code as tap_code',
+                    'taps.cluster_id',
+                    'clusters.name as cluster_name',
+                    'clusters.area_id',
+                    'areas.name as area_name',
+                    'warehouses.name as warehouse_name',
+                    'warehouses.id as warehouse_id'
+                )
+                ->orderBy('sales.id'),
+            'sales.tap_id'
+        )->get();
 
         // Hitung total order yang ditangani masing-masing sales
         $soCounts = DB::table('sales_orders')
@@ -757,9 +908,22 @@ class MasterController extends Controller
             $s->total_sales_amount = $soCounts[$s->id]->total_sales_amount ?? 0;
         }
 
-        $areas = DB::table('areas')->orderBy('id')->get();
-        $clusters = DB::table('clusters')->orderBy('name')->get();
-        $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $areas = TerritoryScope::applyAreaScope(
+            DB::table('areas')->orderBy('id'),
+            'areas.id'
+        )->get();
+        $clusters = TerritoryScope::applyClusterScope(
+            DB::table('clusters')->orderBy('name'),
+            'clusters.id'
+        )->get();
+        $taps = TerritoryScope::applyTapScope(
+            DB::table('taps')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->where('taps.status', 'ACTIVE')
+                ->select('taps.*', 'clusters.area_id')
+                ->orderBy('taps.name'),
+            'taps.id'
+        )->get();
         $salesTypes = DB::table('sales_types')->orderBy('id')->get();
         $salesLevels = DB::table('sales_levels')->orderBy('id')->get();
 
@@ -889,6 +1053,10 @@ class MasterController extends Controller
             'ngrs_type' => 'nullable|string|max:30',
         ]);
 
+        if (!TerritoryScope::canAccessTap((int) $request->tap_id)) {
+            return redirect()->route('master.sales-team')->with('error', 'Akses ditolak: Anda tidak memiliki otorisasi wilayah untuk TAP tersebut.');
+        }
+
         $nextId = DB::table('sales')->count() + 1;
         $salesCode = 'SLS-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
         $limit = $request->sales_limit ?? 20000000;
@@ -950,6 +1118,10 @@ class MasterController extends Controller
             'status' => 'required|in:ACTIVE,INACTIVE',
         ]);
 
+        if (!TerritoryScope::canAccessTap((int) $request->tap_id)) {
+            return redirect()->route('master.sales-team')->with('error', 'Akses ditolak: Anda tidak memiliki otorisasi wilayah untuk TAP tersebut.');
+        }
+
         $updateData = [
             'name' => $request->name,
             'tap_id' => $request->tap_id,
@@ -998,6 +1170,9 @@ class MasterController extends Controller
                 'sales.name as sales_name',
                 'sales.code as sales_code'
             );
+
+        // Batasi data customer sesuai cakupan wilayah user
+        TerritoryScope::applyTapScope($query, 'customers.tap_id');
 
         if ($request->filled('area_id')) {
             $query->where('clusters.area_id', $request->area_id);
@@ -1070,10 +1245,22 @@ class MasterController extends Controller
             $c->total_rs_count = $c->rs_list->count();
         }
 
-        $areas = DB::table('areas')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $clusters = DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $areas = TerritoryScope::applyAreaScope(
+            DB::table('areas')->where('status', 'ACTIVE')->orderBy('name'),
+            'areas.id'
+        )->get();
+        $clusters = TerritoryScope::applyClusterScope(
+            DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name'),
+            'clusters.id'
+        )->get();
+        $taps = TerritoryScope::applyTapScope(
+            DB::table('taps')->where('status', 'ACTIVE')->orderBy('name'),
+            'taps.id'
+        )->get();
+        $salesList = TerritoryScope::applyTapScope(
+            DB::table('sales')->where('status', 'ACTIVE')->orderBy('name'),
+            'sales.tap_id'
+        )->get();
 
         return view('master.customers', compact('customers', 'areas', 'clusters', 'taps', 'salesList', 'perPage'));
     }
@@ -1278,6 +1465,10 @@ class MasterController extends Controller
             'credit_limit' => 'nullable|numeric|min:0',
         ]);
 
+        if (!TerritoryScope::canAccessTap((int) $request->tap_id)) {
+            return redirect()->route('master.customers')->with('error', 'Akses ditolak: Anda tidak memiliki otorisasi wilayah untuk TAP tersebut.');
+        }
+
         $nextId = DB::table('customers')->count() + 1;
         $customerCode = 'CST-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
 
@@ -1332,6 +1523,10 @@ class MasterController extends Controller
             'credit_limit' => 'nullable|numeric|min:0',
             'status' => 'required|in:ACTIVE,INACTIVE',
         ]);
+
+        if (!TerritoryScope::canAccessTap((int) $request->tap_id)) {
+            return redirect()->route('master.customers')->with('error', 'Akses ditolak: Anda tidak memiliki otorisasi wilayah untuk TAP tersebut.');
+        }
 
         DB::table('customers')->where('id', $id)->update([
             'name' => $request->name,

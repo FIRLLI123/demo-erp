@@ -54,6 +54,12 @@
                 <i data-lucide="landmark" class="w-4 h-4"></i>
                 <span>6. Kas & Bank (TTK & BBM)</span>
             </a>
+
+            <a href="{{ route('reports.index', array_merge(request()->all(), ['type' => 'STOCK'])) }}"
+               class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shrink-0 transition-all {{ $reportType === 'STOCK' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' }}">
+                <i data-lucide="boxes" class="w-4 h-4"></i>
+                <span>7. Mutasi Stok (Awal/In/Out/Akhir)</span>
+            </a>
         </div>
 
         <!-- ============================================== -->
@@ -146,7 +152,7 @@
                     <div>
                         <span class="text-[10px] font-bold text-slate-400 block uppercase">Total Nilai / Volume:</span>
                         <span class="font-mono text-base font-extrabold text-rose-600">
-                            {{ $reportType === 'SM' ? number_format($summary['total_amount']) . ' pcs' : 'Rp ' . number_format($summary['total_amount'], 0, ',', '.') }}
+                            {{ in_array($reportType, ['SM', 'STOCK']) ? number_format($summary['total_amount']) . ' pcs' : 'Rp ' . number_format($summary['total_amount'], 0, ',', '.') }}
                         </span>
                     </div>
                 @endif
@@ -404,6 +410,63 @@
                                 </tr>
                             @endforelse
                         </tbody>
+                    </table>
+
+                @elseif($reportType === 'STOCK')
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4">TAP & Gudang</th>
+                                <th class="py-3 px-4">SKU & Produk</th>
+                                <th class="py-3 px-4 text-right">Stok Awal</th>
+                                <th class="py-3 px-4 text-right text-emerald-700">Masuk (IN)</th>
+                                <th class="py-3 px-4 text-right text-rose-700">Keluar (OUT)</th>
+                                <th class="py-3 px-4 text-right">Stok Akhir</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium">
+                            @forelse($records as $r)
+                                <tr class="hover:bg-slate-50">
+                                    <td class="py-3 px-4">
+                                        <span class="font-bold text-slate-900 block">{{ $r->warehouse_name }}</span>
+                                        <span class="text-[10px] font-mono text-slate-400">{{ $r->tap_name }} &bull; {{ $r->warehouse_type }}</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="font-bold text-slate-900 block">{{ $r->product_name }}</span>
+                                        <span class="text-[10px] font-mono text-slate-400">{{ $r->product_sku }}</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-mono text-slate-700">
+                                        {{ number_format($r->opening_stock, 0, ',', '.') }}
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-mono font-bold text-emerald-700">
+                                        +{{ number_format($r->qty_in, 0, ',', '.') }}
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-mono font-bold text-rose-600">
+                                        -{{ number_format($r->qty_out, 0, ',', '.') }}
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-mono font-extrabold text-slate-900">
+                                        {{ number_format($r->closing_stock, 0, ',', '.') }} {{ $r->uom ?? 'PCS' }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-slate-400">
+                                        Belum ada mutasi stok pada filter wilayah dan periode ini.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        @if(count($records) > 0)
+                            <tfoot class="bg-slate-50 border-t-2 border-slate-200 font-mono font-extrabold text-slate-900">
+                                <tr>
+                                    <td colspan="2" class="py-3 px-4 text-right uppercase text-[11px] text-slate-600">Total Mutasi Periode:</td>
+                                    <td class="py-3 px-4 text-right">{{ number_format($summary['total_opening'] ?? 0, 0, ',', '.') }}</td>
+                                    <td class="py-3 px-4 text-right text-emerald-700">+{{ number_format($summary['total_in'] ?? 0, 0, ',', '.') }}</td>
+                                    <td class="py-3 px-4 text-right text-rose-600">-{{ number_format($summary['total_out'] ?? 0, 0, ',', '.') }}</td>
+                                    <td class="py-3 px-4 text-right">{{ number_format($summary['total_closing'] ?? 0, 0, ',', '.') }} pcs</td>
+                                </tr>
+                            </tfoot>
+                        @endif
                     </table>
                 @endif
             </div>

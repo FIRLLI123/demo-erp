@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TerritoryScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,9 +16,15 @@ class ReportController extends Controller
         $tapId = $request->input('tap_id', 'ALL');
         $warehouseId = $request->input('warehouse_id', 'ALL');
 
-        // Master data untuk filter
-        $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $warehouses = DB::table('warehouses')->where('status', 'ACTIVE')->orderBy('name')->get();
+        // Master data filter dibatasi sesuai TerritoryScope user
+        $taps = TerritoryScope::applyTapScope(
+            DB::table('taps')->where('status', 'ACTIVE')->orderBy('name'),
+            'taps.id'
+        )->get();
+        $warehouses = TerritoryScope::applyWarehouseScope(
+            DB::table('warehouses')->where('status', 'ACTIVE')->orderBy('name'),
+            'warehouses.id'
+        )->get();
 
         $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId);
 
@@ -113,7 +120,7 @@ class ReportController extends Controller
     {
         switch ($type) {
             case 'PO_GR':
-                return $this->getPoGrData($start, $end, $tapId);
+                return $this->getPoGrData($start, $end, $tapId, $whId);
             case 'SM':
                 return $this->getSmData($start, $end, $whId);
             case 'REPACK':
@@ -121,9 +128,11 @@ class ReportController extends Controller
             case 'SALES':
                 return $this->getSalesData($start, $end, $tapId, $whId);
             case 'AR':
-                return $this->getArData($start, $end);
+                return $this->getArData($start, $end, $tapId);
             case 'CASH_BANK':
-                return $this->getCashBankData($start, $end);
+                return $this->getCashBankData($start, $end, $tapId);
+            case 'STOCK':
+                return $this->getStockData($start, $end, $tapId, $whId);
             default:
                 return $this->getSalesData($start, $end, $tapId, $whId);
         }
@@ -149,6 +158,9 @@ class ReportController extends Controller
                 'accounts_receivable.status as ar_status'
             )
             ->orderBy('sales_orders.id', 'desc');
+
+        TerritoryScope::applyTapScope($query, 'sales_orders.tap_id');
+        TerritoryScope::applyWarehouseScope($query, 'sales_orders.warehouse_id');
 
         if ($tapId !== 'ALL') $query->where('sales_orders.tap_id', $tapId);
         if ($whId !== 'ALL') $query->where('sales_orders.warehouse_id', $whId);
@@ -186,7 +198,7 @@ class ReportController extends Controller
         ];
     }
 
-    private function getPoGrData($start, $end, $tapId)
+    private function getPoGrData($start, $end, $tapId, $whId = 'ALL')
     {
         $query = DB::table('purchase_orders')
             ->join('taps', 'purchase_orders.tap_id', '=', 'taps.id')
@@ -202,7 +214,10 @@ class ReportController extends Controller
             )
             ->orderBy('purchase_orders.id', 'desc');
 
+        TerritoryScope::applyTapScope($query, 'purchase_orders.tap_id');
+
         if ($tapId !== 'ALL') $query->where('purchase_orders.tap_id', $tapId);
+        if ($whId !== 'ALL') $query->where('goods_receipts.warehouse_id', $whId);
 
         $records = $query->get();
         $rows = [];
@@ -244,6 +259,18 @@ class ReportController extends Controller
             ->whereBetween('stock_movements.movement_date', [$start, $end])
             ->select('stock_movements.*', 'sw.name as source_wh', 'dw.name as dest_wh')
             ->orderBy('stock_movements.id', 'desc');
+
+        $scope = TerritoryScope::for();
+        if (!$scope['is_full_access']) {
+            if (empty($scope['warehouse_ids'])) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where(function ($q) use ($scope) {
+                    $q->whereIn('stock_movements.source_warehouse_id', $scope['warehouse_ids'])
+                      ->orWhereIn('stock_movements.destination_warehouse_id', $scope['warehouse_ids']);
+                });
+            }
+        }
 
         if ($whId !== 'ALL') {
             $query->where(function ($q) use ($whId) {
@@ -307,6 +334,8 @@ class ReportController extends Controller
             ->select('repacks.*', 'warehouses.name as warehouse_name')
             ->orderBy('repacks.id', 'desc');
 
+        TerritoryScope::applyWarehouseScope($query, 'repacks.warehouse_id');
+
         if ($whId !== 'ALL') $query->where('repacks.warehouse_id', $whId);
 
         $records = $query->get();
@@ -340,9 +369,9 @@ class ReportController extends Controller
         ];
     }
 
-    private function getArData($start, $end)
+    private function getArData($start, $end, $tapId = 'ALL')
     {
-        $records = DB::table('accounts_receivable')
+        $query = DB::table('accounts_receivable')
             ->join('customers', 'accounts_receivable.customer_id', '=', 'customers.id')
             ->leftJoin('sales_orders', 'accounts_receivable.sales_order_id', '=', 'sales_orders.id')
             ->leftJoin('sales', 'sales_orders.sales_id', '=', 'sales.id')
@@ -355,8 +384,12 @@ class ReportController extends Controller
                 'sales.name as sales_name',
                 'sales_orders.doc_number as so_number'
             )
-            ->orderBy('accounts_receivable.id', 'desc')
-            ->get();
+            ->orderBy('accounts_receivable.id', 'desc');
+
+        TerritoryScope::applyTapScope($query, 'customers.tap_id');
+        if ($tapId !== 'ALL') $query->where('customers.tap_id', $tapId);
+
+        $records = $query->get();
 
         $rows = [];
         $totalPiutang = 0;
@@ -397,9 +430,9 @@ class ReportController extends Controller
         ];
     }
 
-    private function getCashBankData($start, $end)
+    private function getCashBankData($start, $end, $tapId = 'ALL')
     {
-        $records = DB::table('bank_receipts')
+        $query = DB::table('bank_receipts')
             ->join('payments', 'bank_receipts.payment_id', '=', 'payments.id')
             ->join('customers', 'payments.customer_id', '=', 'customers.id')
             ->whereBetween('bank_receipts.receipt_date', [$start, $end])
@@ -410,8 +443,12 @@ class ReportController extends Controller
                 'payments.cashier_name',
                 'customers.name as customer_name'
             )
-            ->orderBy('bank_receipts.id', 'desc')
-            ->get();
+            ->orderBy('bank_receipts.id', 'desc');
+
+        TerritoryScope::applyTapScope($query, 'customers.tap_id');
+        if ($tapId !== 'ALL') $query->where('customers.tap_id', $tapId);
+
+        $records = $query->get();
 
         $rows = [];
         $totalMasuk = 0;
@@ -442,6 +479,108 @@ class ReportController extends Controller
                 'total_amount' => $totalMasuk,
             ],
             'excel_summary' => ['TOTAL KAS/BANK MASUK', '', '', '', '', '', '', '', '', number_format($totalMasuk, 0, ',', '.')],
+        ];
+    }
+
+    /**
+     * Laporan Mutasi Stok Ringkas (Stok Awal | Masuk IN | Keluar OUT | Stok Akhir)
+     * Dihitung akurat dari buku besar `stock_mutations` dan dikunci oleh TerritoryScope.
+     */
+    private function getStockData($start, $end, $tapId, $whId)
+    {
+        $query = DB::table('stock_mutations')
+            ->join('warehouses', 'stock_mutations.warehouse_id', '=', 'warehouses.id')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->join('products', 'stock_mutations.product_id', '=', 'products.id')
+            ->where('stock_mutations.date', '<=', $end)
+            ->select(
+                'stock_mutations.warehouse_id',
+                'stock_mutations.product_id',
+                'warehouses.name as warehouse_name',
+                'warehouses.type as warehouse_type',
+                'taps.name as tap_name',
+                'products.sku as product_sku',
+                'products.name as product_name',
+                'products.uom',
+                DB::raw("SUM(CASE WHEN stock_mutations.date < ? THEN (CASE WHEN stock_mutations.mutation_type = 'IN' THEN stock_mutations.quantity ELSE -stock_mutations.quantity END) ELSE 0 END) as opening_stock"),
+                DB::raw("SUM(CASE WHEN stock_mutations.date BETWEEN ? AND ? AND stock_mutations.mutation_type = 'IN' THEN stock_mutations.quantity ELSE 0 END) as qty_in"),
+                DB::raw("SUM(CASE WHEN stock_mutations.date BETWEEN ? AND ? AND stock_mutations.mutation_type = 'OUT' THEN stock_mutations.quantity ELSE 0 END) as qty_out")
+            )
+            ->addBinding([$start, $start, $end, $start, $end], 'select')
+            ->groupBy(
+                'stock_mutations.warehouse_id',
+                'stock_mutations.product_id',
+                'warehouses.name',
+                'warehouses.type',
+                'taps.name',
+                'products.sku',
+                'products.name',
+                'products.uom'
+            )
+            ->orderBy('warehouses.name')
+            ->orderBy('products.name');
+
+        TerritoryScope::applyTapScope($query, 'warehouses.tap_id');
+        TerritoryScope::applyWarehouseScope($query, 'stock_mutations.warehouse_id');
+
+        if ($tapId !== 'ALL') $query->where('warehouses.tap_id', $tapId);
+        if ($whId !== 'ALL') $query->where('stock_mutations.warehouse_id', $whId);
+
+        $records = $query->get()->map(function ($r) {
+            $r->opening_stock = (int) $r->opening_stock;
+            $r->qty_in = (int) $r->qty_in;
+            $r->qty_out = (int) $r->qty_out;
+            $r->closing_stock = $r->opening_stock + $r->qty_in - $r->qty_out;
+            return $r;
+        });
+
+        $rows = [];
+        $totalOpening = 0;
+        $totalIn = 0;
+        $totalOut = 0;
+        $totalClosing = 0;
+
+        foreach ($records as $r) {
+            $totalOpening += $r->opening_stock;
+            $totalIn += $r->qty_in;
+            $totalOut += $r->qty_out;
+            $totalClosing += $r->closing_stock;
+
+            $rows[] = [
+                $r->tap_name,
+                "[{$r->warehouse_type}] {$r->warehouse_name}",
+                $r->product_sku,
+                $r->product_name,
+                number_format($r->opening_stock, 0, ',', '.'),
+                number_format($r->qty_in, 0, ',', '.'),
+                number_format($r->qty_out, 0, ',', '.'),
+                number_format($r->closing_stock, 0, ',', '.'),
+            ];
+        }
+
+        return [
+            'title' => 'Laporan Mutasi Stok Ringkas (Stok Awal - Masuk - Keluar - Stok Akhir)',
+            'headers' => ['TAP', 'Gudang', 'SKU', 'Nama Produk', 'Stok Awal', 'Masuk (IN)', 'Keluar (OUT)', 'Stok Akhir'],
+            'records' => $records,
+            'rows' => $rows,
+            'summary' => [
+                'total_records' => count($records),
+                'total_amount' => $totalClosing,
+                'total_opening' => $totalOpening,
+                'total_in' => $totalIn,
+                'total_out' => $totalOut,
+                'total_closing' => $totalClosing,
+            ],
+            'excel_summary' => [
+                'TOTAL STOK',
+                '',
+                '',
+                '',
+                number_format($totalOpening, 0, ',', '.'),
+                number_format($totalIn, 0, ',', '.'),
+                number_format($totalOut, 0, ',', '.'),
+                number_format($totalClosing, 0, ',', '.'),
+            ],
         ];
     }
 }

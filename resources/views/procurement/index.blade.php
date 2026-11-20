@@ -3,8 +3,8 @@
     <x-slot name="headerTitle">Purchase Order & Goods Received</x-slot>
     <x-slot name="badge">PO &rarr; GR</x-slot>
 
-    <div x-data="procurementMasterDetail()" x-init="initData()">
-        
+    <div x-data="procurementMasterDetail()" x-init="initData()" class="pb-12">
+
         <!-- Top Action Bar -->
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -12,26 +12,28 @@
                     <span>Purchase Order & Penerimaan Barang</span>
                     <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">PT WAHANA PUTRA YUDHA</span>
                 </h2>
-                <p class="text-xs text-slate-500">Pengadaan Resmi PT Wahana Putra Yudha: Pemesanan ke Supplier Pusat & Penerimaan Fisik ke Gudang Utama TAP</p>
+                <p class="text-xs text-slate-500">Pemesanan ke Vendor/Principal & Penerimaan Fisik (GR) ke Gudang TAP</p>
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="{{ route('reports.index', ['type' => 'PO_GR']) }}" 
+                <a href="{{ route('reports.index', ['type' => 'PO_GR']) }}"
                    class="px-3.5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
                     <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
                     <span>Rekap Laporan PO (Excel/PDF)</span>
                 </a>
-                <button type="button" 
-                        @click="createPoOpen = !createPoOpen" 
-                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
+                <button type="button"
+                        @click="createPoOpen = !createPoOpen"
+                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer">
                     <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
                     <span x-text="createPoOpen ? 'Tutup Form' : '+ Buat PO Baru'"></span>
                 </button>
             </div>
         </div>
 
+        <x-alert />
+
         <!-- ============================================== -->
-        <!-- FORM PEMBUATAN PO MULTI-ITEM (INLINE CARD)    -->
+        <!-- FORM PEMBUATAN PO MULTI-ITEM (INLINE CARD)     -->
         <!-- ============================================== -->
         <div x-show="createPoOpen" x-cloak x-transition class="mb-6 bg-white rounded-2xl border-2 border-emerald-500/30 p-5 shadow-lg">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
@@ -39,12 +41,17 @@
                     <i data-lucide="file-plus" class="w-4 h-4 text-emerald-600"></i>
                     <span>Buat Purchase Order (PO)</span>
                 </h3>
-                <button @click="createPoOpen = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+                <button type="button" @click="createPoOpen = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('procurement.store-po') }}" 
+            <form method="POST" action="{{ route('procurement.store-po') }}"
+                  data-confirm="Konfirmasi Penerbitan Purchase Order (PO)"
+                  data-confirm-text="Apakah Anda yakin ingin menyimpan dan menerbitkan dokumen Purchase Order (PO) ini?"
+                  data-confirm-type="emerald"
+                  data-confirm-btn="Ya, Simpan & Terbitkan PO"
+                  data-cancel-btn="Tidak, Periksa Lagi"
                   data-loading-title="Menerbitkan PO"
                   data-loading-sub="Menyimpan dokumen Purchase Order baru..."
                   data-doctype="PO">
@@ -53,46 +60,56 @@
                 <!-- Header Info -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">TAP Pemesan</label>
-                        <select name="tap_id" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">TAP Pemesan <span class="text-rose-500">*</span></label>
+                        <select name="tap_id" x-model="formTapId" required class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                             @foreach($taps as $tap)
                                 <option value="{{ $tap->id }}">{{ $tap->name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-[10px] text-emerald-700 font-semibold mt-1 flex items-center gap-1" x-show="selectedTapMainWh">
+                            <i data-lucide="warehouse" class="w-3 h-3"></i>
+                            <span>Tujuan Default GR: <strong x-text="selectedTapMainWh"></strong></span>
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Vendor / Supplier <span class="text-rose-500">*</span></label>
+                        <select name="vendor_id" required class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                            @foreach($vendors as $vnd)
+                                <option value="{{ $vnd->id }}">[{{ $vnd->code }}] {{ $vnd->name }}</option>
                             @endforeach
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Supplier</label>
-                        <input type="text" name="supplier_name" value="PT TELKOMSEL DISTRIBUSI PUSAT" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal PO <span class="text-rose-500">*</span></label>
                         <input type="date" name="order_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Catatan / Keterangan (Notes)</label>
-                        <input type="text" name="notes" placeholder="e.g. PO Pengadaan Awal Bulan" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Catatan / Keterangan</label>
+                        <input type="text" name="notes" placeholder="Contoh: PO Pengadaan Awal Bulan" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
                     </div>
                 </div>
 
-                <!-- Multi-Item Rows Table -->
+                <!-- Multi-Item Rows Table dengan Searchable Product Picker -->
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-xs font-bold text-slate-800">Daftar Barang</label>
-                        <button type="button" @click="addItemRow()" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+                        <button type="button" @click="addItemRow()" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer">
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Baris
                         </button>
                     </div>
 
-                    <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+                    <div class="border border-slate-200 rounded-xl overflow-visible bg-slate-50/50">
                         <table class="w-full text-left text-xs">
                             <thead class="bg-slate-100/70 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200/80">
                                 <tr>
-                                    <th class="py-2.5 px-4 w-6/12">Produk</th>
-                                    <th class="py-2.5 px-4 w-3/12">Tracking Method</th>
-                                    <th class="py-2.5 px-4 w-2/12 text-center">Kuantitas (Qty)</th>
+                                    <th class="py-2.5 px-4 {{ $iccidEnabled ? 'w-6/12' : 'w-8/12' }}">Produk (Ketik untuk Cari SKU / Nama)</th>
+                                    @if($iccidEnabled)
+                                        <th class="py-2.5 px-4 w-3/12">Tracking Method</th>
+                                    @endif
+                                    <th class="py-2.5 px-4 w-3/12 text-center">Kuantitas (Qty)</th>
                                     <th class="py-2.5 px-4 w-1/12 text-center"></th>
                                 </tr>
                             </thead>
@@ -100,59 +117,73 @@
                                 <template x-for="(row, index) in items" :key="index">
                                     <tr>
                                         <td class="py-2.5 px-4">
-                                            <select :name="`items[${index}][product_id]`" 
-                                                    x-model="row.product_id" 
-                                                    @change="updateProductRow(index)"
-                                                    required 
-                                                    class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
-                                                <option value="">-- Pilih Produk --</option>
-                                                <optgroup label="🏷️ BAHAN BAKU REPACK (0K & SALDO INJEKSI NGRS)">
-                                                    @foreach($products->filter(fn($p) => str_starts_with($p->sku, 'RAW-') || str_starts_with($p->sku, 'BULK-')) as $p)
-                                                        <option value="{{ $p->id }}" 
-                                                                data-cost="{{ $p->cost_price }}" 
-                                                                data-sku="{{ $p->sku }}" 
-                                                                data-tracking="{{ $p->tracking_method }}" 
-                                                                data-type="{{ $p->type }}">
-                                                            [{{ $p->sku }}] {{ $p->name }}
-                                                        </option>
-                                                    @endforeach
-                                                </optgroup>
-                                                <optgroup label="📦 PRODUK JADI / SIAP JUAL (KARTU PERDANA, VOUCHER, MODEM)">
-                                                    @foreach($products->filter(fn($p) => !str_starts_with($p->sku, 'RAW-') && !str_starts_with($p->sku, 'BULK-')) as $p)
-                                                        <option value="{{ $p->id }}" 
-                                                                data-cost="{{ $p->cost_price }}" 
-                                                                data-sku="{{ $p->sku }}" 
-                                                                data-tracking="{{ $p->tracking_method }}" 
-                                                                data-type="{{ $p->type }}">
-                                                            [{{ $p->type }}] {{ $p->name }} ({{ $p->sku }})
-                                                        </option>
-                                                    @endforeach
-                                                </optgroup>
-                                            </select>
+                                            <!-- Hidden input submitted to server -->
+                                            <input type="hidden" :name="`items[${index}][product_id]`" :value="row.product_id" required>
+
+                                            <!-- Searchable Combobox -->
+                                            <div class="relative" @click.outside="row.dropdownOpen = false">
+                                                <div class="flex items-center">
+                                                    <input type="text"
+                                                           x-model="row.searchText"
+                                                           @focus="row.dropdownOpen = true"
+                                                           @input="row.dropdownOpen = true"
+                                                           placeholder="Ketik cari SKU atau nama produk..."
+                                                           class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 focus:bg-white focus:outline-none focus:border-emerald-500">
+                                                    <button type="button"
+                                                            x-show="row.product_id"
+                                                            @click="clearProductRow(index)"
+                                                            class="absolute right-2 text-slate-400 hover:text-rose-600 cursor-pointer"
+                                                            title="Ganti produk">
+                                                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                </div>
+
+                                                <!-- Dropdown List -->
+                                                <div x-show="row.dropdownOpen"
+                                                     x-cloak
+                                                     class="absolute z-40 left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl divide-y divide-slate-100">
+                                                    <template x-for="prod in filterProductsForRow(row.searchText)" :key="prod.id">
+                                                        <button type="button"
+                                                                @click="selectProductForRow(index, prod)"
+                                                                class="w-full text-left px-3 py-2 hover:bg-emerald-50 flex items-center justify-between gap-2 transition-colors cursor-pointer">
+                                                            <div>
+                                                                <span class="font-bold text-slate-900 block text-xs" x-text="prod.name"></span>
+                                                                <span class="font-mono text-[10px] text-slate-500" x-text="prod.sku + ' • Tipe: ' + prod.type"></span>
+                                                            </div>
+                                                            <span class="font-mono text-[11px] font-bold text-emerald-700 shrink-0" x-text="'Rp ' + Number(prod.cost_price).toLocaleString('id-ID')"></span>
+                                                        </button>
+                                                    </template>
+                                                    <div x-show="filterProductsForRow(row.searchText).length === 0" class="px-3 py-3 text-center text-slate-400 text-xs">
+                                                        Produk tidak ditemukan.
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
 
-                                        <td class="py-2.5 px-4">
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono"
-                                                  :class="row.tracking_method === 'ICCID' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'"
-                                                  x-text="row.tracking_method || '-'">
-                                            </span>
-                                        </td>
+                                        @if($iccidEnabled)
+                                            <td class="py-2.5 px-4">
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono"
+                                                      :class="row.tracking_method === 'ICCID' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'"
+                                                      x-text="row.tracking_method || '-'">
+                                                </span>
+                                            </td>
+                                        @endif
 
                                         <td class="py-2.5 px-4 text-center">
                                             <div class="flex items-center justify-center gap-1.5">
-                                                <input type="number" 
-                                                       :name="`items[${index}][quantity]`" 
-                                                       x-model.number="row.quantity" 
+                                                <input type="number"
+                                                       :name="`items[${index}][quantity]`"
+                                                       x-model.number="row.quantity"
                                                        @input="calculateTotal()"
-                                                       min="1" 
-                                                       required 
+                                                       min="1"
+                                                       required
                                                        class="w-24 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500">
                                                 <span class="text-[11px] text-slate-400 font-medium">pcs</span>
                                             </div>
                                         </td>
 
                                         <td class="py-2.5 px-4 text-center">
-                                            <button type="button" @click="removeItemRow(index)" class="text-slate-400 hover:text-rose-600 transition-colors" x-show="items.length > 1">
+                                            <button type="button" @click="removeItemRow(index)" class="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer" x-show="items.length > 1">
                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
                                         </td>
@@ -169,14 +200,17 @@
                         <span class="text-sm font-extrabold text-slate-900 font-mono">
                             <span x-text="totalQty.toLocaleString('id-ID')"></span> pcs
                         </span>
-                        <span class="text-xs text-slate-400 font-medium">(<span x-text="items.length"></span> produk)</span>
+                        <span class="text-xs text-slate-400 font-medium">(<span x-text="items.length"></span> baris produk)</span>
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <button type="button" @click="createPoOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                        <button type="button" @click="createPoOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">
                             Batal
                         </button>
-                        <button type="submit" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
+                        <button type="submit"
+                                :disabled="!canSubmitPo"
+                                :class="!canSubmitPo ? 'opacity-50 cursor-not-allowed bg-slate-500' : 'bg-slate-900 hover:bg-slate-800 active:scale-95'"
+                                class="px-5 py-2 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
                             <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
                             <span>Simpan PO</span>
                         </button>
@@ -186,56 +220,74 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- BAGIAN 1: HEADER TABLE (DAFTAR PO)            -->
+        <!-- KOMPONEN UI: FILTER TANGGAL & FILTER WILAYAH   -->
+        <!-- ============================================== -->
+        <div class="space-y-3 mb-5">
+            <x-filter-date-range :action="route('procurement.index')" label="Periode PO" />
+
+            <x-filter-territory
+                tab="po"
+                :show-area="true"
+                :show-cluster="true"
+                :show-tap="true"
+                :show-search="true"
+                model-search="searchPo"
+                search-placeholder="Cari No. PO, DO, Vendor, TAP, catatan..."
+                :areas="$areas"
+                :clusters="$clusters"
+                :taps="$taps" />
+        </div>
+
+        <!-- ============================================== -->
+        <!-- BAGIAN 1: HEADER TABLE (DAFTAR PO)             -->
         <!-- ============================================== -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
-            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <h3 class="font-extrabold text-slate-900 text-xs flex items-center gap-2">
                     <span>Daftar Purchase Order (PO)</span>
-                    <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold font-mono">{{ count($orders) }}</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold font-mono" x-text="filteredOrders.length"></span>
                 </h3>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+                    <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                         <tr>
-                            <th class="py-3 px-5">Nomor PO</th>
+                            <th class="py-3 px-4">Nomor PO</th>
                             <th class="py-3 px-4">No. DO Telkomsel</th>
-                            <th class="py-3 px-4 text-center">Bukti DO (PDF)</th>
-                            <th class="py-3 px-4">Supplier</th>
-                            <th class="py-3 px-4">TAP</th>
+                            <th class="py-3 px-4 text-center">Bukti DO</th>
+                            <th class="py-3 px-4">Vendor / Supplier</th>
+                            <th class="py-3 px-4">TAP & Cluster</th>
                             <th class="py-3 px-4">Tanggal</th>
                             <th class="py-3 px-4 text-center">Item</th>
                             <th class="py-3 px-4 text-right">Total Nilai</th>
-                            <th class="py-3 px-4">Catatan (Notes)</th>
+                            <th class="py-3 px-4">Catatan</th>
                             <th class="py-3 px-4 text-center">Status</th>
                             <th class="py-3 px-4 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 font-medium">
-                        @foreach($orders as $idx => $po)
-                            <tr @click="selectPo({{ json_encode($po) }})"
-                                :class="selectedPo && selectedPo.id === {{ $po->id }} 
-                                    ? 'bg-rose-50/90 border-l-4 border-rose-600 shadow-sm' 
+                        @foreach($orders as $po)
+                            <tr x-show="paginatedOrderIds.includes({{ $po->id }})"
+                                @click="selectPo({{ json_encode($po) }})"
+                                :class="selectedPo && selectedPo.id === {{ $po->id }}
+                                    ? 'bg-rose-50/90 border-l-4 border-rose-600 shadow-sm'
                                     : 'hover:bg-slate-50/70 cursor-pointer'"
                                 class="transition-all cursor-pointer">
-                                
-                                <td class="py-3.5 px-5 font-mono font-bold text-slate-900">
+
+                                <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
                                     <div class="flex items-center gap-2">
                                         <span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-white"
                                               :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'bg-rose-600 font-extrabold' : 'bg-slate-900'">
                                             {{ $po->doc_type }}
                                         </span>
-                                        <span :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'text-rose-950 font-extrabold' : ''">{{ $po->doc_number }}</span>
+                                        <span class="{{ $po->status === 'CANCELLED' ? 'line-through text-slate-400' : '' }}">{{ $po->doc_number }}</span>
                                     </div>
                                 </td>
 
                                 <td class="py-3.5 px-4 font-mono text-xs">
                                     @if(!empty($po->do_number))
-                                        <span class="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                            {{ $po->do_number }}
-                                        </span>
+                                        <span class="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{{ $po->do_number }}</span>
                                     @else
                                         <span class="text-slate-400 italic text-[11px]">-</span>
                                     @endif
@@ -243,11 +295,10 @@
 
                                 <td class="py-3.5 px-4 text-center">
                                     @if(!empty($po->do_file_path))
-                                        <a href="{{ asset('storage/' . $po->do_file_path) }}" 
-                                           target="_blank" 
+                                        <a href="{{ asset('storage/' . $po->do_file_path) }}"
+                                           target="_blank"
                                            @click.stop
-                                           class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 shadow-xs transition-all"
-                                           title="Buka Berkas PDF Surat Jalan Telkomsel">
+                                           class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 shadow-xs transition-all">
                                             <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-600"></i>
                                             <span>PDF</span>
                                         </a>
@@ -256,75 +307,135 @@
                                     @endif
                                 </td>
 
-                                <td class="py-3.5 px-4 font-bold text-slate-800">{{ $po->supplier_name }}</td>
-                                
                                 <td class="py-3.5 px-4">
-                                    <span class="px-2 py-0.5 rounded text-[11px] font-semibold"
-                                          :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-slate-100 text-slate-700'">
-                                        {{ $po->tap_name }}
-                                    </span>
+                                    <span class="font-bold text-slate-800 block">{{ $po->vendor_display }}</span>
+                                    @if($po->vendor_code)
+                                        <span class="text-[10px] font-mono text-slate-400">{{ $po->vendor_code }}</span>
+                                    @endif
+                                </td>
+
+                                <td class="py-3.5 px-4">
+                                    <span class="font-bold text-slate-800 block">{{ $po->tap_name }}</span>
+                                    <span class="text-[10px] text-slate-400">{{ $po->cluster_name }}</span>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-slate-500">{{ date('d M Y', strtotime($po->order_date)) }}</td>
 
                                 <td class="py-3.5 px-4 text-center font-bold text-slate-800">
-                                    <span class="px-2 py-0.5 rounded text-[11px] font-mono"
-                                          :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'bg-rose-200/70 text-rose-900 font-bold' : 'bg-slate-100 text-slate-700'">
-                                        {{ count($po->items) }} item ({{ $po->total_qty }} pcs)
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-slate-700">
+                                        {{ count($po->items) }} item ({{ number_format($po->total_qty) }} pcs)
                                     </span>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-right font-mono font-extrabold text-slate-900">
-                                    Rp {{ number_format($po->total_amount, 0, ',', '.') }}
+                                    <x-money :value="$po->total_amount" />
                                 </td>
 
                                 <td class="py-3.5 px-4 text-slate-600 max-w-[180px]">
                                     @if(!empty($po->notes))
-                                        <span class="text-[11px] font-medium text-slate-700 block truncate" title="{{ $po->notes }}">
-                                            {{ $po->notes }}
-                                        </span>
+                                        <span class="text-[11px] font-medium text-slate-700 block truncate" title="{{ $po->notes }}">{{ $po->notes }}</span>
                                     @else
                                         <span class="text-slate-400 font-mono text-xs">-</span>
                                     @endif
                                 </td>
 
                                 <td class="py-3.5 px-4 text-center">
-                                    @if($po->status === 'RECEIVED')
-                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                            RECEIVED
-                                        </span>
-                                    @else
-                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                                            ORDERED
-                                        </span>
-                                    @endif
+                                    <x-status-badge :status="$po->status" />
                                 </td>
 
-                                <td class="py-3.5 px-4 text-center">
+                                <td class="py-3.5 px-4 text-center" @click.stop>
                                     <div class="flex items-center justify-center gap-1.5">
                                         @if($po->status === 'ORDERED')
-                                            <a href="{{ route('procurement.create-gr', $po->id) }}" 
-                                               @click.stop
+                                            <a href="{{ route('procurement.create-gr', $po->id) }}"
                                                class="px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1 transition-all shadow-xs">
                                                 <span>Terima GR</span>
                                                 <i data-lucide="arrow-right" class="w-3 h-3"></i>
                                             </a>
+
+                                            <form method="POST"
+                                                  action="{{ route('procurement.void-po', $po->id) }}"
+                                                  data-confirm="Konfirmasi Void / Pembatalan PO"
+                                                  data-confirm-text="Apakah Anda yakin ingin melakukan VOID (Pembatalan) pada dokumen {{ $po->doc_number }}? Dokumen yang sudah di-VOID tidak dapat diproses ke Penerimaan Barang (GR)."
+                                                  data-confirm-type="danger"
+                                                  data-confirm-btn="Ya, Void PO"
+                                                  data-cancel-btn="Tidak, Kembali"
+                                                  data-loading-title="Memproses Void PO"
+                                                  data-loading-sub="Membatalkan dokumen Purchase Order {{ $po->doc_number }}..."
+                                                  data-doctype="VOID">
+                                                @csrf
+                                                <button type="submit" class="px-2 py-1 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer">
+                                                    Void
+                                                </button>
+                                            </form>
                                         @endif
-                                        <button type="button" 
-                                                class="px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                                                :class="selectedPo && selectedPo.id === {{ $po->id }} 
-                                                    ? 'bg-rose-600 text-white' 
+
+                                        <button type="button"
+                                                @click="selectPo({{ json_encode($po) }})"
+                                                class="px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                                                :class="selectedPo && selectedPo.id === {{ $po->id }}
+                                                    ? 'bg-rose-600 text-white'
                                                     : 'bg-slate-100 hover:bg-slate-200 text-slate-600'">
                                             <span x-text="selectedPo && selectedPo.id === {{ $po->id }} ? 'Aktif' : 'Detail'"></span>
-                                            <i data-lucide="chevron-down" class="w-3 h-3 transition-transform" 
-                                               :class="selectedPo && selectedPo.id === {{ $po->id }} ? 'rotate-180 text-white' : 'text-slate-400'"></i>
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                         @endforeach
+
+                        <tr x-show="filteredOrders.length === 0" x-cloak>
+                            <td colspan="11" class="py-6">
+                                <x-empty-state title="Tidak Ada Dokumen PO" description="Belum ada Purchase Order yang sesuai dengan filter wilayah, tanggal, atau pencarian Anda." icon="file-search" />
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Client-Side Pagination Bar PO -->
+            <div class="p-4 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
+                <div class="flex items-center gap-3">
+                    <div>
+                        Menampilkan <strong class="text-slate-800" x-text="poPaginationStart"></strong> - <strong class="text-slate-800" x-text="poPaginationEnd"></strong> dari <strong class="text-slate-800" x-text="filteredOrders.length"></strong> data PO
+                    </div>
+                    <span class="text-slate-300">|</span>
+                    <label class="flex items-center gap-1.5 text-xs">
+                        <span>Baris:</span>
+                        <select x-model="poPerPage" @change="poPage = 1; refreshIcons()" class="border border-slate-200 rounded-lg px-2 py-1 bg-white text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="ALL">Semua</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-1" x-show="totalPoPages > 1">
+                    <button type="button"
+                            @click="poPage = Math.max(1, poPage - 1); refreshIcons()"
+                            :disabled="poPage === 1"
+                            class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 text-xs font-bold flex items-center gap-1 cursor-pointer">
+                        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                        <span>Prev</span>
+                    </button>
+
+                    <template x-for="(p, idx) in displayedPoPages" :key="idx">
+                        <button type="button"
+                                @click="if (p !== '...') { poPage = p; refreshIcons(); }"
+                                :disabled="p === '...'"
+                                :class="poPage === p ? 'bg-rose-600 text-white font-extrabold border-rose-600 shadow-xs' : (p === '...' ? 'cursor-default border-transparent text-slate-400' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 font-semibold')"
+                                class="min-w-[30px] h-7 px-1.5 rounded-lg border text-xs flex items-center justify-center transition-all cursor-pointer"
+                                x-text="p">
+                        </button>
+                    </template>
+
+                    <button type="button"
+                            @click="poPage = Math.min(totalPoPages, poPage + 1); refreshIcons()"
+                            :disabled="poPage === totalPoPages"
+                            class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 text-xs font-bold flex items-center gap-1 cursor-pointer">
+                        <span>Next</span>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -333,52 +444,32 @@
         <!-- ============================================== -->
         <div x-show="selectedPo" x-cloak class="scroll-mt-4" id="detailSection">
             <div class="rounded-2xl border-2 border-slate-300 shadow-lg overflow-hidden bg-white">
-                
-                <!-- Distinct Dark Header Strip for Detail Panel -->
+
                 <div class="bg-slate-900 text-white px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800">
                     <div class="flex items-center gap-3">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-rose-500 text-white shadow-sm">
-                            RINCIAN PO
-                        </span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-rose-500 text-white shadow-sm">RINCIAN PO</span>
                         <h4 class="text-base font-extrabold text-white tracking-tight" x-text="selectedPo ? selectedPo.doc_number : ''"></h4>
                     </div>
 
                     <div class="flex items-center gap-3 text-xs flex-wrap">
-                        <template x-if="selectedPo && selectedPo.notes">
-                            <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
-                                <span class="text-slate-400">Catatan:</span>
-                                <span class="font-bold text-amber-300" x-text="selectedPo.notes"></span>
-                            </div>
-                        </template>
+                        <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                            <span class="text-slate-400">Vendor:</span>
+                            <span class="font-bold text-white" x-text="selectedPo ? selectedPo.vendor_display : ''"></span>
+                        </div>
                         <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
                             <span class="text-slate-400">TAP:</span>
                             <span class="font-bold text-white" x-text="selectedPo ? selectedPo.tap_name : ''"></span>
                         </div>
-                        <template x-if="selectedPo && selectedPo.do_number">
-                            <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
-                                <span class="text-slate-400">No. DO:</span>
-                                <span class="font-bold font-mono text-emerald-400" x-text="selectedPo.do_number"></span>
-                            </div>
-                        </template>
-                        <template x-if="selectedPo && selectedPo.do_file_path">
-                            <a :href="'{{ asset('storage') }}/' + selectedPo.do_file_path" 
-                               target="_blank" 
-                               class="flex items-center gap-1 bg-rose-900/60 hover:bg-rose-900 px-3 py-1 rounded-lg border border-rose-700/60 text-white font-bold text-xs transition-all">
-                                <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-400"></i>
-                                <span>Lihat Berkas PDF</span>
-                            </a>
-                        </template>
                         <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
                             <span class="text-slate-400">Status:</span>
-                            <span class="font-bold px-1.5 py-0.5 rounded text-[10px]" 
-                                  :class="selectedPo && selectedPo.status === 'RECEIVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'"
-                                  x-text="selectedPo ? selectedPo.status : ''"></span>
+                            <span class="font-bold px-1.5 py-0.5 rounded text-[10px]"
+                                  :class="selectedPo && selectedPo.status === 'RECEIVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : (selectedPo && selectedPo.status === 'CANCELLED' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30')"
+                                  x-text="selectedPo ? (selectedPo.status === 'CANCELLED' ? 'VOID / CANCELLED' : selectedPo.status) : ''"></span>
                         </div>
                     </div>
                 </div>
 
                 <div class="p-6">
-                    <!-- Detail Line Items Table -->
                     <div class="mb-5">
                         <div class="border border-slate-200 rounded-xl overflow-hidden bg-white">
                             <table class="w-full text-left text-xs">
@@ -386,7 +477,9 @@
                                     <tr>
                                         <th class="py-2.5 px-4">Produk</th>
                                         <th class="py-2.5 px-4">Tipe</th>
-                                        <th class="py-2.5 px-4">Tracking</th>
+                                        @if($iccidEnabled)
+                                            <th class="py-2.5 px-4">Tracking</th>
+                                        @endif
                                         <th class="py-2.5 px-4 text-center">Qty</th>
                                         <th class="py-2.5 px-4 text-right">Harga Modal</th>
                                         <th class="py-2.5 px-4 text-right">Subtotal</th>
@@ -400,17 +493,16 @@
                                                 <span x-text="item.product_name"></span>
                                             </td>
                                             <td class="py-3 px-4">
-                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold"
-                                                      :class="item.product_type === 'SA' ? 'bg-rose-100 text-rose-700' : (item.product_type === 'VOUCHER' ? 'bg-indigo-100 text-indigo-700' : 'bg-cyan-100 text-cyan-700')"
-                                                      x-text="item.product_type">
-                                                </span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700" x-text="item.product_type"></span>
                                             </td>
-                                            <td class="py-3 px-4 font-mono text-[11px] font-bold"
-                                                :class="item.tracking_method === 'ICCID' ? 'text-purple-700' : 'text-blue-700'"
-                                                x-text="item.tracking_method">
-                                            </td>
+                                            @if($iccidEnabled)
+                                                <td class="py-3 px-4 font-mono text-[11px] font-bold"
+                                                    :class="item.tracking_method === 'ICCID' ? 'text-purple-700' : 'text-blue-700'"
+                                                    x-text="item.tracking_method">
+                                                </td>
+                                            @endif
                                             <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">
-                                                <span x-text="item.quantity.toLocaleString('id-ID')"></span> pcs
+                                                <span x-text="Number(item.quantity).toLocaleString('id-ID')"></span> pcs
                                             </td>
                                             <td class="py-3 px-4 text-right font-mono text-slate-600">
                                                 Rp <span x-text="Number(item.cost_price).toLocaleString('id-ID')"></span>
@@ -425,19 +517,47 @@
                         </div>
                     </div>
 
-                    <!-- Action jika status ORDERED: Tombol Buka Layar GR -->
-                    <template x-if="selectedPo && selectedPo.status !== 'RECEIVED'">
+                    <!-- Action jika status ORDERED -->
+                    <template x-if="selectedPo && selectedPo.status === 'ORDERED'">
                         <div class="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="flex items-center gap-2 text-xs text-slate-700 font-semibold">
                                 <i data-lucide="package-search" class="w-4 h-4 text-amber-600"></i>
-                                <span>Barang fisik dari supplier sudah tiba di gudang?</span>
+                                <span>Barang fisik dari vendor sudah tiba di gudang?</span>
                             </div>
-                            <a :href="'{{ url('procurement/gr') }}/' + selectedPo.id" 
-                               class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95">
-                                <i data-lucide="boxes" class="w-4 h-4"></i>
-                                <span>Buka Formulir Penerimaan Fisik (GR) & Registrasi ICCID</span>
-                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                            </a>
+                            <div class="flex items-center gap-2">
+                                <form method="POST"
+                                      :action="'{{ url('procurement/void-po') }}/' + selectedPo.id"
+                                      data-confirm="Konfirmasi Void / Pembatalan PO"
+                                      :data-confirm-text="'Apakah Anda yakin ingin melakukan VOID (Pembatalan) pada dokumen ' + (selectedPo ? selectedPo.doc_number : '') + '? Dokumen yang sudah di-VOID tidak dapat diproses ke Penerimaan Barang (GR).'"
+                                      data-confirm-type="danger"
+                                      data-confirm-btn="Ya, Void PO"
+                                      data-cancel-btn="Tidak, Kembali"
+                                      data-loading-title="Memproses Void PO"
+                                      data-loading-sub="Membatalkan dokumen Purchase Order..."
+                                      data-doctype="VOID">
+                                    @csrf
+                                    <button type="submit" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs cursor-pointer">
+                                        Void PO
+                                    </button>
+                                </form>
+                                <a :href="'{{ url('procurement/gr') }}/' + selectedPo.id"
+                                   class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95">
+                                    <i data-lucide="boxes" class="w-4 h-4"></i>
+                                    <span>Buka Formulir Penerimaan Fisik (GR)</span>
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Info jika PO sudah VOID / CANCELLED -->
+                    <template x-if="selectedPo && selectedPo.status === 'CANCELLED'">
+                        <div class="mt-4 p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-xs text-rose-900">
+                            <i data-lucide="ban" class="w-5 h-5 text-rose-600 shrink-0"></i>
+                            <div>
+                                <h5 class="font-extrabold text-rose-950">Dokumen PO Ini Telah Di-VOID (Dibatalkan)</h5>
+                                <p class="text-[11px] text-rose-700 mt-0.5" x-text="selectedPo.notes || 'PO dibatalkan dan tidak dapat diproses ke Penerimaan Barang (GR).'"></p>
+                            </div>
                         </div>
                     </template>
 
@@ -453,23 +573,21 @@
                                     <div class="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-emerald-800">
                                         <span>Dokumen GR: <strong class="font-mono" x-text="selectedPo.gr_number || 'Tercatat'"></strong></span>
                                         <span>&bull;</span>
-                                        <span>No. DO Telkomsel: <strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-200" x-text="selectedPo.do_number || '-'"></strong></span>
+                                        <span>No. DO: <strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-200" x-text="selectedPo.do_number || '-'"></strong></span>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <template x-if="selectedPo && selectedPo.do_file_path">
-                                <a :href="'{{ asset('storage') }}/' + selectedPo.do_file_path" 
-                                   target="_blank" 
+                                <a :href="'{{ asset('storage') }}/' + selectedPo.do_file_path"
+                                   target="_blank"
                                    class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-all shrink-0">
                                     <i data-lucide="file-text" class="w-4 h-4"></i>
                                     <span>Lihat Berkas Surat Jalan (PDF)</span>
-                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                                 </a>
                             </template>
                         </div>
                     </template>
-
                 </div>
             </div>
         </div>
@@ -481,46 +599,203 @@
             return {
                 createPoOpen: false,
                 selectedPo: null,
+                allOrders: @json($orders),
+                allProducts: @json($products),
+                allClusters: @json($clusters),
+                allTaps: @json($taps),
+
+                // Form Create PO
+                formTapId: '{{ $taps->first()->id ?? '' }}',
                 items: [
-                    { product_id: '', tracking_method: '', cost_price: 0, quantity: 100 }
+                    { product_id: '', searchText: '', dropdownOpen: false, tracking_method: 'QUANTITY', cost_price: 0, quantity: 100 }
                 ],
                 grandTotal: 0,
+
+                // Filter Wilayah & Search (Sinkron dengan x-filter-territory)
+                selectedArea: '',
+                selectedCluster: '',
+                selectedTap: '',
+                searchPo: '',
+
+                // Pagination PO
+                poPage: 1,
+                poPerPage: '10',
+
+                get selectedTapMainWh() {
+                    const t = this.allTaps.find(x => String(x.id) === String(this.formTapId));
+                    return t ? t.main_warehouse_name : '';
+                },
 
                 get totalQty() {
                     return this.items.reduce((acc, row) => acc + (parseInt(row.quantity) || 0), 0);
                 },
 
+                get canSubmitPo() {
+                    return this.items.length > 0 && this.items.every(r => Boolean(r.product_id) && parseInt(r.quantity) > 0);
+                },
+
                 initData() {
-                    const firstPo = @json($orders->first());
-                    if (firstPo) {
-                        this.selectedPo = firstPo;
+                    if (this.allOrders.length > 0) {
+                        this.selectedPo = this.allOrders[0];
                     }
-                    this.$nextTick(() => {
-                        lucide.createIcons();
-                    });
+                    this.$watch('searchPo', () => { this.poPage = 1; this.refreshIcons(); });
+                    this.refreshIcons();
+                },
+
+                // Searchable Product Combobox Helpers
+                filterProductsForRow(query) {
+                    if (!query || !query.trim()) return this.allProducts;
+                    const q = query.toLowerCase();
+                    return this.allProducts.filter(p =>
+                        (p.name && p.name.toLowerCase().includes(q)) ||
+                        (p.sku && p.sku.toLowerCase().includes(q)) ||
+                        (p.type && p.type.toLowerCase().includes(q)) ||
+                        (p.denom && p.denom.toLowerCase().includes(q))
+                    );
+                },
+
+                selectProductForRow(index, prod) {
+                    this.items[index].product_id = prod.id;
+                    this.items[index].searchText = `[${prod.sku}] ${prod.name}`;
+                    this.items[index].tracking_method = prod.tracking_method || 'QUANTITY';
+                    this.items[index].cost_price = parseFloat(prod.cost_price) || 0;
+                    this.items[index].dropdownOpen = false;
+                    this.calculateTotal();
+                    this.refreshIcons();
+                },
+
+                clearProductRow(index) {
+                    this.items[index].product_id = '';
+                    this.items[index].searchText = '';
+                    this.items[index].tracking_method = 'QUANTITY';
+                    this.items[index].cost_price = 0;
+                    this.items[index].dropdownOpen = true;
+                    this.calculateTotal();
+                },
+
+                // Filter Wilayah & Pagination Getters
+                get clusterOptions() {
+                    if (!this.selectedArea) return this.allClusters;
+                    return this.allClusters.filter(c => String(c.area_id) === String(this.selectedArea));
+                },
+
+                get tapOptions() {
+                    if (this.selectedCluster) {
+                        return this.allTaps.filter(t => String(t.cluster_id) === String(this.selectedCluster));
+                    }
+                    if (this.selectedArea) {
+                        return this.allTaps.filter(t => String(t.area_id) === String(this.selectedArea));
+                    }
+                    return this.allTaps;
+                },
+
+                onAreaChange() {
+                    this.selectedCluster = '';
+                    this.selectedTap = '';
+                    this.poPage = 1;
+                    this.refreshIcons();
+                },
+
+                onClusterChange() {
+                    this.selectedTap = '';
+                    this.poPage = 1;
+                    this.refreshIcons();
+                },
+
+                onTapChange() {
+                    this.poPage = 1;
+                    this.refreshIcons();
+                },
+
+                onSearchChange() {
+                    this.poPage = 1;
+                    this.refreshIcons();
+                },
+
+                hasActiveFilter() {
+                    return Boolean(this.selectedArea || this.selectedCluster || this.selectedTap || this.searchPo);
+                },
+
+                resetFilter() {
+                    this.selectedArea = '';
+                    this.selectedCluster = '';
+                    this.selectedTap = '';
+                    this.searchPo = '';
+                    this.poPage = 1;
+                    this.refreshIcons();
+                },
+
+                isOrderVisible(po) {
+                    if (this.selectedArea && String(po.area_id) !== String(this.selectedArea)) return false;
+                    if (this.selectedCluster && String(po.cluster_id) !== String(this.selectedCluster)) return false;
+                    if (this.selectedTap && String(po.tap_id) !== String(this.selectedTap)) return false;
+                    if (this.searchPo) {
+                        const q = this.searchPo.toLowerCase();
+                        const match = (po.doc_number && po.doc_number.toLowerCase().includes(q)) ||
+                                      (po.do_number && po.do_number.toLowerCase().includes(q)) ||
+                                      (po.vendor_display && po.vendor_display.toLowerCase().includes(q)) ||
+                                      (po.tap_name && po.tap_name.toLowerCase().includes(q)) ||
+                                      (po.cluster_name && po.cluster_name.toLowerCase().includes(q)) ||
+                                      (po.notes && po.notes.toLowerCase().includes(q));
+                        if (!match) return false;
+                    }
+                    return true;
+                },
+
+                get filteredOrders() {
+                    return this.allOrders.filter(po => this.isOrderVisible(po));
+                },
+
+                get totalPoPages() {
+                    if (this.poPerPage === 'ALL') return 1;
+                    const perPage = parseInt(this.poPerPage, 10) || 10;
+                    return Math.max(1, Math.ceil(this.filteredOrders.length / perPage));
+                },
+
+                get paginatedOrderIds() {
+                    if (this.poPerPage === 'ALL') return this.filteredOrders.map(po => po.id);
+                    const perPage = parseInt(this.poPerPage, 10) || 10;
+                    const start = (this.poPage - 1) * perPage;
+                    return this.filteredOrders.slice(start, start + perPage).map(po => po.id);
+                },
+
+                get poPaginationStart() {
+                    if (this.filteredOrders.length === 0) return 0;
+                    if (this.poPerPage === 'ALL') return 1;
+                    const perPage = parseInt(this.poPerPage, 10) || 10;
+                    return (this.poPage - 1) * perPage + 1;
+                },
+
+                get poPaginationEnd() {
+                    if (this.poPerPage === 'ALL') return this.filteredOrders.length;
+                    const perPage = parseInt(this.poPerPage, 10) || 10;
+                    return Math.min(this.poPage * perPage, this.filteredOrders.length);
+                },
+
+                get displayedPoPages() {
+                    const current = this.poPage;
+                    const total = this.totalPoPages;
+                    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+                    if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+                    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+                    return [1, '...', current - 1, current, current + 1, '...', total];
                 },
 
                 selectPo(po) {
                     this.selectedPo = po;
-                    this.$nextTick(() => {
-                        lucide.createIcons();
-                        const el = document.getElementById('detailSection');
-                        if (el) {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    });
+                    this.refreshIcons();
                 },
 
                 addItemRow() {
                     this.items.push({
                         product_id: '',
-                        tracking_method: '',
+                        searchText: '',
+                        dropdownOpen: false,
+                        tracking_method: 'QUANTITY',
                         cost_price: 0,
                         quantity: 100
                     });
-                    this.$nextTick(() => {
-                        lucide.createIcons();
-                    });
+                    this.refreshIcons();
                 },
 
                 removeItemRow(index) {
@@ -530,27 +805,18 @@
                     }
                 },
 
-                updateProductRow(index) {
-                    const select = document.querySelectorAll('select[name^="items["]')[index];
-                    if (!select) return;
-
-                    const option = select.options[select.selectedIndex];
-                    if (option && option.value) {
-                        this.items[index].cost_price = parseFloat(option.getAttribute('data-cost')) || 0;
-                        this.items[index].tracking_method = option.getAttribute('data-tracking') || '';
-                    } else {
-                        this.items[index].cost_price = 0;
-                        this.items[index].tracking_method = '';
-                    }
-                    this.calculateTotal();
-                },
-
                 calculateTotal() {
                     this.grandTotal = this.items.reduce((acc, row) => {
                         const price = parseFloat(row.cost_price) || 0;
                         const qty = parseInt(row.quantity) || 0;
                         return acc + (price * qty);
                     }, 0);
+                },
+
+                refreshIcons() {
+                    this.$nextTick(() => {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
                 }
             }
         }

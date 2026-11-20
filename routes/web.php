@@ -15,6 +15,7 @@ use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UiShowcaseController;
 
 // ============================================================
 // 1. PUBLIC AUTHENTICATION ROUTES (GUEST ONLY)
@@ -98,6 +99,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [ProcurementController::class, 'index'])->name('index');
         Route::get('/returns', [ProcurementController::class, 'returns'])->name('returns');
         Route::post('/store-po', [ProcurementController::class, 'storePo'])->name('store-po');
+        Route::post('/void-po/{id}', [ProcurementController::class, 'voidPo'])->name('void-po');
         Route::get('/gr/{id}', [ProcurementController::class, 'createGr'])->name('create-gr');
         Route::get('/download-iccid-template', [ProcurementController::class, 'downloadIccidTemplate'])->name('download-iccid-template');
         Route::post('/process-gr/{id}', [ProcurementController::class, 'processGr'])->name('process-gr');
@@ -167,4 +169,8 @@ Route::middleware(['auth'])->group(function () {
 
     // AI Assistant Copilot (Nisa)
     Route::post('/ai/chat', [AiAssistantController::class, 'chat'])->name('ai.chat');
+
+    // Master UI Components Showcase & Testing Lab
+    Route::get('/ui-showcase', [UiShowcaseController::class, 'index'])->name('ui.showcase');
+    Route::post('/ui-showcase/trigger-alert', [UiShowcaseController::class, 'triggerAlert'])->name('ui.showcase.trigger-alert');
 });
