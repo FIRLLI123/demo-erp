@@ -103,7 +103,7 @@
          x-transition:leave="transition ease-in duration-150"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+         class="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
         
         <div class="relative bg-white/95 rounded-3xl max-w-sm w-full p-7 shadow-2xl border border-slate-100/80 overflow-hidden transform transition-all text-center"
              x-transition:enter="transition ease-out duration-250"
@@ -199,9 +199,10 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- GLOBAL CONFIRMATION MODAL COMPONENT        -->
+    <!-- GLOBAL CONFIRMATION & RESPONSE MODALS      -->
     <!-- ========================================== -->
     <x-confirm-modal />
+    <x-response-modal />
 
     <div class="min-h-full flex">
         <!-- Sidebar for Desktop & Mobile Overlay -->
@@ -947,7 +948,7 @@
                     });
                     setTimeout(() => {
                         this.toast.show = false;
-                    }, 4000);
+                    }, 5500);
                 },
 
                 initApp() {
@@ -981,12 +982,20 @@
 
         // Window Helper Functions
         window.showLoading = function(title, subtitle, docType) {
+            if (window.Alpine && document.body._x_dataStack) {
+                Alpine.$data(document.body).showLoading(title, subtitle, docType);
+                return;
+            }
             window.dispatchEvent(new CustomEvent('show-global-loading', { 
                 detail: { title, subtitle, docType } 
             }));
         };
 
         window.hideLoading = function() {
+            if (window.Alpine && document.body._x_dataStack) {
+                Alpine.$data(document.body).hideLoading();
+                return;
+            }
             window.dispatchEvent(new CustomEvent('hide-global-loading'));
         };
 

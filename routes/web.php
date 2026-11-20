@@ -98,8 +98,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('procurement')->name('procurement.')->group(function () {
         Route::get('/', [ProcurementController::class, 'index'])->name('index');
         Route::get('/returns', [ProcurementController::class, 'returns'])->name('returns');
-        Route::post('/store-po', [ProcurementController::class, 'storePo'])->name('store-po');
-        Route::post('/void-po/{id}', [ProcurementController::class, 'voidPo'])->name('void-po');
+        Route::post('/store-po', [ProcurementController::class, 'storePo'])->name('store-po')->middleware(\App\Http\Middleware\JsonFlashResponse::class);
+        Route::post('/void-po/{id}', [ProcurementController::class, 'voidPo'])->name('void-po')->middleware(\App\Http\Middleware\JsonFlashResponse::class);
         Route::get('/gr/{id}', [ProcurementController::class, 'createGr'])->name('create-gr');
         Route::get('/download-iccid-template', [ProcurementController::class, 'downloadIccidTemplate'])->name('download-iccid-template');
         Route::post('/process-gr/{id}', [ProcurementController::class, 'processGr'])->name('process-gr');

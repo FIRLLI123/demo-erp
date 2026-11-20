@@ -95,6 +95,23 @@
                     <span>Test Toast Popup (JS)</span>
                 </button>
             </div>
+
+            <!-- Tambahan Uji Coba Modal Alert Pop-up di Tengah Layar -->
+            <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
+                <span class="text-xs font-bold text-slate-600">Test Modal Pop-up Tengah (Center Alert):</span>
+                <button type="button"
+                        @click="window.showSuccessAlert('Purchase Order #PO/202611/0088 ke CV Mandiri Perkasa berhasil diterbitkan!', 'Transaksi Berhasil Diproses!')"
+                        class="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>Buka Pop-up Alert Berhasil (Tengah)</span>
+                </button>
+                <button type="button"
+                        @click="window.showErrorAlert('Gagal menerbitkan PO: Batas limit kredit vendor telah tercapai!', 'Transaksi Ditolak!')"
+                        class="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-900 font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5">
+                    <i data-lucide="alert-octagon" class="w-3.5 h-3.5 text-rose-600"></i>
+                    <span>Buka Pop-up Alert Gagal (Tengah)</span>
+                </button>
+            </div>
         </div>
 
         <!-- ========================================================================= -->

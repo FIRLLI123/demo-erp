@@ -31,7 +31,7 @@
         'ORDERED' => [
             'label' => 'Dipesan',
             'bg' => 'bg-blue-50 text-blue-700 border-blue-200',
-            'icon' => 'send',
+            'icon' => '',
         ],
         'RECEIVED' => [
             'label' => 'Diterima',

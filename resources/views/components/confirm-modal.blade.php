@@ -171,13 +171,54 @@
 
                 if (form) {
                     form.dataset.confirmed = 'true';
-                    if (!form.hasAttribute('data-no-loading') && typeof window.showLoading === 'function') {
-                        const customTitle = form.getAttribute('data-loading-title') || 'Memproses Transaksi...';
-                        const customSub = form.getAttribute('data-loading-sub') || 'Menyimpan perubahan ke database ERP...';
-                        const docType = form.getAttribute('data-doctype') || '';
+                    const customTitle = form.getAttribute('data-loading-title') || 'Memproses Transaksi...';
+                    const customSub = form.getAttribute('data-loading-sub') || 'Menyimpan perubahan ke database ERP...';
+                    const docType = form.getAttribute('data-doctype') || '';
+                    const showLoad = !form.hasAttribute('data-no-loading');
+
+                    // Mode AJAX: loading -> kirim via fetch -> pop-up respon berhasil/gagal di tengah layar
+                    if (form.hasAttribute('data-ajax')) {
+                        if (showLoad) window.showLoading(customTitle, customSub, docType);
+                        const started = Date.now();
+                        const fd = new FormData(form);
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: fd,
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                        }).then(async (res) => {
+                            let data = {};
+                            try { data = await res.json(); } catch (e) {}
+                            let ok = res.ok && data.success !== false;
+                            let msg = data.message || (ok ? 'Proses berhasil.' : 'Terjadi kesalahan pada server (HTTP ' + res.status + ').');
+                            if (data.errors) {
+                                msg = Object.values(data.errors).flat().join(' • ');
+                            }
+                            return { ok, msg };
+                        }).catch(() => ({ ok: false, msg: 'Gagal terhubung ke server. Periksa koneksi Anda.' }))
+                        .then(({ ok, msg }) => {
+                            // Pastikan loading terlihat minimal 700ms agar terasa natural
+                            const wait = Math.max(0, 700 - (Date.now() - started));
+                            setTimeout(() => {
+                                if (showLoad) window.hideLoading();
+                                delete form.dataset.confirmed;
+                                if (ok) {
+                                    window.showSuccessAlert(msg, 'Operasi Berhasil!', { reload: true });
+                                } else {
+                                    window.showErrorAlert(msg, 'Transaksi Gagal!');
+                                }
+                            }, wait);
+                        });
+                        return;
+                    }
+
+                    if (showLoad && typeof window.showLoading === 'function') {
                         window.showLoading(customTitle, customSub, docType);
                     }
-                    form.submit();
+                    // Beri jeda agar loading modal ter-render sebelum form disubmit
+                    setTimeout(() => {
+                        form.submit();
+                    }, 450);
                 }
             }
         };
