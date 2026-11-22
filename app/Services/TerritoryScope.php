@@ -5,17 +5,18 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 
 class TerritoryScope
 {
     protected static array $cache = [];
+    protected static array $baseCache = [];
 
     /**
-     * Ambil cakupan wilayah & gudang user berdasarkan tabel tunggal
-     * `user_has_areas_clusters_taps_warehouses`.
-     * Di-cache per request untuk menghindari query berulang.
+     * Ambil cakupan wilayah & gudang DASAR user berdasarkan role / tabel
+     * `user_has_areas_clusters_taps_warehouses` (sebelum filter active cluster di session).
      */
-    public static function for(?User $user = null): array
+    public static function getBaseScope(?User $user = null): array
     {
         $user = $user ?? Auth::user();
         if (!$user) {
@@ -30,15 +31,15 @@ class TerritoryScope
             ];
         }
 
-        if (isset(static::$cache[$user->id])) {
-            return static::$cache[$user->id];
+        if (isset(static::$baseCache[$user->id])) {
+            return static::$baseCache[$user->id];
         }
 
         $role = DB::table('roles')->where('id', $user->role_id)->first();
         $isFullAccess = (bool) $user->has_full_access || ($role && in_array($role->slug, ['it_dev', 'super_admin'], true));
 
         if ($isFullAccess) {
-            return static::$cache[$user->id] = [
+            return static::$baseCache[$user->id] = [
                 'is_full_access' => true,
                 'is_ho_readonly' => (bool) $user->is_ho_readonly,
                 'sales_id' => $user->sales_id,
@@ -65,7 +66,7 @@ class TerritoryScope
                 : [];
             $whIds = DB::table('warehouses')->where('sales_id', $user->sales_id)->pluck('id')->map(fn ($v) => (int) $v)->all();
 
-            return static::$cache[$user->id] = [
+            return static::$baseCache[$user->id] = [
                 'is_full_access' => false,
                 'is_ho_readonly' => (bool) $user->is_ho_readonly,
                 'sales_id' => $user->sales_id,
@@ -78,7 +79,7 @@ class TerritoryScope
 
         // User non-admin tanpa mapping sama sekali -> 0 data (kosong demi keamanan)
         if ($mappings->isEmpty()) {
-            return static::$cache[$user->id] = [
+            return static::$baseCache[$user->id] = [
                 'is_full_access' => false,
                 'is_ho_readonly' => (bool) $user->is_ho_readonly,
                 'sales_id' => $user->sales_id,
@@ -148,7 +149,7 @@ class TerritoryScope
             $whIds = array_values(array_unique(array_merge($whIds, $customWhs)));
         }
 
-        return static::$cache[$user->id] = [
+        return static::$baseCache[$user->id] = [
             'is_full_access' => false,
             'is_ho_readonly' => (bool) $user->is_ho_readonly,
             'sales_id' => $user->sales_id,
@@ -159,9 +160,113 @@ class TerritoryScope
         ];
     }
 
+    /**
+     * Ambil daftar Cluster yang berhak diakses user (untuk pilihan di dropdown navbar).
+     */
+    public static function getUserAccessibleClusters(?User $user = null): Collection
+    {
+        $base = static::getBaseScope($user);
+        $query = DB::table('clusters')
+            ->join('areas', 'clusters.area_id', '=', 'areas.id')
+            ->select('clusters.*', 'areas.name as area_name', 'areas.code as area_code')
+            ->where('clusters.status', 'ACTIVE')
+            ->orderBy('areas.name')
+            ->orderBy('clusters.name');
+
+        if (!$base['is_full_access']) {
+            if (empty($base['cluster_ids'])) {
+                return collect();
+            }
+            $query->whereIn('clusters.id', $base['cluster_ids']);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Ambil cakupan wilayah & gudang EFEKTIF user (menggabungkan mapping user + active cluster di session).
+     * Di-cache per request untuk performa tinggi.
+     */
+    public static function for(?User $user = null): array
+    {
+        $user = $user ?? Auth::user();
+        if (!$user) {
+            return [
+                'is_full_access' => false,
+                'is_ho_readonly' => false,
+                'sales_id' => null,
+                'area_ids' => [],
+                'cluster_ids' => [],
+                'tap_ids' => [],
+                'warehouse_ids' => [],
+                'active_cluster_id' => null,
+                'active_cluster_name' => 'Semua Cluster',
+            ];
+        }
+
+        if (isset(static::$cache[$user->id])) {
+            return static::$cache[$user->id];
+        }
+
+        $base = static::getBaseScope($user);
+
+        // Periksa filter cluster aktif di session
+        $activeClusterId = session('active_cluster_id');
+
+        if (!empty($activeClusterId) && $activeClusterId !== 'all') {
+            $targetId = (int) $activeClusterId;
+            // Validasi: hanya boleh jika ada di hak akses user atau user full access
+            $canAccess = $base['is_full_access'] || in_array($targetId, $base['cluster_ids'], true);
+            if ($canAccess) {
+                $cluster = DB::table('clusters')->where('id', $targetId)->first();
+                if ($cluster) {
+                    $clusterTapIds = DB::table('taps')
+                        ->where('cluster_id', $targetId)
+                        ->where('status', 'ACTIVE')
+                        ->pluck('id')
+                        ->map(fn ($v) => (int) $v)
+                        ->all();
+
+                    $filteredTapIds = $base['is_full_access']
+                        ? $clusterTapIds
+                        : array_values(array_intersect($base['tap_ids'], $clusterTapIds));
+
+                    $clusterWhIds = DB::table('warehouses')
+                        ->whereIn('tap_id', $filteredTapIds)
+                        ->where('status', 'ACTIVE')
+                        ->pluck('id')
+                        ->map(fn ($v) => (int) $v)
+                        ->all();
+
+                    $filteredWhIds = $base['is_full_access']
+                        ? $clusterWhIds
+                        : array_values(array_intersect($base['warehouse_ids'], $clusterWhIds));
+
+                    return static::$cache[$user->id] = [
+                        'is_full_access' => false, // Terkunci ke cluster yang dipilih
+                        'is_ho_readonly' => $base['is_ho_readonly'],
+                        'sales_id' => $base['sales_id'],
+                        'area_ids' => [(int) $cluster->area_id],
+                        'cluster_ids' => [$targetId],
+                        'tap_ids' => $filteredTapIds,
+                        'warehouse_ids' => $filteredWhIds,
+                        'active_cluster_id' => $targetId,
+                        'active_cluster_name' => $cluster->name,
+                    ];
+                }
+            }
+        }
+
+        // Default: Semua Cluster (sesuai hak akses user)
+        $base['active_cluster_id'] = null;
+        $base['active_cluster_name'] = $base['is_full_access'] ? 'Semua Cluster (Konsolidasi)' : 'Semua Cluster Saya';
+        return static::$cache[$user->id] = $base;
+    }
+
     public static function flush(): void
     {
         static::$cache = [];
+        static::$baseCache = [];
     }
 
     public static function canAccessArea(int $areaId, ?User $user = null): bool
@@ -196,6 +301,18 @@ class TerritoryScope
         if ($clusterId) return in_array($clusterId, $scope['cluster_ids'], true);
         if ($areaId) return in_array($areaId, $scope['area_ids'], true);
         return false;
+    }
+
+    public static function getActiveClusterId(?User $user = null): ?int
+    {
+        $scope = static::for($user);
+        return $scope['active_cluster_id'] ?? null;
+    }
+
+    public static function getActiveClusterName(?User $user = null): string
+    {
+        $scope = static::for($user);
+        return $scope['active_cluster_name'] ?? 'Semua Cluster';
     }
 
     public static function applyAreaScope($query, string $column = 'area_id', ?User $user = null)

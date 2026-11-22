@@ -29,9 +29,10 @@ Route::middleware(['guest'])->group(function () {
 // 2. PROTECTED ENTERPRISE ERP ROUTES (WAJIB LOGIN / AUTH)
 // ============================================================
 Route::middleware(['auth'])->group(function () {
-    // Sesi & Switch Area TAP (Khusus IT DEV & Super Admin)
+    // Sesi & Switch Area / Cluster
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/switch-tap', [AuthController::class, 'switchTap'])->name('switch-tap');
+    Route::post('/switch-cluster', [AuthController::class, 'switchCluster'])->name('switch-cluster');
 
     // Dashboard Utama
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');

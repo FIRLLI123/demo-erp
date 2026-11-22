@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TerritoryScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -10,7 +11,7 @@ class InventoryController extends Controller
     public function index()
     {
         // 1. Stock Balances grouped by Warehouse with product details and tap info
-        $stockBalances = DB::table('stock_balances')
+        $stockBalances = TerritoryScope::applyWarehouseScope(DB::table('stock_balances'), 'stock_balances.warehouse_id')
             ->join('warehouses', 'stock_balances.warehouse_id', '=', 'warehouses.id')
             ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('products', 'stock_balances.product_id', '=', 'products.id')
@@ -32,7 +33,7 @@ class InventoryController extends Controller
             ->get();
 
         // 2. ICCID Units with warehouse & product info
-        $iccids = DB::table('iccid_units')
+        $iccids = TerritoryScope::applyWarehouseScope(DB::table('iccid_units'), 'iccid_units.warehouse_id')
             ->join('products', 'iccid_units.product_id', '=', 'products.id')
             ->leftJoin('warehouses', 'iccid_units.warehouse_id', '=', 'warehouses.id')
             ->select('iccid_units.*', 'products.name as product_name', 'products.sku', 'warehouses.name as warehouse_name')
@@ -41,7 +42,7 @@ class InventoryController extends Controller
             ->get();
 
         // 3. Stock Movements (SM)
-        $movements = DB::table('stock_movements')
+        $movements = TerritoryScope::applyWarehouseScope(DB::table('stock_movements'), 'stock_movements.source_warehouse_id')
             ->join('warehouses as sw', 'stock_movements.source_warehouse_id', '=', 'sw.id')
             ->join('warehouses as dw', 'stock_movements.destination_warehouse_id', '=', 'dw.id')
             ->select('stock_movements.*', 'sw.name as source_wh', 'dw.name as dest_wh')
@@ -49,7 +50,7 @@ class InventoryController extends Controller
             ->get();
 
         // 4. Stock Mutations Ledger (Buku Kartu Stok In - Out)
-        $mutations = DB::table('stock_mutations')
+        $mutations = TerritoryScope::applyWarehouseScope(DB::table('stock_mutations'), 'stock_mutations.warehouse_id')
             ->join('warehouses', 'stock_mutations.warehouse_id', '=', 'warehouses.id')
             ->join('products', 'stock_mutations.product_id', '=', 'products.id')
             ->select(
@@ -66,15 +67,18 @@ class InventoryController extends Controller
             ->get();
 
         // 5. Master data untuk filter
-        $warehouses = DB::table('warehouses')
-            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
-            ->where('warehouses.status', 'ACTIVE')
-            ->select('warehouses.*', 'taps.name as tap_name')
+        $warehouses = TerritoryScope::applyWarehouseScope(
+            DB::table('warehouses')
+                ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+                ->where('warehouses.status', 'ACTIVE')
+                ->select('warehouses.*', 'taps.name as tap_name'),
+            'warehouses.id'
+        )
             ->orderBy('warehouses.type')
             ->orderBy('warehouses.name')
             ->get();
 
-        $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $taps = TerritoryScope::applyTapScope(DB::table('taps')->where('status', 'ACTIVE')->orderBy('name'), 'taps.id')->get();
 
         return view('inventory.index', compact(
             'stockBalances', 

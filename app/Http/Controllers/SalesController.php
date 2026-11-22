@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TerritoryScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -10,8 +11,8 @@ class SalesController extends Controller
 {
     public function index()
     {
-        // 1. Ambil daftar Sales Orders (Header)
-        $ordersRaw = DB::table('sales_orders')
+        // 1. Ambil daftar Sales Orders (Header) terfilter TerritoryScope
+        $ordersRaw = TerritoryScope::applyTapScope(DB::table('sales_orders'), 'sales_orders.tap_id')
             ->join('customers', 'sales_orders.customer_id', '=', 'customers.id')
             ->join('sales', 'sales_orders.sales_id', '=', 'sales.id')
             ->join('taps', 'sales_orders.tap_id', '=', 'taps.id')
@@ -95,38 +96,43 @@ class SalesController extends Controller
             return $so;
         });
 
-        // 2. Daftar Surat Jalan (GD)
-        $deliveries = DB::table('goods_deliveries')
+        // 2. Daftar Surat Jalan (GD) terfilter TerritoryScope
+        $deliveries = TerritoryScope::applyWarehouseScope(DB::table('goods_deliveries'), 'goods_deliveries.warehouse_id')
             ->join('customers', 'goods_deliveries.customer_id', '=', 'customers.id')
             ->join('warehouses', 'goods_deliveries.warehouse_id', '=', 'warehouses.id')
             ->select('goods_deliveries.*', 'customers.name as customer_name', 'warehouses.name as warehouse_name')
             ->orderBy('goods_deliveries.id', 'desc')
             ->get();
 
-        // 3. Daftar Retur (SR)
-        $returns = DB::table('sales_returns')
+        // 3. Daftar Retur (SR) terfilter TerritoryScope
+        $returns = TerritoryScope::applyWarehouseScope(DB::table('sales_returns'), 'sales_returns.warehouse_id')
             ->join('customers', 'sales_returns.customer_id', '=', 'customers.id')
             ->join('warehouses', 'sales_returns.warehouse_id', '=', 'warehouses.id')
             ->select('sales_returns.*', 'customers.name as customer_name', 'warehouses.name as warehouse_name')
             ->orderBy('sales_returns.id', 'desc')
             ->get();
 
-        // 4. Master Data Pendukung Pembuatan SO
-        $customers = DB::table('customers')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
+        // 4. Master Data Pendukung Pembuatan SO (Terfilter TerritoryScope)
+        $customers = TerritoryScope::applyClusterScope(DB::table('customers')->where('status', 'ACTIVE'), 'customers.cluster_id')->orderBy('name')->get();
+        $salesList = TerritoryScope::applyTapScope(DB::table('sales')->where('status', 'ACTIVE'), 'sales.tap_id')->orderBy('name')->get();
         
         // Gudang untuk penjualan: SALES (Kanvas) dan INVENTORY (Stok TAP)
-        $warehouses = DB::table('warehouses')
-            ->where('status', 'ACTIVE')
-            ->whereIn('type', ['SALES', 'INVENTORY'])
+        $warehouses = TerritoryScope::applyWarehouseScope(
+            DB::table('warehouses')
+                ->where('status', 'ACTIVE')
+                ->whereIn('type', ['SALES', 'INVENTORY']),
+            'warehouses.id'
+        )
             ->orderBy('type')
             ->orderBy('name')
             ->get();
 
         $products = DB::table('products')->where('status', 'ACTIVE')->orderBy('name')->get();
-        $stockBalances = DB::table('stock_balances')->get();
-        $availableIccids = DB::table('iccid_units')
-            ->where('status', 'AVAILABLE')
+        $stockBalances = TerritoryScope::applyWarehouseScope(DB::table('stock_balances'), 'stock_balances.warehouse_id')->get();
+        $availableIccids = TerritoryScope::applyWarehouseScope(
+            DB::table('iccid_units')->where('status', 'AVAILABLE'),
+            'iccid_units.warehouse_id'
+        )
             ->select('id', 'iccid_number', 'warehouse_id', 'product_id')
             ->get();
 

@@ -608,7 +608,7 @@
                         <p class="text-xs font-bold text-white truncate">{{ Auth::user()->name ?? 'Administrator' }}</p>
                         <p class="text-[10px] text-rose-400 flex items-center gap-1 font-medium truncate">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
-                            <span class="truncate">{{ session('active_tap_name', 'SEMUA AREA (IT DEV)') }}</span>
+                            <span class="truncate">{{ \App\Services\TerritoryScope::getActiveClusterName() }}</span>
                         </p>
                     </div>
                     <form method="POST" action="{{ route('logout') }}" data-no-loading>
@@ -644,33 +644,35 @@
 
                 <div class="flex items-center gap-3">
                     @php
-                        $currentUser = Auth::user();
-                        $roleSlug = $currentUser && $currentUser->role_id ? \Illuminate\Support\Facades\DB::table('roles')->where('id', $currentUser->role_id)->value('slug') : 'it_dev';
-                        $canSwitchArea = !$currentUser || is_null($currentUser->tap_id) || in_array($roleSlug, ['it_dev', 'super_admin']);
-                        $currentTapId = session('active_tap_id');
-                        $tapsList = \Illuminate\Support\Facades\DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+                        $accessibleClusters = \App\Services\TerritoryScope::getUserAccessibleClusters();
+                        $activeClusterId = session('active_cluster_id');
                     @endphp
 
-                    <!-- Area Scope Indicator / Switcher -->
-                    @if($canSwitchArea)
-                        <form method="POST" action="{{ route('switch-tap') }}" class="hidden md:flex items-center gap-1.5 bg-slate-900 text-white p-1 rounded-xl border border-slate-700/80 text-xs shadow-sm" data-no-loading>
+                    <!-- Cluster Scope Switcher (Dinamis Sesuai Mapping Wilayah User) -->
+                    @if($accessibleClusters->count() > 1)
+                        <form method="POST" action="{{ route('switch-cluster') }}" class="flex items-center gap-1.5 bg-slate-900 text-white p-1 rounded-xl border border-slate-700/90 text-xs shadow-sm" data-no-loading>
                             @csrf
-                            <span class="text-rose-400 text-[10px] px-2 font-bold font-mono uppercase flex items-center gap-1">
-                                <i data-lucide="shield" class="w-3.5 h-3.5 text-rose-500"></i>
-                                IT DEV Area:
+                            <span class="text-rose-400 text-[10px] pl-2 pr-1 font-bold font-mono uppercase flex items-center gap-1">
+                                <i data-lucide="network" class="w-3.5 h-3.5 text-rose-500"></i>
+                                <span class="hidden sm:inline">Cluster:</span>
                             </span>
-                            <select name="tap_id" onchange="this.form.submit()" class="text-xs font-bold bg-slate-800 text-white border-none rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-rose-500 cursor-pointer">
-                                <option value="all" {{ empty($currentTapId) ? 'selected' : '' }}>🌟 SEMUA AREA (KONSOLIDASI)</option>
-                                @foreach($tapsList as $t)
-                                    <option value="{{ $t->id }}" {{ $currentTapId == $t->id ? 'selected' : '' }}>🏢 {{ $t->name }}</option>
+                            <select name="cluster_id" onchange="this.form.submit()" class="text-xs font-bold bg-slate-800 hover:bg-slate-750 text-white border-none rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-rose-500 cursor-pointer max-w-[180px] sm:max-w-[260px] truncate transition-colors">
+                                <option value="all" {{ (empty($activeClusterId) || $activeClusterId === 'all') ? 'selected' : '' }}>
+                                    🌐 SEMUA CLUSTER ({{ $accessibleClusters->count() }} CLUSTER)
+                                </option>
+                                @foreach($accessibleClusters as $c)
+                                    <option value="{{ $c->id }}" {{ $activeClusterId == $c->id ? 'selected' : '' }}>
+                                        🏢 {{ $c->name }} ({{ $c->area_name }})
+                                    </option>
                                 @endforeach
                             </select>
                         </form>
-                    @else
-                        <!-- Badge Scope TAP User Biasa (Terkunci ke Cabangnya) -->
-                        <div class="hidden md:flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs">
-                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-amber-600"></i>
-                            <span>Wilayah: {{ session('active_tap_name', 'TAP Kantor') }}</span>
+                    @elseif($accessibleClusters->count() === 1)
+                        @php $singleC = $accessibleClusters->first(); @endphp
+                        <div class="flex items-center gap-2 bg-slate-900 border border-slate-700/80 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs">
+                            <i data-lucide="network" class="w-3.5 h-3.5 text-rose-400"></i>
+                            <span class="text-slate-400 text-[11px]">Cluster:</span>
+                            <span class="text-white">{{ $singleC->name }}</span>
                         </div>
                     @endif
 

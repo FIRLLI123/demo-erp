@@ -94,7 +94,45 @@ class AuthController extends Controller
             ]);
         }
 
-        return redirect()->intended(route('dashboard'))->with('success', "Selamat datang kembali, {$user->name}! Anda masuk dalam sesi {$tapName}.");
+        return redirect()->intended(route('dashboard'));
+    }
+
+    /**
+     * Switch Active Cluster (Global Scope Filter)
+     * Mengatur cluster aktif di Session yang otomatis menyaring seluruh menu & data ERP.
+     */
+    public function switchCluster(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $clusterId = $request->input('cluster_id');
+
+        if ($clusterId === 'all' || empty($clusterId)) {
+            session()->forget(['active_cluster_id', 'active_cluster_name']);
+            session([
+                'active_cluster_id' => 'all',
+                'active_cluster_name' => 'Semua Cluster',
+            ]);
+        } else {
+            $accessible = \App\Services\TerritoryScope::getUserAccessibleClusters($user);
+            $cluster = $accessible->firstWhere('id', (int) $clusterId);
+
+            if (!$cluster) {
+                return back()->with('error', 'Akses ditolak: Anda tidak memiliki hak akses untuk cluster tersebut.');
+            }
+
+            session([
+                'active_cluster_id' => (int) $cluster->id,
+                'active_cluster_name' => $cluster->name,
+            ]);
+        }
+
+        \App\Services\TerritoryScope::flush();
+
+        return back();
     }
 
     /**
