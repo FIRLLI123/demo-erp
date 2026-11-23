@@ -16,10 +16,12 @@
             </div>
 
             <div class="flex items-center gap-2">
+                @if(config('erp.enable_iccid', false))
                 <a href="{{ route('inventory.iccids') }}" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 flex items-center gap-1.5 shadow-xs transition-all">
                     <i data-lucide="scan-barcode" class="w-4 h-4 text-purple-600"></i>
                     <span>Tracking Serial ICCID</span>
                 </a>
+                @endif
                 <a href="{{ route('stock-movement.index') }}" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 shadow-xs transition-all">
                     <i data-lucide="arrow-left-right" class="w-4 h-4 text-cyan-600"></i>
                     <span>Transfer Antar Gudang (SM)</span>
