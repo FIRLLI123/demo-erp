@@ -64,13 +64,14 @@ class SalesController extends Controller
             $invoicesBySo[$ar->sales_order_id] = $ar;
         }
 
-        // Ambil ICCID terkait SO
+        // Ambil ICCID terkait SO (jika fitur ICCID diaktifkan)
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
         $soDocNumbers = $ordersRaw->pluck('doc_number')->toArray();
         $gdDocNumbers = $gdList->pluck('doc_number')->toArray();
         $allDocRefs = array_unique(array_merge($soDocNumbers, $gdDocNumbers));
 
         $iccidsByDoc = [];
-        if (!empty($allDocRefs)) {
+        if ($iccidEnabled && !empty($allDocRefs)) {
             $iccids = DB::table('iccid_units')
                 ->whereIn('last_doc_number', $allDocRefs)
                 ->select('iccid_number', 'product_id', 'last_doc_number', 'status')
@@ -113,7 +114,7 @@ class SalesController extends Controller
             ->get();
 
         // 4. Master Data Pendukung Pembuatan SO (Terfilter TerritoryScope)
-        $customers = TerritoryScope::applyClusterScope(DB::table('customers')->where('status', 'ACTIVE'), 'customers.cluster_id')->orderBy('name')->get();
+        $customers = TerritoryScope::applyTapScope(DB::table('customers')->where('status', 'ACTIVE'), 'customers.tap_id')->orderBy('name')->get();
         $salesList = TerritoryScope::applyTapScope(DB::table('sales')->where('status', 'ACTIVE'), 'sales.tap_id')->orderBy('name')->get();
         
         // Gudang untuk penjualan: SALES (Kanvas) dan INVENTORY (Stok TAP)
@@ -129,12 +130,14 @@ class SalesController extends Controller
 
         $products = DB::table('products')->where('status', 'ACTIVE')->orderBy('name')->get();
         $stockBalances = TerritoryScope::applyWarehouseScope(DB::table('stock_balances'), 'stock_balances.warehouse_id')->get();
-        $availableIccids = TerritoryScope::applyWarehouseScope(
-            DB::table('iccid_units')->where('status', 'AVAILABLE'),
-            'iccid_units.warehouse_id'
-        )
-            ->select('id', 'iccid_number', 'warehouse_id', 'product_id')
-            ->get();
+        $availableIccids = $iccidEnabled
+            ? TerritoryScope::applyWarehouseScope(
+                DB::table('iccid_units')->where('status', 'AVAILABLE'),
+                'iccid_units.warehouse_id'
+            )
+                ->select('id', 'iccid_number', 'warehouse_id', 'product_id')
+                ->get()
+            : collect([]);
 
         return view('sales.index', compact(
             'orders',
@@ -145,7 +148,8 @@ class SalesController extends Controller
             'warehouses',
             'products',
             'stockBalances',
-            'availableIccids'
+            'availableIccids',
+            'iccidEnabled'
         ));
     }
 
@@ -167,8 +171,30 @@ class SalesController extends Controller
         }
 
         $customer = DB::table('customers')->where('id', $customerId)->first();
+        if (!$customer) {
+            return redirect()->back()->with('error', 'Customer tidak ditemukan!');
+        }
+        if ($customer->tap_id && !TerritoryScope::canAccessTap((int)$customer->tap_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Customer berada di luar wilayah wewenang Anda!');
+        }
+
         $sales = DB::table('sales')->where('id', $salesId)->first();
+        if (!$sales) {
+            return redirect()->back()->with('error', 'Sales tidak ditemukan!');
+        }
+        if ($sales->tap_id && !TerritoryScope::canAccessTap((int)$sales->tap_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Sales berada di luar wilayah wewenang Anda!');
+        }
+
         $warehouse = DB::table('warehouses')->where('id', $warehouseId)->first();
+        if (!$warehouse) {
+            return redirect()->back()->with('error', 'Gudang tidak ditemukan!');
+        }
+        if (!TerritoryScope::canAccessWarehouse((int)$warehouseId)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Gudang berada di luar wilayah wewenang Anda!');
+        }
+
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
 
         DB::beginTransaction();
         try {
@@ -192,13 +218,13 @@ class SalesController extends Controller
                     ->where('product_id', $productId)
                     ->value('quantity') ?? 0;
 
-                if ($prod->tracking_method === 'QUANTITY') {
+                if (!$iccidEnabled || $prod->tracking_method === 'QUANTITY') {
                     $qty = max(1, (int)($row['quantity'] ?? 1));
                     if ($currentStock < $qty) {
                         throw new \Exception("Stok {$prod->name} di {$warehouse->name} tidak mencukupi (Tersedia: {$currentStock} pcs, Diminta: {$qty} pcs)!");
                     }
                 } else {
-                    // Tracking: ICCID
+                    // Tracking: ICCID (hanya jika fitur ICCID aktif)
                     $inputMode = $row['iccid_mode'] ?? 'SELECT';
                     $targetIccids = [];
 
@@ -297,8 +323,8 @@ class SalesController extends Controller
                 ]);
             }
 
-            // Kunci status serial ICCID menjadi RESERVED untuk SO ini
-            if (!empty($allReservedIccids)) {
+            // Kunci status serial ICCID menjadi RESERVED untuk SO ini (jika fitur ICCID aktif)
+            if ($iccidEnabled && !empty($allReservedIccids)) {
                 DB::table('iccid_units')
                     ->whereIn('iccid_number', $allReservedIccids)
                     ->update([
@@ -323,6 +349,10 @@ class SalesController extends Controller
         $so = DB::table('sales_orders')->where('id', $id)->first();
         if (!$so) return redirect()->back()->with('error', 'Sales Order tidak ditemukan!');
 
+        if (!TerritoryScope::canAccessWarehouse((int)$so->warehouse_id) && !TerritoryScope::canAccessTap((int)$so->tap_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Dokumen SO berada di luar wilayah wewenang Anda!');
+        }
+
         DB::table('sales_orders')->where('id', $id)->update([
             'status' => 'APPROVED',
             'updated_at' => now(),
@@ -336,6 +366,12 @@ class SalesController extends Controller
         $so = DB::table('sales_orders')->where('id', $id)->first();
         if (!$so) return redirect()->back()->with('error', 'Sales Order tidak ditemukan!');
 
+        if (!TerritoryScope::canAccessWarehouse((int)$so->warehouse_id) && !TerritoryScope::canAccessTap((int)$so->tap_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Dokumen SO berada di luar wilayah wewenang Anda!');
+        }
+
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
+
         DB::beginTransaction();
         try {
             DB::table('sales_orders')->where('id', $id)->update([
@@ -343,15 +379,17 @@ class SalesController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Lepas ICCID yang sempat di-reserve kembali jadi AVAILABLE
-            DB::table('iccid_units')
-                ->where('last_doc_type', 'SO')
-                ->where('last_doc_number', $so->doc_number)
-                ->where('status', 'RESERVED')
-                ->update([
-                    'status' => 'AVAILABLE',
-                    'updated_at' => now(),
-                ]);
+            // Lepas ICCID yang sempat di-reserve kembali jadi AVAILABLE jika fitur ICCID aktif
+            if ($iccidEnabled) {
+                DB::table('iccid_units')
+                    ->where('last_doc_type', 'SO')
+                    ->where('last_doc_number', $so->doc_number)
+                    ->where('status', 'RESERVED')
+                    ->update([
+                        'status' => 'AVAILABLE',
+                        'updated_at' => now(),
+                    ]);
+            }
 
             DB::commit();
             return redirect()->back()->with('success', "Sales Order [{$so->doc_number}] telah DITOLAK Finance. Stok dan serial ICCID telah dikembalikan.");
@@ -366,10 +404,15 @@ class SalesController extends Controller
         $so = DB::table('sales_orders')->where('id', $id)->first();
         if (!$so) return redirect()->back()->with('error', 'SO tidak ditemukan!');
 
+        if (!TerritoryScope::canAccessWarehouse((int)$so->warehouse_id) && !TerritoryScope::canAccessTap((int)$so->tap_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Dokumen SO berada di luar wilayah wewenang Anda!');
+        }
+
         if ($so->status !== 'APPROVED') {
             return redirect()->back()->with('error', 'Hanya SO yang sudah disetujui Finance (APPROVED) yang dapat dikirimkan!');
         }
 
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
         $soItems = DB::table('sales_order_items')->where('sales_order_id', $so->id)->get();
         $warehouse = DB::table('warehouses')->where('id', $so->warehouse_id)->first();
         $customer = DB::table('customers')->where('id', $so->customer_id)->first();
@@ -449,17 +492,19 @@ class SalesController extends Controller
                 ]);
             }
 
-            // 4. Ubah status ICCID dari RESERVED menjadi SOLD
-            DB::table('iccid_units')
-                ->where('last_doc_type', 'SO')
-                ->where('last_doc_number', $so->doc_number)
-                ->update([
-                    'status' => 'SOLD',
-                    'customer_id' => $so->customer_id,
-                    'last_doc_type' => 'GD',
-                    'last_doc_number' => $gdNum,
-                    'updated_at' => now(),
-                ]);
+            // 4. Ubah status ICCID dari RESERVED menjadi SOLD jika fitur ICCID aktif
+            if ($iccidEnabled) {
+                DB::table('iccid_units')
+                    ->where('last_doc_type', 'SO')
+                    ->where('last_doc_number', $so->doc_number)
+                    ->update([
+                        'status' => 'SOLD',
+                        'customer_id' => $so->customer_id,
+                        'last_doc_type' => 'GD',
+                        'last_doc_number' => $gdNum,
+                        'updated_at' => now(),
+                    ]);
+            }
 
             // 5. Update Status SO menjadi DELIVERED
             DB::table('sales_orders')->where('id', $id)->update([
@@ -496,6 +541,10 @@ class SalesController extends Controller
 
         if (!$so) abort(404);
 
+        if (!TerritoryScope::canAccessWarehouse((int)$so->warehouse_id) && !TerritoryScope::canAccessTap((int)$so->tap_id)) {
+            abort(403, 'Akses ditolak: Dokumen SO berada di luar wilayah wewenang Anda!');
+        }
+
         $items = DB::table('sales_order_items')
             ->join('products', 'sales_order_items.product_id', '=', 'products.id')
             ->where('sales_order_items.sales_order_id', $so->id)
@@ -517,6 +566,10 @@ class SalesController extends Controller
 
         $so = DB::table('sales_orders')->where('id', $soId)->first();
         if (!$so) return redirect()->back()->with('error', 'Sales Order tidak ditemukan!');
+
+        if (!TerritoryScope::canAccessWarehouse((int)$so->warehouse_id) && !TerritoryScope::canAccessTap((int)$so->tap_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Dokumen SO berada di luar wilayah wewenang Anda!');
+        }
 
         $ar = DB::table('accounts_receivable')->where('sales_order_id', $so->id)->first();
 

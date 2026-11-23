@@ -124,6 +124,7 @@
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200" x-text="filteredMutations.length"></span>
                     </button>
 
+                    @if($iccidEnabled ?? config('erp.enable_iccid', false))
                     <button type="button" 
                             @click="activeTab = 'iccids'" 
                             class="pb-3 border-b-2 flex items-center gap-1.5 transition-all"
@@ -132,13 +133,14 @@
                         <span>3. Tracking Serial ICCID</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200" x-text="filteredIccids.length"></span>
                     </button>
+                    @endif
 
                     <button type="button" 
                             @click="activeTab = 'movements'" 
                             class="pb-3 border-b-2 flex items-center gap-1.5 transition-all"
                             :class="activeTab === 'movements' ? 'text-rose-600 border-rose-600 font-extrabold' : 'text-slate-500 border-transparent hover:text-slate-800'">
                         <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
-                        <span>4. Dokumen Mutasi (SM)</span>
+                        <span>{{ ($iccidEnabled ?? config('erp.enable_iccid', false)) ? '4. Dokumen Mutasi (SM)' : '3. Dokumen Mutasi (SM)' }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200">{{ count($movements) }}</span>
                     </button>
                 </div>
@@ -276,9 +278,13 @@
                                 <th class="py-3 px-4">Kategori</th>
                                 <th class="py-3 px-4">SKU Produk</th>
                                 <th class="py-3 px-4">Nama Produk</th>
-                                <th class="py-3 px-4 text-center">Tracking</th>
+                                @if($iccidEnabled ?? config('erp.enable_iccid', false))
+                                    <th class="py-3 px-4 text-center">Tracking</th>
+                                @endif
                                 <th class="py-3 px-4 text-right">Stok Fisik Tersedia</th>
-                                <th class="py-3 px-4 text-center">Aksi Serial</th>
+                                @if($iccidEnabled ?? config('erp.enable_iccid', false))
+                                    <th class="py-3 px-4 text-center">Aksi Serial</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-medium">
@@ -320,6 +326,7 @@
                                     </td>
                                     <td class="py-3 px-4 font-mono font-semibold text-slate-600" x-text="item.sku"></td>
                                     <td class="py-3 px-4 font-bold text-slate-900" x-text="item.product_name"></td>
+                                    @if($iccidEnabled ?? config('erp.enable_iccid', false))
                                     <td class="py-3 px-4 text-center">
                                         <template x-if="item.tracking_method === 'ICCID'">
                                             <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-purple-50 text-purple-700 border border-purple-200">
@@ -332,12 +339,14 @@
                                             </span>
                                         </template>
                                     </td>
+                                    @endif
                                     <td class="py-3 px-4 text-right">
                                         <span class="font-mono font-extrabold text-sm"
                                               :class="item.quantity > 50 ? 'text-slate-900' : (item.quantity > 0 ? 'text-amber-700' : 'text-slate-400')"
                                               x-text="Number(item.quantity).toLocaleString('id-ID')"></span>
                                         <span class="text-[11px] font-normal text-slate-400" x-text="item.sku.startsWith('BULK-') ? 'saldo' : 'pcs'"></span>
                                     </td>
+                                    @if($iccidEnabled ?? config('erp.enable_iccid', false))
                                     <td class="py-3 px-4 text-center whitespace-nowrap">
                                         <template x-if="item.tracking_method === 'ICCID'">
                                             <a :href="'{{ route('inventory.iccids') }}?warehouse_id=' + item.warehouse_id + '&product_id=' + item.product_id + '&status=AVAILABLE'"
@@ -353,12 +362,13 @@
                                             </span>
                                         </template>
                                     </td>
+                                    @endif
                                 </tr>
                             </template>
 
                             <template x-if="filteredBalances.length === 0">
                                 <tr>
-                                    <td colspan="8" class="py-12 text-center text-slate-400">
+                                    <td colspan="{{ ($iccidEnabled ?? config('erp.enable_iccid', false)) ? 8 : 6 }}" class="py-12 text-center text-slate-400">
                                         <i data-lucide="package-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
                                         <p class="font-bold">Tidak ada data stok yang sesuai dengan filter yang dipilih.</p>
                                         <button type="button" @click="resetFilters()" class="text-xs text-rose-600 hover:underline mt-1 font-semibold">Reset Filter</button>
@@ -458,6 +468,7 @@
                 </div>
             </div>
 
+            @if($iccidEnabled ?? config('erp.enable_iccid', false))
             <!-- ============================================== -->
             <!-- TAB 3: TRACKING SERIAL ICCID                   -->
             <!-- ============================================== -->
@@ -511,6 +522,7 @@
                     </table>
                 </div>
             </div>
+            @endif
 
             <!-- ============================================== -->
             <!-- TAB 4: STOCK MOVEMENTS (SM)                    -->

@@ -98,7 +98,7 @@
                             <td class="py-3 px-4 text-center text-slate-400 font-mono">{{ $idx + 1 }}</td>
                             <td class="py-3 px-4">
                                 <span class="font-bold text-slate-900">{{ $it->product_name }}</span>
-                                <span class="text-[10px] font-mono text-slate-400 block">{{ $it->sku }} (Tracking: {{ $it->tracking_method }})</span>
+                                <span class="text-[10px] font-mono text-slate-400 block">{{ $it->sku }}@if(config('erp.enable_iccid', false)) (Tracking: {{ $it->tracking_method }})@endif</span>
                             </td>
                             <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">{{ number_format($it->quantity) }} pcs</td>
                             <td class="py-3 px-4 text-right font-mono text-slate-700">Rp {{ number_format($it->unit_price, 0, ',', '.') }}</td>

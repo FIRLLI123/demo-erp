@@ -32,14 +32,17 @@ class InventoryController extends Controller
             ->orderBy('products.name')
             ->get();
 
-        // 2. ICCID Units with warehouse & product info
-        $iccids = TerritoryScope::applyWarehouseScope(DB::table('iccid_units'), 'iccid_units.warehouse_id')
-            ->join('products', 'iccid_units.product_id', '=', 'products.id')
-            ->leftJoin('warehouses', 'iccid_units.warehouse_id', '=', 'warehouses.id')
-            ->select('iccid_units.*', 'products.name as product_name', 'products.sku', 'warehouses.name as warehouse_name')
-            ->orderBy('iccid_units.id', 'desc')
-            ->take(100)
-            ->get();
+        // 2. ICCID Units with warehouse & product info (hanya jika fitur aktif di env)
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
+        $iccids = $iccidEnabled
+            ? TerritoryScope::applyWarehouseScope(DB::table('iccid_units'), 'iccid_units.warehouse_id')
+                ->join('products', 'iccid_units.product_id', '=', 'products.id')
+                ->leftJoin('warehouses', 'iccid_units.warehouse_id', '=', 'warehouses.id')
+                ->select('iccid_units.*', 'products.name as product_name', 'products.sku', 'warehouses.name as warehouse_name')
+                ->orderBy('iccid_units.id', 'desc')
+                ->take(100)
+                ->get()
+            : collect([]);
 
         // 3. Stock Movements (SM)
         $movements = TerritoryScope::applyWarehouseScope(DB::table('stock_movements'), 'stock_movements.source_warehouse_id')
@@ -86,7 +89,8 @@ class InventoryController extends Controller
             'movements', 
             'mutations',
             'warehouses',
-            'taps'
+            'taps',
+            'iccidEnabled'
         ));
     }
 

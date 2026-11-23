@@ -5,6 +5,9 @@
 
     <div x-data="salesApp()" x-init="initData()">
         
+        <!-- Flash Alert Feedback -->
+        <x-alert />
+
         <!-- Top Action Bar -->
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -46,8 +49,9 @@
 
             <form method="POST" action="{{ route('sales.store') }}" 
                   enctype="multipart/form-data"
+                  @submit="isSubmitting = true"
                   data-loading-title="Menerbitkan Sales Order"
-                  data-loading-sub="Menyimpan pesanan dan mereserve serial ICCID..."
+                  data-loading-sub="Menyimpan pesanan dan memproses stok..."
                   data-doctype="SO">
                 @csrf
 
@@ -104,11 +108,11 @@
                     </div>
                 </div>
 
-                <!-- Multi-Item Rows Table -->
+                <!-- Multi-Item Rows Table dengan Searchable Product Selector -->
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-xs font-bold text-slate-800">Daftar Barang yang Dipesan</label>
-                        <button type="button" @click="addItemRow()" class="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1">
+                        <button type="button" @click="addItemRow()" class="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer">
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Baris
                         </button>
                     </div>
@@ -118,34 +122,65 @@
                             <div class="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
                                 <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
                                     
-                                    <!-- Produk -->
-                                    <div class="md:col-span-4">
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Produk</label>
-                                        <select :name="`items[${index}][product_id]`" 
-                                                x-model="row.product_id" 
-                                                @change="updateProductRow(index)"
-                                                required 
-                                                class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
-                                            <option value="">-- Pilih Produk --</option>
-                                            <template x-for="p in getAvailableProductsInWarehouse()" :key="p.id">
-                                                <option :value="p.id" 
-                                                        :data-price="p.selling_price" 
-                                                        :data-tracking="p.tracking_method" 
-                                                        :data-type="p.type"
-                                                        x-text="`[${p.type}] ${p.name} (Stok: ${getAvailableStock(p.id)} pcs)`">
-                                                </option>
+                                    <!-- Searchable Produk -->
+                                    <div class="{{ ($iccidEnabled ?? config('erp.enable_iccid', false)) ? 'md:col-span-4' : 'md:col-span-5' }} relative" @click.outside="row.dropdownOpen = false">
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">
+                                            Produk <span class="text-rose-500">*</span>
+                                            <span class="text-slate-400 font-normal">(Ketik SKU / Nama)</span>
+                                        </label>
+                                        <input type="hidden" :name="`items[${index}][product_id]`" :value="row.product_id" required>
+                                        
+                                        <div class="relative flex items-center">
+                                            <input type="text"
+                                                   x-model="row.searchText"
+                                                   @focus="row.dropdownOpen = true"
+                                                   @input="row.dropdownOpen = true"
+                                                   :disabled="!selectedWarehouseId"
+                                                   :placeholder="!selectedWarehouseId ? 'Pilih Gudang Sumber dulu...' : 'Ketik cari SKU atau nama produk...'"
+                                                   class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:bg-slate-100 disabled:cursor-not-allowed">
+                                            <button type="button"
+                                                    x-show="row.product_id"
+                                                    @click="clearProductRow(index)"
+                                                    class="absolute right-2 text-slate-400 hover:text-rose-600 cursor-pointer"
+                                                    title="Ganti produk">
+                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Dropdown List Hasil Pencarian -->
+                                        <div x-show="row.dropdownOpen && selectedWarehouseId"
+                                             x-cloak
+                                             class="absolute z-40 left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl divide-y divide-slate-100">
+                                            <template x-for="prod in filterProductsForRow(row.searchText)" :key="prod.id">
+                                                <button type="button"
+                                                        @click="selectProductForRow(index, prod)"
+                                                        class="w-full text-left px-3 py-2 hover:bg-amber-50 flex items-center justify-between gap-2 transition-colors cursor-pointer">
+                                                    <div>
+                                                        <span class="font-bold text-slate-900 block text-xs" x-text="prod.name"></span>
+                                                        <span class="font-mono text-[10px] text-slate-500" x-text="prod.sku + ' • Tipe: ' + prod.type"></span>
+                                                    </div>
+                                                    <div class="text-right shrink-0">
+                                                        <span class="font-mono text-[11px] font-bold text-amber-700 block" x-text="'Rp ' + Number(prod.selling_price).toLocaleString('id-ID')"></span>
+                                                        <span class="text-[10px] font-semibold" :class="getAvailableStock(prod.id) > 0 ? 'text-emerald-600' : 'text-rose-500'" x-text="'Stok: ' + getAvailableStock(prod.id) + ' pcs'"></span>
+                                                    </div>
+                                                </button>
                                             </template>
-                                        </select>
+                                            <div x-show="filterProductsForRow(row.searchText).length === 0" class="px-3 py-3 text-center text-slate-400 text-xs">
+                                                Produk tidak ditemukan di gudang ini.
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <!-- Tracking Info -->
-                                    <div class="md:col-span-2">
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Tracking</label>
-                                        <span class="inline-block px-2 py-1 rounded text-[11px] font-bold font-mono"
-                                              :class="row.tracking_method === 'ICCID' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'"
-                                              x-text="row.tracking_method || '-'">
-                                        </span>
-                                    </div>
+                                    @if($iccidEnabled ?? config('erp.enable_iccid', false))
+                                        <!-- Tracking Info -->
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Tracking</label>
+                                            <span class="inline-block px-2 py-1 rounded text-[11px] font-bold font-mono"
+                                                  :class="row.tracking_method === 'ICCID' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'"
+                                                  x-text="row.tracking_method || '-'">
+                                            </span>
+                                        </div>
+                                    @endif
 
                                     <!-- Harga Jual Master (Read-only) -->
                                     <div class="md:col-span-2">
@@ -156,36 +191,47 @@
                                     </div>
 
                                     <!-- Quantity Input / Display -->
-                                    <div class="md:col-span-2">
-                                        <template x-if="row.tracking_method === 'QUANTITY'">
+                                    <div class="{{ ($iccidEnabled ?? config('erp.enable_iccid', false)) ? 'md:col-span-2' : 'md:col-span-3' }}">
+                                        @if($iccidEnabled ?? config('erp.enable_iccid', false))
+                                            <template x-if="row.tracking_method === 'QUANTITY' || !row.tracking_method">
+                                                <div>
+                                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Kuantitas</label>
+                                                    <input type="number" 
+                                                           :name="`items[${index}][quantity]`" 
+                                                           x-model.number="row.quantity" 
+                                                           min="1" 
+                                                           :max="getAvailableStock(row.product_id)" 
+                                                           required 
+                                                           :disabled="!row.product_id"
+                                                           class="w-full text-xs font-bold text-center bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:bg-slate-100">
+                                                </div>
+                                            </template>
+
+                                            <template x-if="row.tracking_method === 'ICCID'">
+                                                <div>
+                                                    <label class="block text-[11px] font-bold text-purple-700 mb-1">Total Unit (Otomatis)</label>
+                                                    <div class="py-1.5 px-2 bg-purple-50 text-purple-700 font-mono font-bold text-xs text-center rounded-lg border border-purple-200">
+                                                        <span x-text="getIccidCount(row)"></span> unit
+                                                    </div>
+                                                    <input type="hidden" :name="`items[${index}][quantity]`" :value="getIccidCount(row)">
+                                                </div>
+                                            </template>
+                                        @else
                                             <div>
                                                 <label class="block text-[11px] font-bold text-slate-600 mb-1">Kuantitas</label>
-                                                <input type="number" 
-                                                       :name="`items[${index}][quantity]`" 
-                                                       x-model.number="row.quantity" 
-                                                       min="1" 
-                                                       :max="getAvailableStock(row.product_id)" 
-                                                       required 
-                                                       class="w-full text-xs font-bold text-center bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500">
-                                            </div>
-                                        </template>
-
-                                        <template x-if="row.tracking_method === 'ICCID'">
-                                            <div>
-                                                <label class="block text-[11px] font-bold text-purple-700 mb-1">Total Unit (Otomatis)</label>
-                                                <div class="py-1.5 px-2 bg-purple-50 text-purple-700 font-mono font-bold text-xs text-center rounded-lg border border-purple-200">
-                                                    <span x-text="getIccidCount(row)"></span> unit
+                                                <div class="flex items-center gap-1.5">
+                                                    <input type="number" 
+                                                           :name="`items[${index}][quantity]`" 
+                                                           x-model.number="row.quantity" 
+                                                           min="1" 
+                                                           :max="getAvailableStock(row.product_id)" 
+                                                           required 
+                                                           :disabled="!row.product_id"
+                                                           class="w-full text-xs font-bold text-center bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:bg-slate-100">
+                                                    <span class="text-[11px] text-slate-400 font-medium shrink-0">pcs</span>
                                                 </div>
-                                                <input type="hidden" :name="`items[${index}][quantity]`" :value="getIccidCount(row)">
                                             </div>
-                                        </template>
-
-                                        <template x-if="!row.tracking_method">
-                                            <div>
-                                                <label class="block text-[11px] font-bold text-slate-400 mb-1">Qty</label>
-                                                <div class="py-1.5 px-2 bg-slate-100 text-slate-400 font-mono text-xs text-center rounded-lg">-</div>
-                                            </div>
-                                        </template>
+                                        @endif
                                     </div>
 
                                     <!-- Subtotal -->
@@ -198,74 +244,76 @@
 
                                     <!-- Delete Button -->
                                     <div class="md:col-span-1 pt-6 text-center">
-                                        <button type="button" @click="removeItemRow(index)" class="text-slate-400 hover:text-rose-600 transition-colors p-1" x-show="items.length > 1">
+                                        <button type="button" @click="removeItemRow(index)" class="text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer" x-show="items.length > 1">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
                                 </div>
 
-                                <!-- SUB-SECTION: ICCID SELECTION IF PRODUCT IS ICCID -->
-                                <template x-if="row.tracking_method === 'ICCID' && row.product_id && selectedWarehouseId">
-                                    <div class="mt-3 pt-3 border-t border-slate-200/80 bg-white rounded-lg p-3">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-[11px] font-bold text-slate-700">Metode Serial ICCID:</span>
-                                                <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100 text-[10px] font-bold">
-                                                    <button type="button" @click="row.iccid_mode = 'SELECT'" :class="row.iccid_mode === 'SELECT' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">
-                                                        Pilih Stok (<span x-text="getIccidsForProduct(row.product_id).length"></span>)
-                                                    </button>
-                                                    <button type="button" @click="row.iccid_mode = 'PASTE'" :class="row.iccid_mode === 'PASTE' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">
-                                                        Paste Serial
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <input type="hidden" :name="`items[${index}][iccid_mode]`" :value="row.iccid_mode">
-
-                                        <!-- Mode Select -->
-                                        <div x-show="row.iccid_mode === 'SELECT'">
-                                            <div class="flex items-center justify-between mb-1.5 text-[11px]">
-                                                <span class="text-slate-500">Centang nomor serial yang dipesan:</span>
+                                @if($iccidEnabled ?? config('erp.enable_iccid', false))
+                                    <!-- SUB-SECTION: ICCID SELECTION IF PRODUCT IS ICCID -->
+                                    <template x-if="row.tracking_method === 'ICCID' && row.product_id && selectedWarehouseId">
+                                        <div class="mt-3 pt-3 border-t border-slate-200/80 bg-white rounded-lg p-3">
+                                            <div class="flex items-center justify-between mb-2">
                                                 <div class="flex items-center gap-2">
-                                                    <button type="button" @click="selectAllIccids(index)" class="text-amber-600 font-bold hover:underline">Pilih Semua</button>
-                                                    <span>&bull;</span>
-                                                    <button type="button" @click="row.selected_iccids = []" class="text-slate-400 font-bold hover:underline">Reset</button>
+                                                    <span class="text-[11px] font-bold text-slate-700">Metode Serial ICCID:</span>
+                                                    <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100 text-[10px] font-bold">
+                                                        <button type="button" @click="row.iccid_mode = 'SELECT'" :class="row.iccid_mode === 'SELECT' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">
+                                                            Pilih Stok (<span x-text="getIccidsForProduct(row.product_id).length"></span>)
+                                                        </button>
+                                                        <button type="button" @click="row.iccid_mode = 'PASTE'" :class="row.iccid_mode === 'PASTE' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">
+                                                            Paste Serial
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div class="max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-slate-50/50">
-                                                <template x-for="iccid in getIccidsForProduct(row.product_id)" :key="iccid.id">
-                                                    <label class="flex items-center gap-1.5 text-[10px] font-mono bg-white p-1 rounded border border-slate-200 cursor-pointer hover:bg-amber-50/50">
-                                                        <input type="checkbox" 
-                                                               :name="`items[${index}][selected_iccids][]`" 
-                                                               :value="iccid.iccid_number"
-                                                               x-model="row.selected_iccids"
-                                                               class="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5">
-                                                        <span x-text="iccid.iccid_number" class="truncate"></span>
-                                                    </label>
-                                                </template>
-                                                <template x-if="getIccidsForProduct(row.product_id).length === 0">
-                                                    <div class="col-span-full py-2 text-center text-slate-400 text-xs">
-                                                        Tidak ada serial AVAILABLE di gudang ini.
-                                                    </div>
-                                                </template>
-                                            </div>
-                                            <div class="mt-1 text-[11px] text-slate-500">
-                                                Terpilih: <span class="font-bold font-mono text-purple-700" x-text="row.selected_iccids.length"></span> unit.
-                                            </div>
-                                        </div>
+                                            <input type="hidden" :name="`items[${index}][iccid_mode]`" :value="row.iccid_mode">
 
-                                        <!-- Mode Paste -->
-                                        <div x-show="row.iccid_mode === 'PASTE'">
-                                            <textarea :name="`items[${index}][iccid_text]`" 
-                                                      x-model="row.iccid_text" 
-                                                      rows="2" 
-                                                      placeholder="Paste serial ICCID disini (1 per baris)..." 
-                                                      class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:outline-none"></textarea>
+                                            <!-- Mode Select -->
+                                            <div x-show="row.iccid_mode === 'SELECT'">
+                                                <div class="flex items-center justify-between mb-1.5 text-[11px]">
+                                                    <span class="text-slate-500">Centang nomor serial yang dipesan:</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" @click="selectAllIccids(index)" class="text-amber-600 font-bold hover:underline cursor-pointer">Pilih Semua</button>
+                                                        <span>&bull;</span>
+                                                        <button type="button" @click="row.selected_iccids = []" class="text-slate-400 font-bold hover:underline cursor-pointer">Reset</button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-slate-50/50">
+                                                    <template x-for="iccid in getIccidsForProduct(row.product_id)" :key="iccid.id">
+                                                        <label class="flex items-center gap-1.5 text-[10px] font-mono bg-white p-1 rounded border border-slate-200 cursor-pointer hover:bg-amber-50/50">
+                                                            <input type="checkbox" 
+                                                                   :name="`items[${index}][selected_iccids][]`" 
+                                                                   :value="iccid.iccid_number"
+                                                                   x-model="row.selected_iccids"
+                                                                   class="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5">
+                                                            <span x-text="iccid.iccid_number" class="truncate"></span>
+                                                        </label>
+                                                    </template>
+                                                    <template x-if="getIccidsForProduct(row.product_id).length === 0">
+                                                        <div class="col-span-full py-2 text-center text-slate-400 text-xs">
+                                                            Tidak ada serial AVAILABLE di gudang ini.
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <div class="mt-1 text-[11px] text-slate-500">
+                                                    Terpilih: <span class="font-bold font-mono text-purple-700" x-text="row.selected_iccids.length"></span> unit.
+                                                </div>
+                                            </div>
+
+                                            <!-- Mode Paste -->
+                                            <div x-show="row.iccid_mode === 'PASTE'">
+                                                <textarea :name="`items[${index}][iccid_text]`" 
+                                                          x-model="row.iccid_text" 
+                                                          rows="2" 
+                                                          placeholder="Paste serial ICCID disini (1 per baris)..." 
+                                                          class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:outline-none"></textarea>
+                                            </div>
                                         </div>
-                                    </div>
-                                </template>
+                                    </template>
+                                @endif
 
                             </div>
                         </template>
@@ -282,12 +330,27 @@
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <button type="button" @click="createSoOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                        <button type="button" @click="createSoOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">
                             Batal
                         </button>
-                        <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
-                            <i data-lucide="check" class="w-4 h-4 text-amber-400"></i>
-                            <span>Simpan Sales Order (SO)</span>
+                        <button type="submit" 
+                                :disabled="isSubmitting"
+                                class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer">
+                            <template x-if="!isSubmitting">
+                                <div class="flex items-center gap-1.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-amber-400"></i>
+                                    <span>Simpan Sales Order (SO)</span>
+                                </div>
+                            </template>
+                            <template x-if="isSubmitting">
+                                <div class="flex items-center gap-2">
+                                    <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                    </svg>
+                                    <span>Menyimpan Pesanan...</span>
+                                </div>
+                            </template>
                         </button>
                     </div>
                 </div>
@@ -548,7 +611,9 @@
                                     <tr>
                                         <th class="py-2.5 px-4">Produk</th>
                                         <th class="py-2.5 px-4">Tipe</th>
-                                        <th class="py-2.5 px-4">Tracking</th>
+                                        @if($iccidEnabled ?? config('erp.enable_iccid', false))
+                                            <th class="py-2.5 px-4">Tracking</th>
+                                        @endif
                                         <th class="py-2.5 px-4 text-center">Kuantitas</th>
                                         <th class="py-2.5 px-4 text-right">Harga Jual</th>
                                         <th class="py-2.5 px-4 text-right">Subtotal</th>
@@ -567,10 +632,12 @@
                                                       x-text="item.product_type">
                                                 </span>
                                             </td>
-                                            <td class="py-3 px-4 font-mono text-[11px] font-bold"
-                                                :class="item.tracking_method === 'ICCID' ? 'text-purple-700' : 'text-blue-700'"
-                                                x-text="item.tracking_method">
-                                            </td>
+                                            @if($iccidEnabled ?? config('erp.enable_iccid', false))
+                                                <td class="py-3 px-4 font-mono text-[11px] font-bold"
+                                                    :class="item.tracking_method === 'ICCID' ? 'text-purple-700' : 'text-blue-700'"
+                                                    x-text="item.tracking_method">
+                                                </td>
+                                            @endif
                                             <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">
                                                 <span x-text="item.quantity.toLocaleString('id-ID')"></span> pcs
                                             </td>
@@ -587,19 +654,21 @@
                         </div>
                     </div>
 
-                    <!-- Accordion Unit ICCID jika ada -->
-                    <template x-if="selectedSo && selectedSo.iccids && selectedSo.iccids.length > 0">
-                        <div class="mt-4 p-4 rounded-xl bg-purple-50/70 border border-purple-200/80">
-                            <span class="text-xs font-bold text-purple-900 block mb-2">
-                                Serial ICCID Terkait Transaksi Ini (<span x-text="selectedSo.iccids.length"></span> unit):
-                            </span>
-                            <div class="max-h-32 overflow-y-auto grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-white p-2.5 rounded-lg border border-purple-100">
-                                <template x-for="iccid in selectedSo.iccids" :key="iccid">
-                                    <span class="px-2 py-1 rounded bg-purple-50 text-purple-800 font-mono text-[11px] border border-purple-200 truncate" x-text="iccid"></span>
-                                </template>
+                    @if($iccidEnabled ?? config('erp.enable_iccid', false))
+                        <!-- Accordion Unit ICCID jika ada -->
+                        <template x-if="selectedSo && selectedSo.iccids && selectedSo.iccids.length > 0">
+                            <div class="mt-4 p-4 rounded-xl bg-purple-50/70 border border-purple-200/80">
+                                <span class="text-xs font-bold text-purple-900 block mb-2">
+                                    Serial ICCID Terkait Transaksi Ini (<span x-text="selectedSo.iccids.length"></span> unit):
+                                </span>
+                                <div class="max-h-32 overflow-y-auto grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-white p-2.5 rounded-lg border border-purple-100">
+                                    <template x-for="iccid in selectedSo.iccids" :key="iccid">
+                                        <span class="px-2 py-1 rounded bg-purple-50 text-purple-800 font-mono text-[11px] border border-purple-200 truncate" x-text="iccid"></span>
+                                    </template>
+                                </div>
                             </div>
-                        </div>
-                    </template>
+                        </template>
+                    @endif
 
                 </div>
             </div>
@@ -685,12 +754,16 @@
             return {
                 createSoOpen: false,
                 returnModalOpen: false,
+                isSubmitting: false,
+                iccidEnabled: {{ ($iccidEnabled ?? config('erp.enable_iccid', false)) ? 'true' : 'false' }},
                 selectedSo: null,
                 selectedWarehouseId: '',
 
                 items: [
                     {
                         product_id: '',
+                        searchText: '',
+                        dropdownOpen: false,
                         tracking_method: '',
                         unit_price: 0,
                         quantity: 1,
@@ -710,7 +783,7 @@
 
                 get totalQty() {
                     return this.items.reduce((acc, row) => {
-                        if (row.tracking_method === 'ICCID') {
+                        if (this.iccidEnabled && row.tracking_method === 'ICCID') {
                             return acc + (this.getIccidCount(row) || 0);
                         }
                         return acc + (parseInt(row.quantity) || 0);
@@ -745,6 +818,8 @@
                 addItemRow() {
                     this.items.push({
                         product_id: '',
+                        searchText: '',
+                        dropdownOpen: false,
                         tracking_method: '',
                         unit_price: 0,
                         quantity: 1,
@@ -766,6 +841,8 @@
                 onWarehouseChange() {
                     this.items.forEach(row => {
                         row.product_id = '';
+                        row.searchText = '';
+                        row.dropdownOpen = false;
                         row.tracking_method = '';
                         row.unit_price = 0;
                         row.selected_iccids = [];
@@ -780,6 +857,45 @@
                     return this.products.filter(p => prodIds.includes(p.id));
                 },
 
+                filterProductsForRow(searchText) {
+                    const list = this.getAvailableProductsInWarehouse();
+                    if (!searchText || !searchText.trim()) return list;
+                    const q = searchText.toLowerCase().trim();
+                    return list.filter(p => 
+                        (p.name && p.name.toLowerCase().includes(q)) || 
+                        (p.sku && p.sku.toLowerCase().includes(q)) ||
+                        (p.type && p.type.toLowerCase().includes(q))
+                    );
+                },
+
+                selectProductForRow(index, prod) {
+                    const row = this.items[index];
+                    row.product_id = prod.id;
+                    row.searchText = `[${prod.type}] ${prod.name} (Stok: ${this.getAvailableStock(prod.id)})`;
+                    row.dropdownOpen = false;
+                    row.tracking_method = prod.tracking_method;
+                    row.unit_price = parseFloat(prod.selling_price) || 0;
+                    row.selected_iccids = [];
+                    row.iccid_text = '';
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                },
+
+                clearProductRow(index) {
+                    const row = this.items[index];
+                    row.product_id = '';
+                    row.searchText = '';
+                    row.dropdownOpen = false;
+                    row.tracking_method = '';
+                    row.unit_price = 0;
+                    row.selected_iccids = [];
+                    row.iccid_text = '';
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                },
+
                 getAvailableStock(productId) {
                     if (!this.selectedWarehouseId || !productId) return 0;
                     const found = this.stockBalances.find(b => b.warehouse_id == this.selectedWarehouseId && b.product_id == productId);
@@ -789,20 +905,6 @@
                 getIccidsForProduct(productId) {
                     if (!this.selectedWarehouseId || !productId) return [];
                     return this.availableIccids.filter(u => u.warehouse_id == this.selectedWarehouseId && u.product_id == productId);
-                },
-
-                updateProductRow(index) {
-                    const row = this.items[index];
-                    const prod = this.products.find(p => p.id == row.product_id);
-                    if (prod) {
-                        row.tracking_method = prod.tracking_method;
-                        row.unit_price = parseFloat(prod.selling_price) || 0;
-                    } else {
-                        row.tracking_method = '';
-                        row.unit_price = 0;
-                    }
-                    row.selected_iccids = [];
-                    row.iccid_text = '';
                 },
 
                 selectAllIccids(index) {
@@ -822,7 +924,7 @@
 
                 getRowSubtotal(row) {
                     const price = parseFloat(row.unit_price) || 0;
-                    const qty = row.tracking_method === 'ICCID' ? this.getIccidCount(row) : (parseInt(row.quantity) || 0);
+                    const qty = (this.iccidEnabled && row.tracking_method === 'ICCID') ? this.getIccidCount(row) : (parseInt(row.quantity) || 0);
                     return price * qty;
                 }
             }
