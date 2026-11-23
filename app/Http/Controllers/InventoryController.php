@@ -175,36 +175,46 @@ class InventoryController extends Controller
      */
     public function adjustment(Request $request)
     {
-        $adjustments = DB::table('stock_mutations')
+        $query = DB::table('stock_mutations')
             ->join('warehouses', 'stock_mutations.warehouse_id', '=', 'warehouses.id')
             ->join('products', 'stock_mutations.product_id', '=', 'products.id')
+            ->leftJoin('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->leftJoin('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->leftJoin('areas', 'clusters.area_id', '=', 'areas.id')
             ->where('stock_mutations.doc_type', 'ADJ')
             ->select(
                 'stock_mutations.*',
                 'warehouses.name as warehouse_name',
                 'warehouses.code as warehouse_code',
                 'warehouses.type as warehouse_type',
+                'taps.name as tap_name',
+                'clusters.name as cluster_name',
                 'products.name as product_name',
                 'products.sku',
                 'products.type as product_type'
             )
-            ->orderByDesc('stock_mutations.id')
-            ->get();
+            ->orderByDesc('stock_mutations.id');
 
-        $warehouses = DB::table('warehouses')
+        TerritoryScope::applyWarehouseScope($query, 'stock_mutations.warehouse_id');
+
+        $adjustments = $query->get();
+
+        $whQuery = DB::table('warehouses')
             ->where('status', 'ACTIVE')
             ->orderBy('type')
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+        TerritoryScope::applyWarehouseScope($whQuery, 'id');
+        $warehouses = $whQuery->get();
 
         $products = DB::table('products')
             ->where('status', 'ACTIVE')
             ->orderBy('name')
             ->get();
 
-        $balances = DB::table('stock_balances')
-            ->select('warehouse_id', 'product_id', 'quantity')
-            ->get();
+        $balancesQuery = DB::table('stock_balances')
+            ->select('warehouse_id', 'product_id', 'quantity');
+        TerritoryScope::applyWarehouseScope($balancesQuery, 'warehouse_id');
+        $balances = $balancesQuery->get();
 
         $totalAdj = $adjustments->count();
         $totalPlus = $adjustments->where('mutation_type', 'IN')->sum('quantity');
@@ -236,11 +246,16 @@ class InventoryController extends Controller
             'notes' => 'required|string|max:255',
         ]);
 
-        $warehouseId = $request->input('warehouse_id');
-        $productId = $request->input('product_id');
+        $warehouseId = (int) $request->input('warehouse_id');
+        $productId = (int) $request->input('product_id');
         $type = $request->input('adjustment_type');
         $qty = (int) $request->input('quantity');
         $notes = $request->input('notes');
+
+        // Validasi hak akses wilayah user terhadap gudang
+        if (!TerritoryScope::canAccessWarehouse($warehouseId)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Anda tidak memiliki wewenang untuk gudang ini.');
+        }
 
         DB::beginTransaction();
         try {
@@ -306,11 +321,12 @@ class InventoryController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
                 $wh = DB::table('warehouses')->where('id', $warehouseId)->first();
                 $prod = DB::table('products')->where('id', $productId)->first();
+                $authUser = auth()->user();
 
                 DB::table('activity_logs')->insert([
-                    'user_id' => 1,
-                    'user_name' => 'Supervisor Logistik / Admin',
-                    'user_role' => 'Warehouse Supervisor',
+                    'user_id' => $authUser ? $authUser->id : 1,
+                    'user_name' => $authUser ? $authUser->name : 'Supervisor Logistik / Admin',
+                    'user_role' => $authUser && $authUser->role ? $authUser->role->name : 'Warehouse Supervisor',
                     'action' => $type === 'PLUS' ? 'STOCK_ADJUSTMENT_ADD' : 'STOCK_ADJUSTMENT_DEDUCT',
                     'module' => 'INVENTORY',
                     'doc_number' => $docNum,
@@ -319,15 +335,14 @@ class InventoryController extends Controller
                     'ip_address' => $request->ip() ?? '127.0.0.1',
                     'user_agent' => $request->userAgent() ?? 'System Desktop',
                     'created_at' => now(),
-                    'updated_at' => now(),
                 ]);
             }
 
             DB::commit();
-            return redirect()->route('inventory.adjustment')->with('success', "Stock Adjustment [{$docNum}] berhasil disimpan! Stok fisik langsung diperbarui menjadi {$balanceAfter} pcs dan riwayat mutasi tercatat.");
+            return redirect()->route('inventory.adjustment')->with('success', "Penyesuaian stok fisik berhasil disimpan! Dokumen: {$docNum}. Saldo akhir: {$balanceAfter} pcs.");
         } catch (\Throwable $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Gagal memproses penyesuaian stok: ' . $e->getMessage());
+            return redirect()->back()->with('error', "Gagal menyimpan penyesuaian: " . $e->getMessage());
         }
     }
 

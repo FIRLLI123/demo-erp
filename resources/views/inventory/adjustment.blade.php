@@ -5,6 +5,9 @@
 
     <div x-data="stockAdjustmentApp()" x-init="init()" class="space-y-6">
 
+        <!-- Flash / Session Alert -->
+        <x-alert />
+
         <!-- Top Header & Action -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -196,8 +199,7 @@
              class="fixed inset-0 z-50 overflow-y-auto" 
              aria-labelledby="modal-title" 
              role="dialog" 
-             aria-modal="true"
-             data-no-loading>
+             aria-modal="true">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 <!-- Backdrop -->
                 <div x-show="isModalOpen" 
@@ -222,17 +224,22 @@
                      x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                      class="inline-block align-bottom bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100">
                     
-                    <form action="{{ route('inventory.adjustment.store') }}" method="POST" data-no-loading>
+                    <form action="{{ route('inventory.adjustment.store') }}" 
+                          method="POST" 
+                          @submit="isSubmitting = true" 
+                          data-loading-title="Memproses Penyesuaian Stok"
+                          data-loading-sub="Menyesuaikan saldo fisik gudang & mencatat kartu mutasi..."
+                          data-doctype="ADJ">
                         @csrf
                         <!-- Header Modal -->
-                        <div class="px-6 pt-6 pb-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center">
                                     <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-sm font-extrabold text-slate-900">Form Stock Adjustment Fisik</h3>
-                                    <p class="text-[11px] text-slate-500">Saldo stok fisik di database akan langsung disesuaikan.</p>
+                                    <h3 class="text-sm font-extrabold text-slate-900">Form Stock Adjustment</h3>
+                                    <p class="text-[11px] text-slate-500">Penyesuaian saldo fisik gudang</p>
                                 </div>
                             </div>
                             <button type="button" @click="closeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
@@ -244,7 +251,7 @@
                         <div class="p-6 space-y-4 text-xs">
                             <!-- 1. Pilihan Gudang -->
                             <div>
-                                <label class="block font-bold text-slate-700 mb-1">Pilih Gudang Target <span class="text-rose-500">*</span></label>
+                                <label class="block font-bold text-slate-700 mb-1">Gudang <span class="text-rose-500">*</span></label>
                                 <select name="warehouse_id" x-model="formWarehouse" @change="updateCurrentStock()" required class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:ring-slate-900 focus:border-slate-900">
                                     <option value="">-- Pilih Gudang Fisik --</option>
                                     @foreach ($warehouses as $wh)
@@ -255,7 +262,7 @@
 
                             <!-- 2. Pilihan Produk -->
                             <div>
-                                <label class="block font-bold text-slate-700 mb-1">Pilih Produk <span class="text-rose-500">*</span></label>
+                                <label class="block font-bold text-slate-700 mb-1">Produk <span class="text-rose-500">*</span></label>
                                 <select name="product_id" x-model="formProduct" @change="updateCurrentStock()" required class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:ring-slate-900 focus:border-slate-900">
                                     <option value="">-- Pilih Produk --</option>
                                     @foreach ($products as $prod)
@@ -264,22 +271,22 @@
                                 </select>
                             </div>
 
-                            <!-- Info Saldo Stok Saat Ini -->
-                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                            <!-- Info Saldo Stok Ringkas -->
+                            <div x-show="formWarehouse && formProduct" class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
                                 <div>
-                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Saldo Stok Fisik Saat Ini</span>
-                                    <span class="text-base font-extrabold font-mono text-slate-900" x-text="currentStock.toLocaleString('id-ID') + ' pcs'"></span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Stok Saat Ini</span>
+                                    <span class="text-sm font-extrabold font-mono text-slate-900" x-text="currentStock.toLocaleString('id-ID') + ' pcs'"></span>
                                 </div>
                                 <div class="text-right">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Estimasi Stok Akhir</span>
-                                    <span class="text-base font-extrabold font-mono" :class="estimatedFinalStock < 0 ? 'text-rose-600' : 'text-purple-700'" x-text="estimatedFinalStock.toLocaleString('id-ID') + ' pcs'"></span>
+                                    <span class="text-sm font-extrabold font-mono" :class="estimatedFinalStock < 0 ? 'text-rose-600' : 'text-purple-700'" x-text="estimatedFinalStock.toLocaleString('id-ID') + ' pcs'"></span>
                                 </div>
                             </div>
 
                             <!-- Peringatan jika stok minus melebihi saldo -->
-                            <div x-show="formType === 'MINUS' && formQty > currentStock" class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
+                            <div x-show="formType === 'MINUS' && formQty > currentStock" class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2 text-xs">
                                 <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-rose-600"></i>
-                                <span class="text-[11px] font-semibold">Pengurangan melebihi stok yang ada! Sistem menolak penyesuaian minus yang membuat saldo di bawah 0.</span>
+                                <span class="text-[11px] font-semibold">Pengurangan melebihi stok yang ada (stok saat ini: <strong x-text="currentStock"></strong> pcs).</span>
                             </div>
 
                             <!-- 3. Jenis Penyesuaian (+ / -) -->
@@ -287,34 +294,30 @@
                                 <label class="block font-bold text-slate-700 mb-1.5">Tipe Penyesuaian <span class="text-rose-500">*</span></label>
                                 <div class="grid grid-cols-2 gap-3">
                                     <!-- Option Plus -->
-                                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex items-start gap-2.5 transition-all"
-                                           :class="formType === 'PLUS' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-950 shadow-xs' : 'border-slate-200 hover:border-slate-300 text-slate-600'">
-                                        <input type="radio" name="adjustment_type" value="PLUS" x-model="formType" class="mt-0.5 text-emerald-600 focus:ring-emerald-500">
-                                        <div>
-                                            <div class="font-extrabold text-xs text-emerald-700 flex items-center gap-1">
-                                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Penambahan (+)
-                                            </div>
-                                            <p class="text-[10px] text-slate-500 mt-0.5">Temuan fisik lebih opname atau koreksi tambah.</p>
-                                        </div>
+                                    <label class="cursor-pointer border-2 rounded-xl py-2.5 px-3 flex items-center justify-center gap-2 transition-all font-bold text-xs"
+                                           :class="formType === 'PLUS' ? 'border-emerald-500 bg-emerald-50/70 text-emerald-800 shadow-2xs' : 'border-slate-200 hover:border-slate-300 text-slate-600'">
+                                        <input type="radio" name="adjustment_type" value="PLUS" x-model="formType" class="text-emerald-600 focus:ring-emerald-500">
+                                        <span class="flex items-center gap-1.5">
+                                            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+                                            <span>Penambahan (+)</span>
+                                        </span>
                                     </label>
 
                                     <!-- Option Minus -->
-                                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex items-start gap-2.5 transition-all"
-                                           :class="formType === 'MINUS' ? 'border-rose-500 bg-rose-50/50 text-rose-950 shadow-xs' : 'border-slate-200 hover:border-slate-300 text-slate-600'">
-                                        <input type="radio" name="adjustment_type" value="MINUS" x-model="formType" class="mt-0.5 text-rose-600 focus:ring-rose-500">
-                                        <div>
-                                            <div class="font-extrabold text-xs text-rose-700 flex items-center gap-1">
-                                                <i data-lucide="minus-circle" class="w-3.5 h-3.5"></i> Pengurangan (-)
-                                            </div>
-                                            <p class="text-[10px] text-slate-500 mt-0.5">Barang rusak, hilang, atau selisih kurang opname.</p>
-                                        </div>
+                                    <label class="cursor-pointer border-2 rounded-xl py-2.5 px-3 flex items-center justify-center gap-2 transition-all font-bold text-xs"
+                                           :class="formType === 'MINUS' ? 'border-rose-500 bg-rose-50/70 text-rose-800 shadow-2xs' : 'border-slate-200 hover:border-slate-300 text-slate-600'">
+                                        <input type="radio" name="adjustment_type" value="MINUS" x-model="formType" class="text-rose-600 focus:ring-rose-500">
+                                        <span class="flex items-center gap-1.5">
+                                            <i data-lucide="minus-circle" class="w-4 h-4 text-rose-600"></i>
+                                            <span>Pengurangan (-)</span>
+                                        </span>
                                     </label>
                                 </div>
                             </div>
 
                             <!-- 4. Jumlah Qty -->
                             <div>
-                                <label class="block font-bold text-slate-700 mb-1">Jumlah Fisik yang Disesuaikan (Qty) <span class="text-rose-500">*</span></label>
+                                <label class="block font-bold text-slate-700 mb-1">Jumlah (Qty) <span class="text-rose-500">*</span></label>
                                 <div class="relative">
                                     <input type="number" name="quantity" min="1" x-model.number="formQty" required placeholder="Contoh: 10" class="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:ring-slate-900 focus:border-slate-900">
                                     <span class="absolute right-3 top-2 text-[11px] font-bold text-slate-400">PCS</span>
@@ -323,23 +326,23 @@
 
                             <!-- 5. Alasan / Catatan Penyesuaian -->
                             <div>
-                                <label class="block font-bold text-slate-700 mb-1">Keterangan / Alasan Penyesuaian <span class="text-rose-500">*</span></label>
-                                <textarea name="notes" rows="2" required placeholder="Contoh: Hasil Stock Opname Fisik Akhir Bulan / Segel kemasan rusak saat bongkar muat..." class="w-full text-xs bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:ring-slate-900 focus:border-slate-900"></textarea>
-                                <p class="text-[10px] text-slate-400 mt-1">Catatan ini akan tersimpan permanen di Kartu Mutasi dan Audit Trail sistem.</p>
+                                <label class="block font-bold text-slate-700 mb-1">Alasan Penyesuaian <span class="text-rose-500">*</span></label>
+                                <textarea name="notes" rows="2" required placeholder="Contoh: Hasil stock opname / kemasan rusak" class="w-full text-xs bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:ring-slate-900 focus:border-slate-900"></textarea>
                             </div>
                         </div>
 
                         <!-- Footer Modal -->
                         <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2.5">
-                            <button type="button" @click="closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+                            <button type="button" @click="closeModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer">
                                 Batal
                             </button>
                             <button type="submit" 
-                                    :disabled="formType === 'MINUS' && formQty > currentStock"
-                                    :class="(formType === 'MINUS' && formQty > currentStock) ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-slate-900 hover:bg-slate-800'"
-                                    class="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-xs transition-all flex items-center gap-1.5">
-                                <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
-                                <span>Simpan & Update Stok</span>
+                                    :disabled="isSubmitting || (formType === 'MINUS' && formQty > currentStock)"
+                                    :class="(isSubmitting || (formType === 'MINUS' && formQty > currentStock)) ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-slate-900 hover:bg-slate-800'"
+                                    class="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                                <i x-show="!isSubmitting" data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                <span x-show="isSubmitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                <span x-text="isSubmitting ? 'Menyimpan...' : 'Simpan Penyesuaian'"></span>
                             </button>
                         </div>
                     </form>
@@ -354,6 +357,7 @@
         function stockAdjustmentApp() {
             return {
                 isModalOpen: false,
+                isSubmitting: false,
                 typeFilter: 'ALL',
                 whFilter: 'ALL',
                 searchQuery: '',
@@ -377,6 +381,7 @@
                 },
 
                 openModal() {
+                    this.isSubmitting = false;
                     this.isModalOpen = true;
                     this.updateCurrentStock();
                     this.$nextTick(() => {
