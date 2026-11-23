@@ -88,7 +88,7 @@ class ReportController extends Controller
 
         $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId, $format, $areaId, $clusterId);
 
-        $formatSuffix = ($reportType === 'PO_GR' && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
+        $formatSuffix = (($reportType === 'PO_GR' || $reportType === 'SM') && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
         $fileName = "Laporan_{$reportType}_{$formatSuffix}_PT_Wahana_Putra_Yudha_" . date('Ymd_His') . ".csv";
 
         $headers = [
@@ -163,7 +163,7 @@ class ReportController extends Controller
             case 'PO_GR':
                 return $this->getPoGrData($start, $end, $tapId, $whId, $format, $areaId, $clusterId);
             case 'SM':
-                return $this->getSmData($start, $end, $whId);
+                return $this->getSmData($start, $end, $tapId, $whId, $format, $areaId, $clusterId);
             case 'REPACK':
                 return $this->getRepackData($start, $end, $whId);
             case 'SALES':
@@ -503,13 +503,35 @@ class ReportController extends Controller
         }
     }
 
-    private function getSmData($start, $end, $whId)
+    private function getSmData($start, $end, $tapId, $whId, $format = 'summary', $areaId = '', $clusterId = '')
     {
         $query = DB::table('stock_movements')
             ->join('warehouses as sw', 'stock_movements.source_warehouse_id', '=', 'sw.id')
             ->join('warehouses as dw', 'stock_movements.destination_warehouse_id', '=', 'dw.id')
+            ->leftJoin('taps as stap', 'sw.tap_id', '=', 'stap.id')
+            ->leftJoin('clusters as scls', 'stap.cluster_id', '=', 'scls.id')
+            ->leftJoin('areas as sar', 'scls.area_id', '=', 'sar.id')
+            ->leftJoin('taps as dtap', 'dw.tap_id', '=', 'dtap.id')
+            ->leftJoin('clusters as dcls', 'dtap.cluster_id', '=', 'dcls.id')
+            ->leftJoin('areas as dar', 'dcls.area_id', '=', 'dar.id')
+            ->leftJoin('users as creator', 'stock_movements.created_by', '=', 'creator.id')
             ->whereBetween('stock_movements.movement_date', [$start, $end])
-            ->select('stock_movements.*', 'sw.name as source_wh', 'dw.name as dest_wh')
+            ->select(
+                'stock_movements.*',
+                'sw.name as source_wh',
+                'sw.code as source_wh_code',
+                'sw.type as source_wh_type',
+                'dw.name as dest_wh',
+                'dw.code as dest_wh_code',
+                'dw.type as dest_wh_type',
+                'stap.name as source_tap_name',
+                'dtap.name as dest_tap_name',
+                'scls.name as source_cluster_name',
+                'dcls.name as dest_cluster_name',
+                'sar.name as source_area_name',
+                'dar.name as dest_area_name',
+                'creator.name as creator_name'
+            )
             ->orderBy('stock_movements.id', 'desc');
 
         $scope = TerritoryScope::for();
@@ -524,7 +546,25 @@ class ReportController extends Controller
             }
         }
 
-        if ($whId !== 'ALL') {
+        if (!empty($areaId)) {
+            $query->where(function ($q) use ($areaId) {
+                $q->where('scls.area_id', $areaId)
+                  ->orWhere('dcls.area_id', $areaId);
+            });
+        }
+        if (!empty($clusterId)) {
+            $query->where(function ($q) use ($clusterId) {
+                $q->where('stap.cluster_id', $clusterId)
+                  ->orWhere('dtap.cluster_id', $clusterId);
+            });
+        }
+        if ($tapId !== 'ALL' && !empty($tapId)) {
+            $query->where(function ($q) use ($tapId) {
+                $q->where('sw.tap_id', $tapId)
+                  ->orWhere('dw.tap_id', $tapId);
+            });
+        }
+        if ($whId !== 'ALL' && !empty($whId)) {
             $query->where(function ($q) use ($whId) {
                 $q->where('stock_movements.source_warehouse_id', $whId)
                   ->orWhere('stock_movements.destination_warehouse_id', $whId);
@@ -538,44 +578,168 @@ class ReportController extends Controller
             $items = DB::table('stock_movement_items')
                 ->join('products', 'stock_movement_items.product_id', '=', 'products.id')
                 ->whereIn('stock_movement_items.stock_movement_id', $smIds)
-                ->select('stock_movement_items.*', 'products.name as product_name', 'products.sku')
+                ->select(
+                    'stock_movement_items.*',
+                    'products.name as product_name',
+                    'products.sku',
+                    'products.type as product_type',
+                    'products.tracking_method'
+                )
                 ->get();
             foreach ($items as $item) {
                 $itemsBySm[$item->stock_movement_id][] = $item;
             }
         }
 
-        $rows = [];
-        $totalPcs = 0;
-        foreach ($records as $r) {
-            $itemList = $itemsBySm[$r->id] ?? [];
-            $itemDesc = collect($itemList)->map(fn($i) => "{$i->sku} ({$i->quantity} pcs)")->implode(', ');
-            $sumQty = collect($itemList)->sum('quantity');
-            $totalPcs += $sumQty;
+        // Attach items and compute total quantity per movement
+        $records = $records->map(function ($sm) use ($itemsBySm) {
+            $sm->items = $itemsBySm[$sm->id] ?? [];
+            $sm->total_qty = collect($sm->items)->sum('quantity');
+            $sm->creator_display = $sm->creator_name ?: 'Petugas Gudang';
+            return $sm;
+        });
 
-            $rows[] = [
-                $r->doc_number,
-                $r->movement_date,
-                $r->source_wh,
-                $r->dest_wh,
-                $itemDesc ?: 'N/A',
-                $sumQty,
-                $r->status,
-                $r->notes ?? '-',
+        $totalPcs = 0;
+        $totalItems = 0;
+        $rows = [];
+
+        if ($format === 'detailed') {
+            // DETAILED (Per Baris Item Produk)
+            $headers = [
+                'No. Dokumen SM',
+                'Tanggal Mutasi',
+                'Jam Transaksi',
+                'Dibuat Oleh',
+                'Gudang Asal',
+                'Tipe Gudang Asal',
+                'Gudang Tujuan',
+                'Tipe Gudang Tujuan',
+                'SKU Produk',
+                'Nama Produk',
+                'Tipe Produk',
+                'Qty Dipindahkan (Pcs)',
+                'Status',
+                'Keterangan / Keperluan',
+            ];
+
+            foreach ($records as $sm) {
+                $items = $sm->items;
+                $formattedTime = $sm->created_at ? date('H:i:s', strtotime($sm->created_at)) : '-';
+
+                if (empty($items)) {
+                    $rows[] = [
+                        $sm->doc_number,
+                        $sm->movement_date,
+                        $formattedTime,
+                        $sm->creator_display,
+                        $sm->source_wh,
+                        $sm->source_wh_type,
+                        $sm->dest_wh,
+                        $sm->dest_wh_type,
+                        '-',
+                        '-',
+                        '-',
+                        0,
+                        $sm->status,
+                        $sm->notes ?? '-',
+                    ];
+                } else {
+                    foreach ($items as $item) {
+                        $qty = (int)$item->quantity;
+                        $totalPcs += $qty;
+                        $totalItems++;
+
+                        $rows[] = [
+                            $sm->doc_number,
+                            $sm->movement_date,
+                            $formattedTime,
+                            $sm->creator_display,
+                            $sm->source_wh,
+                            $sm->source_wh_type,
+                            $sm->dest_wh,
+                            $sm->dest_wh_type,
+                            $item->sku,
+                            $item->product_name,
+                            $item->product_type,
+                            $qty,
+                            $sm->status,
+                            $sm->notes ?? '-',
+                        ];
+                    }
+                }
+            }
+
+            return [
+                'title' => 'Laporan Rincian Transfer & Mutasi Antar Gudang (SM) Detail per Item',
+                'headers' => $headers,
+                'rows' => $rows,
+                'records' => $records,
+                'format' => 'detailed',
+                'summary' => [
+                    'total_records' => count($records),
+                    'total_amount' => $totalPcs,
+                    'total_qty' => $totalPcs,
+                    'total_items_count' => $totalItems,
+                ],
+                'excel_summary' => ['TOTAL RINCIAN MUTASI', '', '', '', '', '', '', '', '', '', '', number_format($totalPcs, 0, ',', '.'), '', ''],
+            ];
+
+        } else {
+            // SUMMARY (Rekap 1 Baris per Dokumen SM)
+            $headers = [
+                'No. Dokumen SM',
+                'Tanggal Mutasi',
+                'Jam Transaksi',
+                'Dibuat Oleh',
+                'Gudang Asal',
+                'Tipe Asal',
+                'Gudang Tujuan',
+                'Tipe Tujuan',
+                'Rincian Item Singkat',
+                'Jumlah Jenis Item',
+                'Total Qty (Pcs)',
+                'Status',
+                'Keterangan / Keperluan',
+            ];
+
+            foreach ($records as $sm) {
+                $itemList = $sm->items;
+                $itemDesc = collect($itemList)->map(fn($i) => "{$i->sku} ({$i->quantity} pcs)")->implode(', ');
+                $sumQty = $sm->total_qty;
+                $totalPcs += $sumQty;
+                $formattedTime = $sm->created_at ? date('H:i:s', strtotime($sm->created_at)) : '-';
+
+                $rows[] = [
+                    $sm->doc_number,
+                    $sm->movement_date,
+                    $formattedTime,
+                    $sm->creator_display,
+                    $sm->source_wh,
+                    $sm->source_wh_type,
+                    $sm->dest_wh,
+                    $sm->dest_wh_type,
+                    $itemDesc ?: 'N/A',
+                    count($itemList),
+                    $sumQty,
+                    $sm->status,
+                    $sm->notes ?? '-',
+                ];
+            }
+
+            return [
+                'title' => 'Laporan Rekapitulasi Transfer & Mutasi Antar Gudang (SM)',
+                'headers' => $headers,
+                'rows' => $rows,
+                'records' => $records,
+                'format' => 'summary',
+                'summary' => [
+                    'total_records' => count($records),
+                    'total_amount' => $totalPcs,
+                    'total_qty' => $totalPcs,
+                ],
+                'excel_summary' => ['TOTAL MUTASI FISIK', '', '', '', '', '', '', '', '', '', number_format($totalPcs, 0, ',', '.'), '', ''],
             ];
         }
-
-        return [
-            'title' => 'Laporan Rekapitulasi Transfer & Mutasi Antar Gudang (SM)',
-            'headers' => ['No. Dokumen SM', 'Tanggal Mutasi', 'Gudang Asal', 'Gudang Tujuan', 'Rincian Produk & SKU', 'Total Qty (Pcs)', 'Status', 'Keterangan'],
-            'records' => $records,
-            'rows' => $rows,
-            'summary' => [
-                'total_records' => count($records),
-                'total_amount' => $totalPcs,
-            ],
-            'excel_summary' => ['TOTAL MUTASI FISIK', '', '', '', '', $totalPcs . ' pcs', '', ''],
-        ];
     }
 
     private function getRepackData($start, $end, $whId)

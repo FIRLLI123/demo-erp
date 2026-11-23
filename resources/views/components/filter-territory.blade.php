@@ -188,6 +188,9 @@
                 @elseif($tab === 'po')
                     <strong class="text-rose-600" x-text="typeof filteredOrders !== 'undefined' ? filteredOrders.length : 0"></strong>
                     <span class="text-slate-400 font-normal"> / <span x-text="typeof allOrders !== 'undefined' ? allOrders.length : 0"></span> data</span>
+                @elseif($tab === 'sm')
+                    <strong class="text-rose-600" x-text="typeof filteredMovements !== 'undefined' ? filteredMovements.length : 0"></strong>
+                    <span class="text-slate-400 font-normal"> / <span x-text="typeof allMovements !== 'undefined' ? allMovements.length : 0"></span> data</span>
                 @else
                     <strong class="text-rose-600" x-text="typeof filteredWarehousesCount !== 'undefined' ? filteredWarehousesCount : 0"></strong>
                     <span class="text-slate-400 font-normal"> / <span x-text="typeof allWarehouses !== 'undefined' ? allWarehouses.length : 0"></span> data</span>

@@ -4,7 +4,10 @@
     <x-slot name="badge">DocType: SM</x-slot>
 
     <div x-data="stockMovementApp()" x-init="initData()">
-        
+
+        <!-- Alert Notification (Inline & Toast Support) -->
+        <x-alert />
+
         <!-- Top Action Bar -->
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -23,11 +26,96 @@
                 </a>
                 <button type="button" 
                         @click="createSmOpen = !createSmOpen" 
-                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
+                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer">
                     <i data-lucide="plus-circle" class="w-4 h-4 text-cyan-400"></i>
-                    <span x-text="createSmOpen ? 'Tutup Form' : '+ Buat SM Baru'"></span>
+                    <span x-text="createSmOpen ? 'Tutup Formulir' : '+ Buat SM Baru'"></span>
                 </button>
             </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- KOMPONEN UI: FILTER CLIENT-SIDE (TANGGAL, WILAYAH & SEARCH)    -->
+        <!-- SAMA SEPERTI DI PO/GR (100% CEPAT TANPA RELOAD HALAMAN)        -->
+        <!-- ============================================================== -->
+        <div class="space-y-3 mb-5">
+            <!-- Filter Tanggal Client-Side -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-2xs">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mr-1">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-rose-600"></i>
+                            <span>Periode Tanggal Mutasi:</span>
+                        </span>
+                        <!-- Preset Tanggal Client-Side -->
+                        <div class="inline-flex items-center p-0.5 bg-slate-100 rounded-xl gap-0.5">
+                            <button type="button"
+                                    @click="setClientDatePreset('all')"
+                                    :class="!startDate && !endDate ? 'bg-slate-900 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Semua
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('today')"
+                                    :class="isPresetActive('today') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Hari Ini
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('7days')"
+                                    :class="isPresetActive('7days') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                7 Hari
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('this_month')"
+                                    :class="isPresetActive('this_month') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Bulan Ini
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Input Tanggal Custom (Client-Side) -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
+                            <span class="text-[11px] text-slate-400 font-semibold">Dari:</span>
+                            <input type="date"
+                                   x-model="startDate"
+                                   @change="syncSelection(); refreshIcons()"
+                                   class="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer">
+                        </div>
+                        <span class="text-slate-300 text-xs">-</span>
+                        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
+                            <span class="text-[11px] text-slate-400 font-semibold">Sampai:</span>
+                            <input type="date"
+                                   x-model="endDate"
+                                   @change="syncSelection(); refreshIcons()"
+                                   class="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer">
+                        </div>
+                        <button type="button"
+                                x-show="startDate || endDate"
+                                @click="setClientDatePreset('all')"
+                                title="Reset Filter Tanggal"
+                                class="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 transition-colors cursor-pointer">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            <span>Reset Tanggal</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Wilayah & Search (Sinkron Client-Side dengan x-filter-territory) -->
+            <x-filter-territory
+                tab="sm"
+                :show-area="true"
+                :show-cluster="true"
+                :show-tap="true"
+                :show-search="true"
+                model-search="searchQuery"
+                search-placeholder="Cari No. SM, Gudang Asal, Gudang Tujuan, Catatan, Petugas..."
+                :areas="$areas"
+                :clusters="$clusters"
+                :taps="$taps" />
         </div>
 
         <!-- ============================================== -->
@@ -37,119 +125,168 @@
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
                 <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                     <i data-lucide="arrow-right-left" class="w-4 h-4 text-cyan-600"></i>
-                    <span>Formulir Stock Movement (SM)</span>
+                    <span>Formulir Stock Movement (SM) Baru</span>
                 </h3>
-                <button @click="createSmOpen = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+                <button @click="createSmOpen = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
             <form method="POST" action="{{ route('stock-movement.store') }}" 
                   enctype="multipart/form-data"
+                  @submit="isSubmitting = true"
                   data-loading-title="Memproses Transfer Stok"
                   data-loading-sub="Memindahkan saldo & update serial ICCID antar gudang..."
                   data-doctype="SM">
                 @csrf
 
-                <!-- Header Info -->
+                <!-- Header Info (Rute & Tanggal) -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Gudang Asal (Source)</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Gudang Asal (Source) <span class="text-rose-500">*</span></label>
                         <select name="source_warehouse_id" 
                                 x-model="sourceWhId" 
                                 @change="onWarehouseChange()"
                                 required 
-                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/20">
+                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 cursor-pointer shadow-2xs">
                             <option value="">-- Pilih Gudang Asal --</option>
                             @foreach($warehouses as $wh)
                                 <option value="{{ $wh->id }}">
-                                    [{{ $wh->type }}] {{ $wh->name }}
+                                    [{{ $wh->type }}] {{ $wh->name }} ({{ $wh->tap_name }})
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Gudang Tujuan (Destination)</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Gudang Tujuan (Destination) <span class="text-rose-500">*</span></label>
                         <select name="destination_warehouse_id" 
                                 x-model="destWhId" 
                                 required 
-                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/20">
+                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 cursor-pointer shadow-2xs">
                             <option value="">-- Pilih Gudang Tujuan --</option>
                             @foreach($warehouses as $wh)
                                 <option value="{{ $wh->id }}" :disabled="destWhId == {{ $wh->id }} && sourceWhId == {{ $wh->id }}">
-                                    [{{ $wh->type }}] {{ $wh->name }}
+                                    [{{ $wh->type }}] {{ $wh->name }} ({{ $wh->tap_name }})
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Mutasi</label>
-                        <input type="date" name="movement_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Mutasi <span class="text-rose-500">*</span></label>
+                        <input type="date" name="movement_date" value="{{ date('Y-m-d') }}" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-cyan-500 shadow-2xs">
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Keperluan / Catatan</label>
-                        <input type="text" name="notes" placeholder="Contoh: Alokasi kanvas harian" value="Transfer Stok Antar Gudang" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                        <input type="text" name="notes" placeholder="Contoh: Alokasi kanvas harian, dropping stok" value="Transfer Stok Antar Gudang" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-cyan-500 shadow-2xs">
                     </div>
                 </div>
 
-                <!-- Multi-Item Rows Table -->
+                <!-- Multi-Item Rows Table (Daftar Barang yang Dipindahkan) -->
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-xs font-bold text-slate-800">Daftar Barang yang Dipindahkan</label>
-                        <button type="button" @click="addItemRow()" class="text-xs font-bold text-cyan-700 hover:text-cyan-800 flex items-center gap-1">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Baris
+                        <button type="button" @click="addItemRow()" class="text-xs font-bold text-cyan-700 hover:text-cyan-800 flex items-center gap-1 cursor-pointer">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Baris Produk
                         </button>
                     </div>
 
                     <div class="space-y-3">
                         <template x-for="(row, index) in items" :key="index">
-                            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
+                            <div class="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70">
                                 <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
                                     
-                                    <!-- Produk -->
-                                    <div class="md:col-span-5">
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Produk</label>
-                                        <select :name="`items[${index}][product_id]`" 
-                                                x-model="row.product_id" 
-                                                @change="updateProductRow(index)"
-                                                required 
-                                                class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
-                                            <option value="">-- Pilih Produk --</option>
-                                            @foreach($products as $p)
-                                                <option value="{{ $p->id }}" 
-                                                        data-sku="{{ $p->sku }}" 
-                                                        data-tracking="{{ $p->tracking_method }}" 
-                                                        data-type="{{ $p->type }}">
-                                                    [{{ $p->type }}] {{ $p->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
+                                    <!-- 1. SEARCHABLE SPINNER PRODUK -->
+                                    <div class="{{ $iccidEnabled ? 'md:col-span-5' : 'md:col-span-6' }}">
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1 flex items-center justify-between">
+                                            <span>Produk</span>
+                                            <span class="text-[10px] text-slate-400 font-normal">Ketik SKU / Nama</span>
+                                        </label>
+                                        <input type="hidden" :name="`items[${index}][product_id]`" :value="row.product_id" required>
 
-                                    <!-- Tracking Info -->
-                                    <div class="md:col-span-2">
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Tracking</label>
-                                        <span class="inline-block px-2 py-1 rounded text-[11px] font-bold font-mono"
-                                              :class="row.tracking_method === 'ICCID' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'"
-                                              x-text="row.tracking_method || '-'">
-                                        </span>
-                                    </div>
+                                        <div class="relative" @click.outside="row.dropdownOpen = false">
+                                            <div class="relative flex items-center">
+                                                <input type="text"
+                                                       x-model="row.searchText"
+                                                       @focus="row.dropdownOpen = true"
+                                                       @input="row.dropdownOpen = true"
+                                                       placeholder="Ketik cari SKU atau nama produk..."
+                                                       class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:border-cyan-500 shadow-2xs cursor-pointer">
+                                                <button type="button"
+                                                        x-show="row.product_id"
+                                                        @click="clearProductRow(index)"
+                                                        class="absolute right-2 text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
+                                                        title="Ganti produk">
+                                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                            </div>
 
-                                    <!-- Stok Gudang Asal -->
-                                    <div class="md:col-span-2">
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Stok Asal</label>
-                                        <div class="text-xs font-mono font-bold"
-                                             :class="getAvailableStock(row.product_id) > 0 ? 'text-emerald-700' : 'text-slate-400'">
-                                            <span x-text="getAvailableStock(row.product_id)"></span> pcs
+                                            <!-- Dropdown Hasil Pencarian Produk -->
+                                            <div x-show="row.dropdownOpen"
+                                                 x-cloak
+                                                 class="absolute z-50 left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl divide-y divide-slate-100">
+                                                <template x-for="prod in filterProducts(row.searchText)" :key="prod.id">
+                                                    <button type="button"
+                                                            @click="selectProduct(index, prod)"
+                                                            class="w-full text-left px-3 py-2 hover:bg-cyan-50/70 flex items-center justify-between gap-2 transition-colors cursor-pointer"
+                                                            :class="String(row.product_id) === String(prod.id) ? 'bg-cyan-50 font-bold text-cyan-900' : 'text-slate-800'">
+                                                        <div>
+                                                            <div class="flex items-center gap-1.5">
+                                                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                                                                      :class="prod.type === 'SA' ? 'bg-rose-100 text-rose-700' : (prod.type === 'VOUCHER' ? 'bg-indigo-100 text-indigo-700' : 'bg-cyan-100 text-cyan-700')"
+                                                                      x-text="prod.type"></span>
+                                                                <span class="text-xs font-bold" x-text="prod.name"></span>
+                                                            </div>
+                                                            <div class="text-[10px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                                                                <span x-text="prod.sku"></span>
+                                                                @if($iccidEnabled)
+                                                                    <span>&bull;</span>
+                                                                    <span x-text="'Tracking: ' + prod.tracking_method"></span>
+                                                                @endif
+                                                                <template x-if="sourceWhId">
+                                                                    <span class="text-emerald-600 font-semibold" x-text="'• Stok Tersedia: ' + getAvailableStock(prod.id) + ' pcs'"></span>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                        <svg x-show="String(row.product_id) === String(prod.id)" class="w-4 h-4 text-cyan-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    </button>
+                                                </template>
+                                                <div x-show="filterProducts(row.searchText).length === 0" class="px-3 py-3 text-center text-slate-400 text-xs italic">
+                                                    Produk tidak ditemukan.
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <!-- Quantity Input for Non-ICCID / Auto Unit Display for ICCID -->
+                                    @if($iccidEnabled)
+                                    <!-- 2. TRACKING INFO (Hanya Jika Feature Flag Aktif) -->
                                     <div class="md:col-span-2">
-                                        <template x-if="row.tracking_method === 'QUANTITY'">
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Tracking</label>
+                                        <div class="py-2">
+                                            <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold font-mono"
+                                                  :class="row.tracking_method === 'ICCID' ? 'bg-purple-100 text-purple-700 border border-purple-200' : (row.tracking_method === 'QUANTITY' ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200')"
+                                                  x-text="row.tracking_method || '-'">
+                                            </span>
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    <!-- 3. STOK GUDANG ASAL -->
+                                    <div class="{{ $iccidEnabled ? 'md:col-span-2' : 'md:col-span-3' }}">
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Stok Gudang Asal</label>
+                                        <div class="py-1.5 text-xs font-mono font-bold"
+                                             :class="getAvailableStock(row.product_id) > 0 ? 'text-emerald-700' : 'text-slate-400'">
+                                            <span x-text="getAvailableStock(row.product_id).toLocaleString('id-ID')"></span> pcs
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. QUANTITY INPUT -->
+                                    <div class="md:col-span-2">
+                                        <template x-if="!iccidEnabled || row.tracking_method === 'QUANTITY'">
                                             <div>
                                                 <label class="block text-[11px] font-bold text-slate-600 mb-1">Qty Pindah</label>
                                                 <input type="number" 
@@ -158,11 +295,11 @@
                                                        min="1" 
                                                        :max="getAvailableStock(row.product_id)" 
                                                        required 
-                                                       class="w-full text-xs font-bold text-center bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                                                       class="w-full text-xs font-bold text-center bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500 shadow-2xs">
                                             </div>
                                         </template>
 
-                                        <template x-if="row.tracking_method === 'ICCID'">
+                                        <template x-if="iccidEnabled && row.tracking_method === 'ICCID'">
                                             <div>
                                                 <label class="block text-[11px] font-bold text-purple-700 mb-1">Total Unit (Otomatis)</label>
                                                 <div class="py-1.5 px-2 bg-purple-50 text-purple-700 font-mono font-bold text-xs text-center rounded-lg border border-purple-200">
@@ -172,7 +309,7 @@
                                             </div>
                                         </template>
 
-                                        <template x-if="!row.tracking_method">
+                                        <template x-if="iccidEnabled && !row.tracking_method">
                                             <div>
                                                 <label class="block text-[11px] font-bold text-slate-400 mb-1">Qty</label>
                                                 <div class="py-1.5 px-2 bg-slate-100 text-slate-400 font-mono text-xs text-center rounded-lg">-</div>
@@ -180,37 +317,38 @@
                                         </template>
                                     </div>
 
-                                    <!-- Delete Button -->
+                                    <!-- 5. HAPUS BARIS -->
                                     <div class="md:col-span-1 pt-6 text-center">
-                                        <button type="button" @click="removeItemRow(index)" class="text-slate-400 hover:text-rose-600 transition-colors p-1" x-show="items.length > 1">
+                                        <button type="button" @click="removeItemRow(index)" class="text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer" x-show="items.length > 1" title="Hapus baris">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
                                 </div>
 
-                                <!-- SUB-SECTION: ICCID SELECTION IF PRODUCT IS ICCID -->
+                                @if($iccidEnabled)
+                                <!-- SUB-SECTION: ICCID SELECTION JIKA PRODUK BER-ICCID -->
                                 <template x-if="row.tracking_method === 'ICCID' && row.product_id && sourceWhId">
-                                    <div class="mt-3 pt-3 border-t border-slate-200/80 bg-white rounded-lg p-3">
+                                    <div class="mt-3 pt-3 border-t border-slate-200 bg-white rounded-lg p-3">
                                         <div class="flex items-center justify-between mb-2">
                                             <div class="flex items-center gap-2">
-                                                <span class="text-[11px] font-bold text-slate-700">Metode Input ICCID:</span>
+                                                <span class="text-[11px] font-bold text-slate-700">Metode Input Serial ICCID:</span>
                                                 <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100 text-[10px] font-bold">
                                                     <button type="button" 
                                                             @click="row.iccid_mode = 'SELECT'" 
                                                             :class="row.iccid_mode === 'SELECT' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" 
-                                                            class="px-2 py-0.5 rounded-md transition-all">
+                                                            class="px-2 py-0.5 rounded-md transition-all cursor-pointer">
                                                         1. Pilih dari Stok (<span x-text="getIccidsForProduct(row.product_id).length"></span>)
                                                     </button>
                                                     <button type="button" 
                                                             @click="row.iccid_mode = 'PASTE'" 
                                                             :class="row.iccid_mode === 'PASTE' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" 
-                                                            class="px-2 py-0.5 rounded-md transition-all">
+                                                            class="px-2 py-0.5 rounded-md transition-all cursor-pointer">
                                                         2. Paste Serial
                                                     </button>
                                                     <button type="button" 
                                                             @click="row.iccid_mode = 'UPLOAD'" 
                                                             :class="row.iccid_mode === 'UPLOAD' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" 
-                                                            class="px-2 py-0.5 rounded-md transition-all">
+                                                            class="px-2 py-0.5 rounded-md transition-all cursor-pointer">
                                                         3. Upload CSV
                                                     </button>
                                                 </div>
@@ -230,9 +368,9 @@
                                             <div class="flex items-center justify-between mb-1.5 text-[11px]">
                                                 <span class="text-slate-500">Centang nomor serial yang akan dipindahkan:</span>
                                                 <div class="flex items-center gap-2">
-                                                    <button type="button" @click="selectAllIccids(index)" class="text-cyan-600 font-bold hover:underline">Pilih Semua</button>
+                                                    <button type="button" @click="selectAllIccids(index)" class="text-cyan-600 font-bold hover:underline cursor-pointer">Pilih Semua</button>
                                                     <span>&bull;</span>
-                                                    <button type="button" @click="row.selected_iccids = []" class="text-slate-400 font-bold hover:underline">Reset</button>
+                                                    <button type="button" @click="row.selected_iccids = []" class="text-slate-400 font-bold hover:underline cursor-pointer">Reset</button>
                                                 </div>
                                             </div>
 
@@ -249,7 +387,7 @@
                                                 </template>
                                                 <template x-if="getIccidsForProduct(row.product_id).length === 0">
                                                     <div class="col-span-full py-2 text-center text-slate-400 text-xs">
-                                                        Tidak ada ICCID berstatus AVAILABLE di gudang asal ini.
+                                                        Tidak ada nomor ICCID berstatus AVAILABLE di gudang asal ini.
                                                     </div>
                                                 </template>
                                             </div>
@@ -282,28 +420,37 @@
 
                                     </div>
                                 </template>
+                                @endif
 
                             </div>
                         </template>
                     </div>
                 </div>
 
+                <!-- Footer Form & Submit Actions -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
                     <div class="flex items-center gap-2">
                         <span class="text-xs font-bold text-slate-500 uppercase">Total Pemindahan:</span>
                         <span class="text-sm font-extrabold text-slate-900 font-mono">
                             <span x-text="totalQty.toLocaleString('id-ID')"></span> pcs
                         </span>
-                        <span class="text-xs text-slate-400 font-medium">(<span x-text="items.length"></span> produk)</span>
+                        <span class="text-xs text-slate-400 font-medium">(<span x-text="items.length"></span> jenis barang)</span>
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <button type="button" @click="createSmOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                        <button type="button" @click="createSmOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">
                             Batal
                         </button>
-                        <button type="submit" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
-                            <i data-lucide="check" class="w-4 h-4 text-cyan-400"></i>
-                            <span>Proses Transfer SM</span>
+                        <button type="submit" 
+                                :disabled="isSubmitting"
+                                class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer">
+                            <template x-if="isSubmitting">
+                                <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-cyan-400"></i>
+                            </template>
+                            <template x-if="!isSubmitting">
+                                <i data-lucide="check" class="w-4 h-4 text-cyan-400"></i>
+                            </template>
+                            <span x-text="isSubmitting ? 'Memproses Transfer...' : 'Proses Transfer SM'"></span>
                         </button>
                     </div>
                 </div>
@@ -314,13 +461,14 @@
         <!-- BAGIAN 1: HEADER TABLE (DAFTAR DOKUMEN SM)     -->
         <!-- ============================================== -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
-            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                    <span>Daftar Stock Movement (SM)</span>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 text-slate-700">
-                        {{ count($movements) }} Dokumen
-                    </span>
-                </h3>
+            <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+                <div class="flex items-center gap-2.5">
+                    <h3 class="font-extrabold text-slate-900 text-xs flex items-center gap-2">
+                        <i data-lucide="arrow-right-left" class="w-4 h-4 text-cyan-700"></i>
+                        <span>Daftar Stock Movement (SM)</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold font-mono" x-text="filteredMovements.length + ' data'"></span>
+                    </h3>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -328,7 +476,8 @@
                     <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
                         <tr>
                             <th class="py-3 px-4">No. Dokumen SM</th>
-                            <th class="py-3 px-4">Tanggal</th>
+                            <th class="py-3 px-4">Tanggal & Jam</th>
+                            <th class="py-3 px-4">Dibuat Oleh</th>
                             <th class="py-3 px-4">Rute Gudang (Asal &rarr; Tujuan)</th>
                             <th class="py-3 px-4">Catatan</th>
                             <th class="py-3 px-4 text-center">Total Item</th>
@@ -338,76 +487,79 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 font-medium">
-                        @forelse($movements as $sm)
-                            <tr @click="selectSm({{ json_encode($sm) }})"
+                        <template x-for="sm in filteredMovements" :key="sm.id">
+                            <tr @click="selectSm(sm)"
                                 class="cursor-pointer transition-colors"
-                                :class="selectedSm && selectedSm.id === {{ $sm->id }} ? 'bg-cyan-50/80 border-l-4 border-cyan-600' : 'hover:bg-slate-50/70'">
+                                :class="selectedSm && selectedSm.id === sm.id ? 'bg-cyan-50/80 border-l-4 border-cyan-600' : 'hover:bg-slate-50/70'">
                                 
                                 <td class="py-3.5 px-4 font-mono font-extrabold text-slate-900">
                                     <div class="flex items-center gap-1.5">
                                         <span class="px-1.5 py-0.5 rounded text-[10px] bg-cyan-700 text-white font-mono font-bold">SM</span>
-                                        <span>{{ $sm->doc_number }}</span>
+                                        <span x-text="sm.doc_number"></span>
                                     </div>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-slate-600">
-                                    {{ date('d M Y', strtotime($sm->movement_date)) }}
+                                    <div class="font-bold text-slate-800" x-text="sm.movement_date"></div>
+                                    <div class="text-[10px] text-slate-400 font-mono" x-text="sm.created_at ? sm.created_at.substring(11, 16) + ' WIB' : ''"></div>
+                                </td>
+
+                                <td class="py-3.5 px-4">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold"
+                                             x-text="(sm.creator_name || 'S').substring(0, 1).toUpperCase()">
+                                        </div>
+                                        <span class="text-xs font-semibold text-slate-800" x-text="sm.creator_name || 'Petugas Gudang'"></span>
+                                    </div>
                                 </td>
 
                                 <td class="py-3.5 px-4">
                                     <div class="flex items-center gap-2">
-                                        <span class="font-bold text-slate-800">{{ $sm->source_wh_name }}</span>
+                                        <span class="font-bold text-slate-800" x-text="sm.source_wh_name"></span>
                                         <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                                        <span class="font-bold text-cyan-800">{{ $sm->dest_wh_name }}</span>
+                                        <span class="font-bold text-cyan-800" x-text="sm.dest_wh_name"></span>
                                     </div>
-                                    <div class="text-[10px] text-slate-400 font-mono mt-0.5">
-                                        {{ $sm->source_wh_type }} &rarr; {{ $sm->dest_wh_type }}
-                                    </div>
+                                    <div class="text-[10px] text-slate-400 font-mono mt-0.5" x-text="sm.source_wh_type + ' → ' + sm.dest_wh_type"></div>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-slate-600 max-w-[170px]">
-                                    @if(!empty($sm->notes))
-                                        <span class="text-[11px] font-medium text-slate-700 block truncate" title="{{ $sm->notes }}">
-                                            {{ $sm->notes }}
-                                        </span>
-                                    @else
-                                        <span class="text-slate-400 font-mono text-xs">-</span>
-                                    @endif
+                                    <span class="text-[11px] font-medium text-slate-700 block truncate" :title="sm.notes" x-text="sm.notes || '-'"></span>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-center font-bold text-slate-700">
-                                    {{ count($sm->items) }}
+                                    <span x-text="(sm.items ? sm.items.length : 0) + ' jenis'"></span>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-center font-mono font-bold text-slate-900">
-                                    {{ number_format($sm->total_qty) }} pcs
+                                    <span x-text="Number(sm.total_qty || 0).toLocaleString('id-ID') + ' pcs'"></span>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-center">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        {{ $sm->status }}
-                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" x-text="sm.status"></span>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-center">
                                     <button type="button" 
-                                            class="px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-xs mx-auto"
-                                            :class="selectedSm && selectedSm.id === {{ $sm->id }} 
+                                            class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-xs mx-auto cursor-pointer"
+                                            :class="selectedSm && selectedSm.id === sm.id 
                                                 ? 'bg-cyan-700 text-white' 
                                                 : 'bg-slate-100 hover:bg-slate-200 text-slate-600'">
-                                        <span x-text="selectedSm && selectedSm.id === {{ $sm->id }} ? 'Aktif' : 'Detail'"></span>
+                                        <span x-text="selectedSm && selectedSm.id === sm.id ? 'Aktif' : 'Detail'"></span>
                                         <i data-lucide="chevron-down" class="w-3 h-3 transition-transform" 
-                                           :class="selectedSm && selectedSm.id === {{ $sm->id }} ? 'rotate-180 text-white' : 'text-slate-400'"></i>
+                                           :class="selectedSm && selectedSm.id === sm.id ? 'rotate-180 text-white' : 'text-slate-400'"></i>
                                     </button>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="py-8 text-center text-slate-400">
-                                    Belum ada transaksi Stock Movement. Klik "+ Buat SM Baru" untuk memulai transfer stok.
-                                </td>
-                            </tr>
-                        @endforelse
+                        </template>
+
+                        <tr x-show="filteredMovements.length === 0" x-cloak>
+                            <td colspan="9" class="py-10 text-center text-slate-400">
+                                <div class="flex flex-col items-center justify-center gap-2">
+                                    <i data-lucide="inbox" class="w-8 h-8 text-slate-300"></i>
+                                    <span>Tidak ada transaksi Stock Movement pada periode dan filter yang dipilih.</span>
+                                </div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -416,7 +568,7 @@
         <!-- ============================================== -->
         <!-- BAGIAN 2: DETAIL PANEL INLINE (DI BAWAH TABEL) -->
         <!-- ============================================== -->
-        <div x-show="selectedSm" x-cloak class="scroll-mt-4" id="detailSection">
+        <div x-show="selectedSm" x-cloak class="scroll-mt-4 mb-8" id="detailSection">
             <div class="rounded-2xl border-2 border-slate-300 shadow-lg overflow-hidden bg-white">
                 
                 <!-- Distinct Dark Header Strip for Detail Panel -->
@@ -425,17 +577,24 @@
                         <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-cyan-500 text-slate-950 shadow-sm">
                             DETAIL SM
                         </span>
-                        <h4 class="text-base font-extrabold text-white tracking-tight" x-text="selectedSm ? selectedSm.doc_number : ''"></h4>
+                        <div>
+                            <h4 class="text-base font-extrabold text-white tracking-tight" x-text="selectedSm ? selectedSm.doc_number : ''"></h4>
+                            <p class="text-[11px] text-slate-400 font-mono mt-0.5">
+                                <span x-text="selectedSm ? 'Dibuat: ' + (selectedSm.creator_name || 'Petugas Gudang') : ''"></span>
+                                <span>&bull;</span>
+                                <span x-text="selectedSm ? selectedSm.movement_date : ''"></span>
+                            </p>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-3 text-xs">
-                        <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                        <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
                             <span class="text-slate-400">Rute:</span>
                             <span class="font-bold text-white">
                                 <span x-text="selectedSm ? selectedSm.source_wh_name : ''"></span> &rarr; <span x-text="selectedSm ? selectedSm.dest_wh_name : ''"></span>
                             </span>
                         </div>
-                        <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                        <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
                             <span class="text-slate-400">Status:</span>
                             <span class="font-bold px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
                                   x-text="selectedSm ? selectedSm.status : ''"></span>
@@ -464,7 +623,9 @@
                                     <tr>
                                         <th class="py-2.5 px-4">Produk</th>
                                         <th class="py-2.5 px-4">Tipe</th>
-                                        <th class="py-2.5 px-4">Tracking</th>
+                                        @if($iccidEnabled)
+                                            <th class="py-2.5 px-4">Tracking</th>
+                                        @endif
                                         <th class="py-2.5 px-4 text-center">Kuantitas Dipindahkan</th>
                                     </tr>
                                 </thead>
@@ -481,12 +642,14 @@
                                                       x-text="item.product_type">
                                                 </span>
                                             </td>
+                                            @if($iccidEnabled)
                                             <td class="py-3 px-4 font-mono text-[11px] font-bold"
                                                 :class="item.tracking_method === 'ICCID' ? 'text-purple-700' : 'text-blue-700'"
                                                 x-text="item.tracking_method">
                                             </td>
+                                            @endif
                                             <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">
-                                                <span x-text="item.quantity.toLocaleString('id-ID')"></span> pcs
+                                                <span x-text="Number(item.quantity || 0).toLocaleString('id-ID') + ' pcs'"></span>
                                             </td>
                                         </tr>
                                     </template>
@@ -495,6 +658,7 @@
                         </div>
                     </div>
 
+                    @if($iccidEnabled)
                     <!-- Accordion ICCID Units jika ada yang dipindahkan -->
                     <template x-if="selectedSm && selectedSm.iccids && selectedSm.iccids.length > 0">
                         <div class="mt-4 p-4 rounded-xl bg-purple-50/70 border border-purple-200/80">
@@ -513,6 +677,7 @@
                             </div>
                         </div>
                     </template>
+                    @endif
 
                     <!-- Status Banner -->
                     <div class="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs text-slate-700">
@@ -534,21 +699,262 @@
         function stockMovementApp() {
             return {
                 createSmOpen: false,
+                isSubmitting: false,
+                iccidEnabled: {{ $iccidEnabled ? 'true' : 'false' }},
                 selectedSm: null,
                 sourceWhId: '',
                 destWhId: '',
-                stockBalances: @json($stockBalances),
-                availableIccids: @json($availableIccids),
+
+                // Master Data
+                allMovements: @json($movements ?? []),
+                allAreas: @json($areas ?? []),
+                allClusters: @json($clusters ?? []),
+                allTaps: @json($taps ?? []),
+                allProducts: @json($products ?? []),
+                stockBalances: @json($stockBalances ?? []),
+                availableIccids: @json($availableIccids ?? []),
+
+                // Filter States (Client-Side)
+                startDate: '',
+                endDate: '',
+                selectedArea: '',
+                selectedCluster: '',
+                selectedTap: '',
+                searchQuery: '',
+
                 items: [
                     { 
                         product_id: '', 
-                        tracking_method: '', 
+                        searchText: '',
+                        dropdownOpen: false,
+                        tracking_method: 'QUANTITY', 
                         quantity: 10, 
                         iccid_mode: 'SELECT',
                         selected_iccids: [],
                         iccid_text: ''
                     }
                 ],
+
+                initData() {
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                // Preset Tanggal Client-Side (Tanpa Reload Form)
+                setClientDatePreset(type) {
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+                    if (type === 'all') {
+                        this.startDate = '';
+                        this.endDate = '';
+                    } else if (type === 'today') {
+                        const todayStr = fmt(now);
+                        this.startDate = todayStr;
+                        this.endDate = todayStr;
+                    } else if (type === '7days') {
+                        const past = new Date();
+                        past.setDate(past.getDate() - 6);
+                        this.startDate = fmt(past);
+                        this.endDate = fmt(now);
+                    } else if (type === 'this_month') {
+                        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        this.startDate = fmt(firstDay);
+                        this.endDate = fmt(lastDay);
+                    }
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                isPresetActive(type) {
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                    if (type === 'today') {
+                        const todayStr = fmt(now);
+                        return this.startDate === todayStr && this.endDate === todayStr;
+                    }
+                    if (type === '7days') {
+                        const past = new Date();
+                        past.setDate(past.getDate() - 6);
+                        return this.startDate === fmt(past) && this.endDate === fmt(now);
+                    }
+                    if (type === 'this_month') {
+                        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        return this.startDate === fmt(firstDay) && this.endDate === fmt(lastDay);
+                    }
+                    return false;
+                },
+
+                get clusterOptions() {
+                    if (!this.selectedArea) return this.allClusters;
+                    var self = this;
+                    return this.allClusters.filter(function(c) {
+                        return String(c.area_id) === String(self.selectedArea);
+                    });
+                },
+
+                get tapOptions() {
+                    var self = this;
+                    if (this.selectedCluster) {
+                        return this.allTaps.filter(function(t) {
+                            return String(t.cluster_id) === String(self.selectedCluster);
+                        });
+                    }
+                    if (this.selectedArea) {
+                        return this.allTaps.filter(function(t) {
+                            return String(t.area_id) === String(self.selectedArea);
+                        });
+                    }
+                    return this.allTaps;
+                },
+
+                onAreaChange() {
+                    this.selectedCluster = '';
+                    this.selectedTap = '';
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                onClusterChange() {
+                    this.selectedTap = '';
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                onTapChange() {
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                onSearchChange() {
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                onSearchClear() {
+                    this.searchQuery = '';
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                hasActiveFilter() {
+                    return Boolean(this.selectedArea || this.selectedCluster || this.selectedTap || this.searchQuery || this.startDate || this.endDate);
+                },
+
+                resetFilter() {
+                    this.selectedArea = '';
+                    this.selectedCluster = '';
+                    this.selectedTap = '';
+                    this.searchQuery = '';
+                    this.startDate = '';
+                    this.endDate = '';
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                isMovementVisible(sm) {
+                    if (this.selectedArea) {
+                        const srcMatch = sm.source_area_id && String(sm.source_area_id) === String(this.selectedArea);
+                        const dstMatch = sm.dest_area_id && String(sm.dest_area_id) === String(this.selectedArea);
+                        if (!srcMatch && !dstMatch) return false;
+                    }
+                    if (this.selectedCluster) {
+                        const srcMatch = sm.source_cluster_id && String(sm.source_cluster_id) === String(this.selectedCluster);
+                        const dstMatch = sm.dest_cluster_id && String(sm.dest_cluster_id) === String(this.selectedCluster);
+                        if (!srcMatch && !dstMatch) return false;
+                    }
+                    if (this.selectedTap) {
+                        const srcMatch = sm.source_tap_id && String(sm.source_tap_id) === String(this.selectedTap);
+                        const dstMatch = sm.dest_tap_id && String(sm.dest_tap_id) === String(this.selectedTap);
+                        if (!srcMatch && !dstMatch) return false;
+                    }
+
+                    if (this.startDate) {
+                        const smDate = sm.movement_date ? String(sm.movement_date).substring(0, 10) : '';
+                        if (smDate && smDate < this.startDate) return false;
+                    }
+                    if (this.endDate) {
+                        const smDate = sm.movement_date ? String(sm.movement_date).substring(0, 10) : '';
+                        if (smDate && smDate > this.endDate) return false;
+                    }
+
+                    if (this.searchQuery) {
+                        const q = this.searchQuery.toLowerCase().trim();
+                        const docMatch = sm.doc_number && sm.doc_number.toLowerCase().includes(q);
+                        const srcMatch = sm.source_wh_name && sm.source_wh_name.toLowerCase().includes(q);
+                        const dstMatch = sm.dest_wh_name && sm.dest_wh_name.toLowerCase().includes(q);
+                        const creatorMatch = sm.creator_name && sm.creator_name.toLowerCase().includes(q);
+                        const notesMatch = sm.notes && sm.notes.toLowerCase().includes(q);
+                        const itemsMatch = sm.items && sm.items.some(function(it) {
+                            return (it.product_name && it.product_name.toLowerCase().includes(q)) || 
+                                   (it.sku && it.sku.toLowerCase().includes(q));
+                        });
+                        if (!docMatch && !srcMatch && !dstMatch && !creatorMatch && !notesMatch && !itemsMatch) return false;
+                    }
+                    return true;
+                },
+
+                get filteredMovements() {
+                    var self = this;
+                    return this.allMovements.filter(function(sm) {
+                        return self.isMovementVisible(sm);
+                    });
+                },
+
+                syncSelection() {
+                    if (this.selectedSm) {
+                        var self = this;
+                        const stillVisible = this.filteredMovements.some(function(sm) {
+                            return sm.id === self.selectedSm.id;
+                        });
+                        if (!stillVisible) {
+                            this.selectedSm = this.filteredMovements.length > 0 ? this.filteredMovements[0] : null;
+                        }
+                    } else if (this.filteredMovements.length > 0) {
+                        this.selectedSm = this.filteredMovements[0];
+                    }
+                },
+
+                refreshIcons() {
+                    this.$nextTick(() => {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                },
+
+                filterProducts(q) {
+                    if (!q) return this.allProducts.slice(0, 30);
+                    const query = q.toLowerCase().trim();
+                    return this.allProducts.filter(function(p) {
+                        const name = (p.name || '').toLowerCase();
+                        const sku = (p.sku || '').toLowerCase();
+                        const type = (p.type || '').toLowerCase();
+                        return name.includes(query) || sku.includes(query) || type.includes(query);
+                    }).slice(0, 30);
+                },
+
+                selectProduct(index, prod) {
+                    this.items[index].product_id = prod.id;
+                    this.items[index].searchText = `[${prod.sku}] ${prod.name}`;
+                    this.items[index].tracking_method = this.iccidEnabled ? (prod.tracking_method || 'QUANTITY') : 'QUANTITY';
+                    this.items[index].selected_iccids = [];
+                    this.items[index].iccid_text = '';
+                    this.items[index].dropdownOpen = false;
+
+                    this.refreshIcons();
+                },
+
+                clearProductRow(index) {
+                    this.items[index].product_id = '';
+                    this.items[index].searchText = '';
+                    this.items[index].tracking_method = '';
+                    this.items[index].selected_iccids = [];
+                    this.items[index].iccid_text = '';
+                    this.items[index].dropdownOpen = true;
+                },
 
                 getIccidCount(row) {
                     if (row.iccid_mode === 'SELECT') {
@@ -562,47 +968,36 @@
                 },
 
                 get totalQty() {
-                    return this.items.reduce((acc, row) => {
+                    var self = this;
+                    return this.items.reduce(function(acc, row) {
                         if (row.tracking_method === 'ICCID') {
-                            return acc + (parseInt(this.getIccidCount(row)) || 0);
+                            return acc + (parseInt(self.getIccidCount(row)) || 0);
                         }
                         return acc + (parseInt(row.quantity) || 0);
                     }, 0);
                 },
 
-                initData() {
-                    const first = @json($movements->first());
-                    if (first) {
-                        this.selectedSm = first;
-                    }
-                    this.$nextTick(() => {
-                        lucide.createIcons();
-                    });
-                },
-
                 selectSm(sm) {
                     this.selectedSm = sm;
-                    this.$nextTick(() => {
-                        lucide.createIcons();
-                        const el = document.getElementById('detailSection');
-                        if (el) {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    });
+                    this.refreshIcons();
+                    const el = document.getElementById('detailSection');
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
                 },
 
                 addItemRow() {
                     this.items.push({
                         product_id: '',
-                        tracking_method: '',
+                        searchText: '',
+                        dropdownOpen: false,
+                        tracking_method: 'QUANTITY',
                         quantity: 10,
                         iccid_mode: 'SELECT',
                         selected_iccids: [],
                         iccid_text: ''
                     });
-                    this.$nextTick(() => {
-                        lucide.createIcons();
-                    });
+                    this.refreshIcons();
                 },
 
                 removeItemRow(index) {
@@ -612,51 +1007,46 @@
                 },
 
                 onWarehouseChange() {
-                    this.items.forEach((row, idx) => {
+                    this.items.forEach(function(row) {
                         row.selected_iccids = [];
                         row.iccid_text = '';
                     });
                 },
 
-                updateProductRow(index) {
-                    const select = document.querySelectorAll('select[name^="items["]')[index];
-                    if (!select) return;
-
-                    const option = select.options[select.selectedIndex];
-                    if (option && option.value) {
-                        this.items[index].tracking_method = option.getAttribute('data-tracking') || '';
-                    } else {
-                        this.items[index].tracking_method = '';
-                    }
-                    this.items[index].selected_iccids = [];
-                    this.items[index].iccid_text = '';
-                },
-
                 getAvailableStock(productId) {
                     if (!this.sourceWhId || !productId) return 0;
-                    const found = this.stockBalances.find(b => b.warehouse_id == this.sourceWhId && b.product_id == productId);
+                    var self = this;
+                    const found = this.stockBalances.find(function(b) {
+                        return b.warehouse_id == self.sourceWhId && b.product_id == productId;
+                    });
                     return found ? parseInt(found.quantity) : 0;
                 },
 
                 getIccidsForProduct(productId) {
                     if (!this.sourceWhId || !productId) return [];
-                    return this.availableIccids.filter(u => u.warehouse_id == this.sourceWhId && u.product_id == productId);
+                    var self = this;
+                    return this.availableIccids.filter(function(u) {
+                        return u.warehouse_id == self.sourceWhId && u.product_id == productId;
+                    });
                 },
 
                 selectAllIccids(index) {
                     const row = this.items[index];
                     const list = this.getIccidsForProduct(row.product_id);
-                    row.selected_iccids = list.map(u => u.iccid_number);
+                    row.selected_iccids = list.map(function(u) {
+                        return u.iccid_number;
+                    });
                 },
 
                 countPastedIccids(text) {
                     if (!text) return 0;
-                    const items = text.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
+                    const items = text.split(/[\r\n,]+/).map(function(s) {
+                        return s.trim();
+                    }).filter(Boolean);
                     return items.length;
                 }
-            }
+            };
         }
     </script>
     @endpush
 </x-app-layout>
-

@@ -24,7 +24,7 @@
             &larr; Kembali ke Pusat Laporan
         </a>
 
-        @if($reportType === 'PO_GR')
+        @if(in_array($reportType, ['PO_GR', 'SM']))
             <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                 <span class="text-[10px] text-slate-500 font-bold uppercase px-2">Mode:</span>
                 <a href="{{ route('reports.print-pdf', array_merge(request()->all(), ['format' => 'summary'])) }}"
@@ -180,6 +180,89 @@
                     </div>
                 @endforelse
             </div>
+        @elseif($reportType === 'SM' && ($format ?? 'summary') === 'detailed')
+            <!-- ============================================== -->
+            <!-- FORMAT RINCIAN LENGKAP RESMI MUTASI STOK (SM)  -->
+            <!-- ============================================== -->
+            <div class="space-y-6 mb-8">
+                @forelse($records as $idx => $sm)
+                    <div class="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-2xs" style="page-break-inside: avoid;">
+                        <!-- Header Dokumen SM -->
+                        <div class="bg-slate-100/90 border-b border-slate-300 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-cyan-900 text-white">#{{ $idx + 1 }}</span>
+                                <h4 class="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                    <span>SM: {{ $sm->doc_number }}</span>
+                                    <span class="text-slate-400 font-sans font-normal">&bull; {{ date('d M Y', strtotime($sm->movement_date)) }}{{ $sm->created_at ? ', ' . date('H:i', strtotime($sm->created_at)) : '' }}</span>
+                                </h4>
+                            </div>
+                            <div class="flex items-center gap-3 text-[10px] flex-wrap">
+                                <span>Petugas: <strong class="text-slate-800">{{ $sm->creator_display }}</strong></span>
+                                <span>&bull;</span>
+                                <span class="px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800">{{ $sm->status }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Info Strip Rute & Wilayah -->
+                        <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 text-[10px] text-slate-600 flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span>Rute: <strong class="text-slate-900">{{ $sm->source_wh }}</strong> ({{ $sm->source_wh_type }}) &rarr; <strong class="text-rose-700">{{ $sm->dest_wh }}</strong> ({{ $sm->dest_wh_type }})</span>
+                                <span>&bull;</span>
+                                <span>Wilayah: <strong class="text-slate-800">{{ $sm->source_tap_name ?? $sm->dest_tap_name ?? '-' }} ({{ $sm->source_cluster_name ?? $sm->dest_cluster_name ?? '-' }})</strong></span>
+                            </div>
+                            @if(!empty($sm->notes))
+                                <div>
+                                    <span>Keperluan/Catatan: <strong class="text-slate-800">{{ $sm->notes }}</strong></span>
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Tabel Item Barang SM -->
+                        <table class="w-full text-left text-[11px] border-collapse">
+                            <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 text-[10px] uppercase">
+                                <tr>
+                                    <th class="py-2 px-3 text-center w-8">No</th>
+                                    <th class="py-2 px-3">Kode SKU</th>
+                                    <th class="py-2 px-3">Nama Produk Barang</th>
+                                    <th class="py-2 px-3">Tipe</th>
+                                    @if(config('erp.enable_iccid', false))
+                                        <th class="py-2 px-3 text-center">Tracking</th>
+                                    @endif
+                                    <th class="py-2 px-3 text-right">Kuantitas Dipindahkan</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @forelse($sm->items as $iIdx => $item)
+                                    <tr>
+                                        <td class="py-1.5 px-3 text-center text-slate-400 font-mono">{{ $iIdx + 1 }}</td>
+                                        <td class="py-1.5 px-3 font-mono font-bold text-slate-700">{{ $item->sku }}</td>
+                                        <td class="py-1.5 px-3 font-bold text-slate-900">{{ $item->product_name }}</td>
+                                        <td class="py-1.5 px-3 text-slate-600">{{ $item->product_type }}</td>
+                                        @if(config('erp.enable_iccid', false))
+                                            <td class="py-1.5 px-3 text-center font-mono text-[10px] text-slate-600">{{ $item->tracking_method }}</td>
+                                        @endif
+                                        <td class="py-1.5 px-3 text-right font-mono font-bold text-cyan-900">{{ number_format($item->quantity) }} pcs</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="{{ config('erp.enable_iccid', false) ? 6 : 5 }}" class="py-2.5 text-center text-slate-400 italic">Tidak ada item tercatat.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot class="bg-slate-100/70 border-t border-slate-300 font-bold text-[11px]">
+                                <tr>
+                                    <td colspan="{{ config('erp.enable_iccid', false) ? 5 : 4 }}" class="py-2 px-3 text-right uppercase tracking-wider text-slate-700">Subtotal Mutasi ({{ count($sm->items) }} varian):</td>
+                                    <td class="py-2 px-3 text-right font-mono font-extrabold text-cyan-900">{{ number_format($sm->total_qty ?? 0) }} pcs</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @empty
+                    <div class="py-8 text-center text-slate-400 border border-slate-300 rounded-xl bg-slate-50">
+                        Tidak ada data transfer stok (SM) yang ditemukan untuk periode ini.
+                    </div>
+                @endforelse
+            </div>
         @else
             <!-- Tabel Data Laporan (Mode Standar / Rekap Ringkas) -->
             <div class="mb-6 overflow-x-auto">
@@ -229,10 +312,13 @@
                 @endif
             @endif
 
-            @if(isset($summary['total_amount']))
+            @if($reportType === 'SM')
+                <span class="font-extrabold text-cyan-900 font-mono">
+                    Total Fisik Dipindahkan: {{ number_format($summary['total_amount'] ?? 0) }} pcs
+                </span>
+            @elseif(isset($summary['total_amount']))
                 <span class="font-extrabold text-slate-900 font-mono">
-                    Total Nilai: 
-                    {{ $reportType === 'SM' ? number_format($summary['total_amount']) . ' pcs' : 'Rp ' . number_format($summary['total_amount'], 0, ',', '.') }}
+                    Total Nilai: Rp {{ number_format($summary['total_amount'], 0, ',', '.') }}
                 </span>
             @endif
         </div>
@@ -255,36 +341,46 @@
         @endphp
         <div class="grid grid-cols-3 gap-6 pt-6 text-center border-t border-slate-200">
             <div>
-                <p class="text-slate-500 font-medium mb-2">Dibuat Oleh (Admin Operasional),</p>
+                <p class="text-slate-500 font-medium mb-2">
+                    {{ $reportType === 'SM' ? 'Dibuat Oleh (Petugas Mutasi / Admin),' : 'Dibuat Oleh (Admin Operasional),' }}
+                </p>
                 <div class="h-14 flex items-center justify-center">
                     @if($authSignUser && $authSignUser->signature && file_exists(public_path($authSignUser->signature)))
                         <img src="{{ asset($authSignUser->signature) }}" class="max-h-14 max-w-full object-contain" alt="TTD {{ $authSignUser->name }}">
                     @endif
                 </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
-                <p class="font-bold text-slate-800 mt-1">( {{ $authSignUser ? $authSignUser->name : 'Admin TAP' }} )</p>
+                <p class="font-bold text-slate-800 mt-1">( {{ $authSignUser ? $authSignUser->name : 'Admin Operasional' }} )</p>
             </div>
 
             <div>
-                <p class="text-slate-500 font-medium mb-2">Diperiksa Oleh (Finance/Akunting),</p>
+                <p class="text-slate-500 font-medium mb-2">
+                    {{ $reportType === 'SM' ? 'Diserahkan Oleh (Kepala Gudang Asal),' : 'Diperiksa Oleh (Finance/Akunting),' }}
+                </p>
                 <div class="h-14 flex items-center justify-center">
-                    @if($financeSignUser && file_exists(public_path($financeSignUser->signature)))
+                    @if($reportType !== 'SM' && $financeSignUser && file_exists(public_path($financeSignUser->signature)))
                         <img src="{{ asset($financeSignUser->signature) }}" class="max-h-14 max-w-full object-contain" alt="TTD Finance">
                     @endif
                 </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
-                <p class="font-bold text-slate-800 mt-1">( {{ $financeSignUser ? $financeSignUser->name : 'Finance TAP' }} )</p>
+                <p class="font-bold text-slate-800 mt-1">
+                    ( {{ $reportType === 'SM' ? 'Kepala Gudang Asal' : ($financeSignUser ? $financeSignUser->name : 'Finance TAP') }} )
+                </p>
             </div>
 
             <div>
-                <p class="text-slate-500 font-medium mb-2">Disetujui Oleh (Pimpinan Cabang),</p>
+                <p class="text-slate-500 font-medium mb-2">
+                    {{ $reportType === 'SM' ? 'Diterima Oleh (Kepala Gudang Tujuan),' : 'Disetujui Oleh (Pimpinan Cabang),' }}
+                </p>
                 <div class="h-14 flex items-center justify-center">
-                    @if($headSignUser && file_exists(public_path($headSignUser->signature)))
+                    @if($reportType !== 'SM' && $headSignUser && file_exists(public_path($headSignUser->signature)))
                         <img src="{{ asset($headUser->signature ?? $headSignUser->signature) }}" class="max-h-14 max-w-full object-contain" alt="TTD Pimpinan">
                     @endif
                 </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
-                <p class="font-bold text-slate-800 mt-1">( {{ $headSignUser ? $headSignUser->name : 'Pimpinan Cabang' }} )</p>
+                <p class="font-bold text-slate-800 mt-1">
+                    ( {{ $reportType === 'SM' ? 'Kepala Gudang Tujuan' : ($headSignUser ? $headSignUser->name : 'Pimpinan Cabang') }} )
+                </p>
             </div>
         </div>
 

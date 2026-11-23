@@ -2,28 +2,89 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TerritoryScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class StockMovementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // 1. Ambil data Stock Movement (Header)
-        $movementsRaw = DB::table('stock_movements')
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $sourceFilterWhId = $request->input('source_warehouse_id', 'ALL');
+        $destFilterWhId = $request->input('destination_warehouse_id', 'ALL');
+        $search = $request->input('search');
+
+        // 1. Ambil data Stock Movement (Header) dengan join TAP, Cluster, Area
+        $query = DB::table('stock_movements')
             ->join('warehouses as sw', 'stock_movements.source_warehouse_id', '=', 'sw.id')
             ->join('warehouses as dw', 'stock_movements.destination_warehouse_id', '=', 'dw.id')
+            ->leftJoin('taps as stap', 'sw.tap_id', '=', 'stap.id')
+            ->leftJoin('clusters as scls', 'stap.cluster_id', '=', 'scls.id')
+            ->leftJoin('areas as sar', 'scls.area_id', '=', 'sar.id')
+            ->leftJoin('taps as dtap', 'dw.tap_id', '=', 'dtap.id')
+            ->leftJoin('clusters as dcls', 'dtap.cluster_id', '=', 'dcls.id')
+            ->leftJoin('areas as dar', 'dcls.area_id', '=', 'dar.id')
+            ->leftJoin('users as creator', 'stock_movements.created_by', '=', 'creator.id')
             ->select(
                 'stock_movements.*',
                 'sw.name as source_wh_name',
                 'sw.code as source_wh_code',
                 'sw.type as source_wh_type',
+                'sw.tap_id as source_tap_id',
+                'stap.name as source_tap_name',
+                'scls.id as source_cluster_id',
+                'scls.name as source_cluster_name',
+                'sar.id as source_area_id',
+                'sar.name as source_area_name',
                 'dw.name as dest_wh_name',
                 'dw.code as dest_wh_code',
-                'dw.type as dest_wh_type'
-            )
-            ->orderBy('stock_movements.id', 'desc')
-            ->get();
+                'dw.type as dest_wh_type',
+                'dw.tap_id as dest_tap_id',
+                'dtap.name as dest_tap_name',
+                'dcls.id as dest_cluster_id',
+                'dcls.name as dest_cluster_name',
+                'dar.id as dest_area_id',
+                'dar.name as dest_area_name',
+                'creator.name as creator_name'
+            );
+
+        // Territory Scope: batasi gudang asal atau gudang tujuan yang dapat diakses user
+        $scope = TerritoryScope::for(auth()->user());
+        if (!$scope['is_full_access']) {
+            if (empty($scope['warehouse_ids'])) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where(function ($q) use ($scope) {
+                    $q->whereIn('stock_movements.source_warehouse_id', $scope['warehouse_ids'])
+                      ->orWhereIn('stock_movements.destination_warehouse_id', $scope['warehouse_ids']);
+                });
+            }
+        }
+
+        if ($startDate) {
+            $query->whereDate('stock_movements.movement_date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('stock_movements.movement_date', '<=', $endDate);
+        }
+        if ($sourceFilterWhId && $sourceFilterWhId !== 'ALL') {
+            $query->where('stock_movements.source_warehouse_id', $sourceFilterWhId);
+        }
+        if ($destFilterWhId && $destFilterWhId !== 'ALL') {
+            $query->where('stock_movements.destination_warehouse_id', $destFilterWhId);
+        }
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('stock_movements.doc_number', 'like', "%{$search}%")
+                  ->orWhere('stock_movements.notes', 'like', "%{$search}%")
+                  ->orWhere('sw.name', 'like', "%{$search}%")
+                  ->orWhere('dw.name', 'like', "%{$search}%");
+            });
+        }
+
+        $movementsRaw = $query->orderBy('stock_movements.id', 'desc')->get();
 
         // 2. Ambil items untuk setiap movement
         $itemsBySm = [];
@@ -69,31 +130,90 @@ class StockMovementController extends Controller
             return $sm;
         });
 
-        // 4. Master Gudang & Produk
-        $warehouses = DB::table('warehouses')
-            ->where('status', 'ACTIVE')
-            ->orderBy('type')
-            ->orderBy('name')
+        // 4. Master Gudang & Produk (Terkunci TerritoryScope & Active Cluster)
+        $whQuery = DB::table('warehouses')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->where('warehouses.status', 'ACTIVE')
+            ->select(
+                'warehouses.*',
+                'taps.name as tap_name',
+                'clusters.name as cluster_name'
+            );
+
+        $warehouses = TerritoryScope::applyWarehouseScope($whQuery, 'warehouses.id')
+            ->orderBy('warehouses.type')
+            ->orderBy('warehouses.name')
             ->get();
+
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
 
         $products = DB::table('products')
             ->where('status', 'ACTIVE')
             ->orderBy('name')
             ->get();
 
-        // 5. Saldo stok per warehouse & product (untuk validasi & live view di client)
+        if (!$iccidEnabled) {
+            $products = $products->map(function ($p) {
+                $p->tracking_method = 'QUANTITY';
+                return $p;
+            });
+        }
+
+        // 5. Saldo stok per warehouse & product (khusus gudang yang diizinkan)
+        $allowedWhIds = $warehouses->pluck('id')->toArray();
         $stockBalances = DB::table('stock_balances')
+            ->whereIn('warehouse_id', $allowedWhIds)
             ->select('warehouse_id', 'product_id', 'quantity')
             ->get();
 
-        // 6. Unit ICCID berstatus AVAILABLE per warehouse & product
-        $availableIccids = DB::table('iccid_units')
-            ->where('status', 'AVAILABLE')
-            ->select('id', 'iccid_number', 'warehouse_id', 'product_id')
-            ->orderBy('iccid_number')
-            ->get();
+        // 6. Unit ICCID berstatus AVAILABLE per warehouse & product (hanya jika fitur aktif)
+        $availableIccids = collect();
+        if ($iccidEnabled) {
+            $availableIccids = DB::table('iccid_units')
+                ->where('status', 'AVAILABLE')
+                ->whereIn('warehouse_id', $allowedWhIds)
+                ->select('id', 'iccid_number', 'warehouse_id', 'product_id')
+                ->orderBy('iccid_number')
+                ->get();
+        }
 
-        return view('stock_movement.index', compact('movements', 'warehouses', 'products', 'stockBalances', 'availableIccids'));
+        // Master Wilayah (Terkunci TerritoryScope & Active Cluster)
+        $areas = TerritoryScope::applyAreaScope(
+            DB::table('areas')->where('status', 'ACTIVE')->orderBy('name'),
+            'areas.id'
+        )->get();
+
+        $clusters = TerritoryScope::applyClusterScope(
+            DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name'),
+            'clusters.id'
+        )->get();
+
+        $taps = TerritoryScope::applyTapScope(
+            DB::table('taps')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->where('taps.status', 'ACTIVE')
+                ->select('taps.*', 'clusters.area_id')
+                ->orderBy('taps.name'),
+            'taps.id'
+        )->get();
+
+        return view('stock_movement.index', compact(
+            'movements',
+            'warehouses',
+            'products',
+            'stockBalances',
+            'availableIccids',
+            'areas',
+            'clusters',
+            'taps',
+            'startDate',
+            'endDate',
+            'sourceFilterWhId',
+            'destFilterWhId',
+            'search',
+            'iccidEnabled'
+        ));
     }
 
     public function downloadTemplate()
@@ -131,6 +251,11 @@ class StockMovementController extends Controller
             return redirect()->back()->with('error', 'Gudang Asal dan Gudang Tujuan tidak boleh sama!');
         }
 
+        // Territory Scope Security Check
+        if (!TerritoryScope::canAccessWarehouse($sourceWhId)) {
+            return redirect()->back()->with('error', 'Anda tidak memiliki hak akses wilayah untuk memindahkan stok dari gudang asal ini!');
+        }
+
         if (empty($itemsData)) {
             return redirect()->back()->with('error', 'Pilih minimal 1 item produk untuk dipindahkan!');
         }
@@ -156,6 +281,7 @@ class StockMovementController extends Controller
                 'movement_date' => $movementDate,
                 'status' => 'COMPLETED',
                 'notes' => $notes,
+                'created_by' => auth()->id(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -176,7 +302,9 @@ class StockMovementController extends Controller
                     ->where('product_id', $productId)
                     ->value('quantity') ?? 0;
 
-                if ($prod->tracking_method === 'QUANTITY') {
+                $isIccidTracking = config('erp.enable_iccid', false) && ($prod->tracking_method === 'ICCID');
+
+                if (!$isIccidTracking) {
                     $requestedQty = max(1, (int)($row['quantity'] ?? 1));
                     if ($currentSourceBalance < $requestedQty) {
                         throw new \Exception("Stok {$prod->name} di {$sourceWh->name} tidak mencukupi! Tersedia: {$currentSourceBalance} pcs, Diminta: {$requestedQty} pcs.");
