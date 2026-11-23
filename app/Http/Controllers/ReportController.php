@@ -18,6 +18,7 @@ class ReportController extends Controller
         $clusterId = $request->input('cluster_id', '');
         $tapId = $request->input('tap_id', 'ALL');
         $warehouseId = $request->input('warehouse_id', 'ALL');
+        $docType = $request->input('doc_type', 'ALL');
 
         // Master data filter dibatasi sesuai TerritoryScope user
         $areas = TerritoryScope::applyAreaScope(
@@ -59,6 +60,7 @@ class ReportController extends Controller
         return view('reports.index', [
             'reportType' => $reportType,
             'format' => $format,
+            'docType' => $docType,
             'startDate' => $startDate,
             'endDate' => $endDate,
             'areaId' => $areaId,
@@ -88,7 +90,7 @@ class ReportController extends Controller
 
         $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId, $format, $areaId, $clusterId);
 
-        $formatSuffix = (($reportType === 'PO_GR' || $reportType === 'SM') && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
+        $formatSuffix = (($reportType === 'PO_GR' || $reportType === 'SM' || $reportType === 'REPACK') && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
         $fileName = "Laporan_{$reportType}_{$formatSuffix}_PT_Wahana_Putra_Yudha_" . date('Ymd_His') . ".csv";
 
         $headers = [
@@ -165,7 +167,7 @@ class ReportController extends Controller
             case 'SM':
                 return $this->getSmData($start, $end, $tapId, $whId, $format, $areaId, $clusterId);
             case 'REPACK':
-                return $this->getRepackData($start, $end, $whId);
+                return $this->getRepackData($start, $end, $whId, $format, $areaId, $clusterId, $tapId, request()->input('doc_type', 'ALL'));
             case 'SALES':
                 return $this->getSalesData($start, $end, $tapId, $whId, $areaId, $clusterId);
             case 'AR':
@@ -742,24 +744,173 @@ class ReportController extends Controller
         }
     }
 
-    private function getRepackData($start, $end, $whId)
+    private function getRepackData($start, $end, $whId, $format = 'summary', $areaId = '', $clusterId = '', $tapId = 'ALL', $docType = 'ALL')
     {
         $query = DB::table('repacks')
             ->join('warehouses', 'repacks.warehouse_id', '=', 'warehouses.id')
+            ->leftJoin('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->leftJoin('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->leftJoin('areas', 'clusters.area_id', '=', 'areas.id')
             ->whereBetween('repacks.repack_date', [$start, $end])
-            ->select('repacks.*', 'warehouses.name as warehouse_name')
+            ->select(
+                'repacks.*',
+                'warehouses.name as warehouse_name',
+                'warehouses.type as warehouse_type',
+                'taps.name as tap_name',
+                'clusters.name as cluster_name',
+                'areas.name as area_name'
+            )
             ->orderBy('repacks.id', 'desc');
 
         TerritoryScope::applyWarehouseScope($query, 'repacks.warehouse_id');
 
         if ($whId !== 'ALL') $query->where('repacks.warehouse_id', $whId);
+        if ($tapId !== 'ALL') $query->where('warehouses.tap_id', $tapId);
+        if (!empty($clusterId)) $query->where('taps.cluster_id', $clusterId);
+        if (!empty($areaId)) $query->where('clusters.area_id', $areaId);
+
+        if ($docType === 'RPKOUT') {
+            $query->where('repacks.doc_type', 'RPKOUT');
+        } elseif ($docType === 'RPKIN') {
+            $query->where('repacks.doc_type', 'RPKIN');
+        }
 
         $records = $query->get();
-        $rows = [];
+
+        // Ambil items untuk seluruh repack terkait
+        $repackIds = $records->pluck('id')->toArray();
+        $itemsByRepack = [];
+        if (!empty($repackIds)) {
+            $items = DB::table('repack_items')
+                ->join('products', 'repack_items.product_id', '=', 'products.id')
+                ->whereIn('repack_items.repack_id', $repackIds)
+                ->select(
+                    'repack_items.*',
+                    'products.name as product_name',
+                    'products.sku',
+                    'products.type as product_type',
+                    'products.tracking_method'
+                )
+                ->orderBy('repack_items.id')
+                ->get();
+
+            foreach ($items as $item) {
+                $itemsByRepack[$item->repack_id][] = $item;
+            }
+        }
+
         $totalNominal = 0;
+        $totalRoCount = 0;
+        $totalRiCount = 0;
+        $totalComp1Qty = 0;
+        $totalOutputQty = 0;
+        $totalRoAmount = 0;
+        $totalRiAmount = 0;
 
         foreach ($records as $r) {
+            $r->items = $itemsByRepack[$r->id] ?? [];
             $totalNominal += (float)$r->total_amount;
+
+            if ($r->doc_type === 'RPKOUT') {
+                $totalRoCount++;
+                $totalRoAmount += (float)$r->total_amount;
+                // Item pertama / INPUT adalah bahan fisik
+                $firstInput = collect($r->items)->firstWhere('item_type', 'INPUT') ?? ($r->items[0] ?? null);
+                if ($firstInput) {
+                    $totalComp1Qty += (int)$firstInput->quantity;
+                }
+            } elseif ($r->doc_type === 'RPKIN') {
+                $totalRiCount++;
+                $totalRiAmount += (float)$r->total_amount;
+                // Item pertama / OUTPUT adalah produk jadi
+                $firstOutput = collect($r->items)->firstWhere('item_type', 'OUTPUT') ?? ($r->items[0] ?? null);
+                if ($firstOutput) {
+                    $totalOutputQty += (int)$firstOutput->quantity;
+                }
+            }
+        }
+
+        $summaryData = [
+            'total_records' => count($records),
+            'total_ro_count' => $totalRoCount,
+            'total_ri_count' => $totalRiCount,
+            'total_comp1_qty' => $totalComp1Qty,
+            'total_output_qty' => $totalOutputQty,
+            'total_ro_amount' => $totalRoAmount,
+            'total_ri_amount' => $totalRiAmount,
+            'total_amount' => $totalNominal,
+        ];
+
+        $rows = [];
+        if ($format === 'detailed') {
+            $headers = [
+                'No. Dokumen',
+                'Jenis (RO/RI)',
+                'Tanggal Repack',
+                'Gudang Operasional',
+                'Ref Dokumen',
+                'Status',
+                'Role Item',
+                'SKU Produk',
+                'Nama Produk',
+                'Tracking',
+                'Qty (Pcs)',
+                'Harga Satuan (Rp)',
+                'Subtotal (Rp)',
+                'Keterangan',
+            ];
+
+            foreach ($records as $r) {
+                if (empty($r->items)) {
+                    $rows[] = [
+                        $r->doc_number,
+                        $r->doc_type,
+                        $r->repack_date,
+                        $r->warehouse_name,
+                        $r->ref_doc_number ?? '-',
+                        $r->status,
+                        '-', '-', '-', '-', 0, 0,
+                        number_format($r->total_amount, 0, ',', '.'),
+                        $r->notes ?? '-',
+                    ];
+                } else {
+                    foreach ($r->items as $idx => $it) {
+                        $roleLabel = ($r->doc_type === 'RPKOUT')
+                            ? ($it->item_type === 'INPUT' ? 'Bahan Fisik (0K)' : 'Bahan Saldo (Bulk)')
+                            : 'Produk Jadi (Output)';
+
+                        $rows[] = [
+                            $idx === 0 ? $r->doc_number : '',
+                            $idx === 0 ? $r->doc_type : '',
+                            $idx === 0 ? $r->repack_date : '',
+                            $idx === 0 ? $r->warehouse_name : '',
+                            $idx === 0 ? ($r->ref_doc_number ?? '-') : '',
+                            $idx === 0 ? $r->status : '',
+                            $roleLabel,
+                            $it->sku,
+                            $it->product_name,
+                            'QUANTITY',
+                            number_format($it->quantity, 0, ',', '.'),
+                            number_format($it->unit_cost, 0, ',', '.'),
+                            number_format($it->subtotal, 0, ',', '.'),
+                            $idx === 0 ? ($r->notes ?? '-') : '',
+                        ];
+                    }
+                }
+            }
+
+            return [
+                'title' => 'Laporan Rincian Lengkap Konversi Produk Repack (RO - RI)',
+                'headers' => $headers,
+                'records' => $records,
+                'rows' => $rows,
+                'summary' => $summaryData,
+                'excel_summary' => ['TOTAL NILAI KONVERSI', '', '', '', '', '', '', '', '', '', '', '', number_format($totalNominal, 0, ',', '.'), ''],
+            ];
+        }
+
+        // Summary format
+        foreach ($records as $r) {
             $rows[] = [
                 $r->doc_number,
                 $r->doc_type,
@@ -777,10 +928,7 @@ class ReportController extends Controller
             'headers' => ['No. Dokumen', 'Jenis (RO/RI)', 'Tanggal Repack', 'Gudang Operasional', 'Ref Dokumen', 'Status', 'Total Nilai Konversi (Rp)', 'Keterangan'],
             'records' => $records,
             'rows' => $rows,
-            'summary' => [
-                'total_records' => count($records),
-                'total_amount' => $totalNominal,
-            ],
+            'summary' => $summaryData,
             'excel_summary' => ['TOTAL NILAI REPACK', '', '', '', '', '', number_format($totalNominal, 0, ',', '.'), ''],
         ];
     }

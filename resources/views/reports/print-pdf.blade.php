@@ -263,6 +263,101 @@
                     </div>
                 @endforelse
             </div>
+        @elseif($reportType === 'REPACK' && ($format ?? 'summary') === 'detailed')
+            <!-- ================================================== -->
+            <!-- FORMAT RINCIAN LENGKAP RESMI KONVERSI REPACK (RO/RI) -->
+            <!-- ================================================== -->
+            <div class="space-y-6 mb-8">
+                @forelse($records as $idx => $r)
+                    <div class="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-2xs" style="page-break-inside: avoid;">
+                        <!-- Header Dokumen Repack -->
+                        <div class="bg-slate-100/90 border-b border-slate-300 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold {{ $r->doc_type === 'RPKOUT' ? 'bg-amber-800 text-white' : 'bg-indigo-800 text-white' }}">#{{ $idx + 1 }}</span>
+                                <h4 class="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                    <span>{{ $r->doc_number }}</span>
+                                    <span class="text-slate-400 font-sans font-normal">&bull; {{ date('d M Y', strtotime($r->repack_date)) }}</span>
+                                </h4>
+                            </div>
+                            <div class="flex items-center gap-3 text-[10px] flex-wrap">
+                                <span class="px-2 py-0.5 rounded font-bold font-mono {{ $r->doc_type === 'RPKOUT' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800' }}">
+                                    {{ $r->doc_type === 'RPKOUT' ? 'REPACK OUT (BAHAN KELUAR)' : 'REPACK IN (PRODUK JADI MASUK)' }}
+                                </span>
+                                <span>&bull;</span>
+                                <span class="px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800">{{ $r->status }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Info Strip Gudang & Ref -->
+                        <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 text-[10px] text-slate-600 flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span>Gudang Operasional: <strong class="text-slate-900">{{ $r->warehouse_name }}</strong></span>
+                                @if(!empty($r->ref_doc_number))
+                                    <span>&bull;</span>
+                                    <span>Ref Dokumen RO: <strong class="text-amber-800 font-mono">{{ $r->ref_doc_number }}</strong></span>
+                                @endif
+                                @if(!empty($r->notes))
+                                    <span>&bull;</span>
+                                    <span>Catatan: <em>{{ $r->notes }}</em></span>
+                                @endif
+                            </div>
+                            <div>
+                                Total Nilai: <strong class="font-mono text-slate-900">Rp {{ number_format($r->total_amount, 0, ',', '.') }}</strong>
+                            </div>
+                        </div>
+
+                        <!-- Tabel Items Repack -->
+                        <table class="w-full text-left text-[11px] border-collapse">
+                            <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-1.5 px-3 w-8 text-center">No</th>
+                                    <th class="py-1.5 px-3">Peran / Komponen</th>
+                                    <th class="py-1.5 px-3">SKU</th>
+                                    <th class="py-1.5 px-3">Nama Produk</th>
+                                    <th class="py-1.5 px-3 text-center">Tracking</th>
+                                    <th class="py-1.5 px-3 text-center">Kuantitas</th>
+                                    <th class="py-1.5 px-3 text-right">Harga Modal Satuan</th>
+                                    <th class="py-1.5 px-3 text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200">
+                                @forelse($r->items as $iIdx => $item)
+                                    <tr class="{{ $iIdx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white' }}">
+                                        <td class="py-1.5 px-3 text-center font-mono text-slate-400">{{ $iIdx + 1 }}</td>
+                                        <td class="py-1.5 px-3 font-semibold">
+                                            @if($r->doc_type === 'RPKOUT')
+                                                {{ $item->item_type === 'INPUT' ? 'Bahan Fisik (0K)' : 'Bahan Saldo (Bulk)' }}
+                                            @else
+                                                Produk Jadi (Hasil Repack)
+                                            @endif
+                                        </td>
+                                        <td class="py-1.5 px-3 font-mono font-bold text-slate-700">{{ $item->sku }}</td>
+                                        <td class="py-1.5 px-3 font-semibold text-slate-900">{{ $item->product_name }}</td>
+                                        <td class="py-1.5 px-3 text-center font-mono text-[10px] text-slate-600">QUANTITY</td>
+                                        <td class="py-1.5 px-3 text-center font-mono font-bold text-slate-800">{{ number_format($item->quantity) }} pcs</td>
+                                        <td class="py-1.5 px-3 text-right font-mono text-slate-600">Rp {{ number_format($item->unit_cost, 0, ',', '.') }}</td>
+                                        <td class="py-1.5 px-3 text-right font-mono font-bold text-slate-900">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="py-2.5 text-center text-slate-400 italic">Tidak ada item tercatat.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot class="bg-slate-100/70 border-t border-slate-300 font-bold text-[11px]">
+                                <tr>
+                                    <td colspan="7" class="py-2 px-3 text-right uppercase tracking-wider text-slate-700">Total Nilai Dokumen:</td>
+                                    <td class="py-2 px-3 text-right font-mono font-extrabold text-slate-900">Rp {{ number_format($r->total_amount, 0, ',', '.') }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @empty
+                    <div class="py-8 text-center text-slate-400 border border-slate-300 rounded-xl bg-slate-50">
+                        Tidak ada data transaksi konversi repack yang ditemukan untuk periode ini.
+                    </div>
+                @endforelse
+            </div>
         @else
             <!-- Tabel Data Laporan (Mode Standar / Rekap Ringkas) -->
             <div class="mb-6 overflow-x-auto">
@@ -316,6 +411,16 @@
                 <span class="font-extrabold text-cyan-900 font-mono">
                     Total Fisik Dipindahkan: {{ number_format($summary['total_amount'] ?? 0) }} pcs
                 </span>
+            @elseif($reportType === 'REPACK')
+                <span class="font-bold text-slate-800 font-mono">
+                    Total RO: {{ number_format($summary['total_ro_count'] ?? 0) }} dok ({{ number_format($summary['total_comp1_qty'] ?? 0) }} pcs bahan fisik)
+                </span>
+                <span class="font-bold text-indigo-900 font-mono">
+                    Total RI: {{ number_format($summary['total_ri_count'] ?? 0) }} dok ({{ number_format($summary['total_output_qty'] ?? 0) }} pcs produk jadi)
+                </span>
+                <span class="font-extrabold text-slate-900 font-mono">
+                    Total Nilai: Rp {{ number_format($summary['total_amount'] ?? 0, 0, ',', '.') }}
+                </span>
             @elseif(isset($summary['total_amount']))
                 <span class="font-extrabold text-slate-900 font-mono">
                     Total Nilai: Rp {{ number_format($summary['total_amount'], 0, ',', '.') }}
@@ -342,7 +447,7 @@
         <div class="grid grid-cols-3 gap-6 pt-6 text-center border-t border-slate-200">
             <div>
                 <p class="text-slate-500 font-medium mb-2">
-                    {{ $reportType === 'SM' ? 'Dibuat Oleh (Petugas Mutasi / Admin),' : 'Dibuat Oleh (Admin Operasional),' }}
+                    {{ $reportType === 'SM' ? 'Dibuat Oleh (Petugas Mutasi / Admin),' : ($reportType === 'REPACK' ? 'Dibuat Oleh (Petugas Repack / Admin),' : 'Dibuat Oleh (Admin Operasional),') }}
                 </p>
                 <div class="h-14 flex items-center justify-center">
                     @if($authSignUser && $authSignUser->signature && file_exists(public_path($authSignUser->signature)))
@@ -355,7 +460,7 @@
 
             <div>
                 <p class="text-slate-500 font-medium mb-2">
-                    {{ $reportType === 'SM' ? 'Diserahkan Oleh (Kepala Gudang Asal),' : 'Diperiksa Oleh (Finance/Akunting),' }}
+                    {{ $reportType === 'SM' ? 'Diserahkan Oleh (Kepala Gudang Asal),' : ($reportType === 'REPACK' ? 'Diperiksa Oleh (Kepala Gudang),' : 'Diperiksa Oleh (Finance/Akunting),') }}
                 </p>
                 <div class="h-14 flex items-center justify-center">
                     @if($reportType !== 'SM' && $financeSignUser && file_exists(public_path($financeSignUser->signature)))
@@ -364,13 +469,13 @@
                 </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
                 <p class="font-bold text-slate-800 mt-1">
-                    ( {{ $reportType === 'SM' ? 'Kepala Gudang Asal' : ($financeSignUser ? $financeSignUser->name : 'Finance TAP') }} )
+                    ( {{ $reportType === 'SM' ? 'Kepala Gudang Asal' : ($reportType === 'REPACK' ? 'Kepala Gudang' : ($financeSignUser ? $financeSignUser->name : 'Finance TAP')) }} )
                 </p>
             </div>
 
             <div>
                 <p class="text-slate-500 font-medium mb-2">
-                    {{ $reportType === 'SM' ? 'Diterima Oleh (Kepala Gudang Tujuan),' : 'Disetujui Oleh (Pimpinan Cabang),' }}
+                    {{ $reportType === 'SM' ? 'Diterima Oleh (Kepala Gudang Tujuan),' : ($reportType === 'REPACK' ? 'Disetujui Oleh (Pimpinan Cabang),' : 'Disetujui Oleh (Pimpinan Cabang),') }}
                 </p>
                 <div class="h-14 flex items-center justify-center">
                     @if($reportType !== 'SM' && $headSignUser && file_exists(public_path($headSignUser->signature)))

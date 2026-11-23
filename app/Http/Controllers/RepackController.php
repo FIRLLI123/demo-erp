@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TerritoryScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -9,21 +10,25 @@ class RepackController extends Controller
 {
     public function index()
     {
-        // 1. Ambil transaksi Repack Out (RO)
-        $roListRaw = DB::table('repacks')
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
+
+        // 1. Ambil transaksi Repack Out (RO) terfilter wilayah user
+        $roQuery = DB::table('repacks')
             ->join('warehouses', 'repacks.warehouse_id', '=', 'warehouses.id')
             ->where('repacks.doc_type', 'RPKOUT')
             ->select('repacks.*', 'warehouses.name as warehouse_name', 'warehouses.type as warehouse_type')
-            ->orderBy('repacks.id', 'desc')
-            ->get();
+            ->orderBy('repacks.id', 'desc');
+        TerritoryScope::applyWarehouseScope($roQuery, 'repacks.warehouse_id');
+        $roListRaw = $roQuery->get();
 
-        // 2. Ambil transaksi Repack In (RI)
-        $riListRaw = DB::table('repacks')
+        // 2. Ambil transaksi Repack In (RI) terfilter wilayah user
+        $riQuery = DB::table('repacks')
             ->join('warehouses', 'repacks.warehouse_id', '=', 'warehouses.id')
             ->where('repacks.doc_type', 'RPKIN')
             ->select('repacks.*', 'warehouses.name as warehouse_name', 'warehouses.type as warehouse_type')
-            ->orderBy('repacks.id', 'desc')
-            ->get();
+            ->orderBy('repacks.id', 'desc');
+        TerritoryScope::applyWarehouseScope($riQuery, 'repacks.warehouse_id');
+        $riListRaw = $riQuery->get();
 
         // 3. Ambil items untuk seluruh repack
         $allRepackIds = $roListRaw->pluck('id')->merge($riListRaw->pluck('id'))->unique()->toArray();
@@ -46,10 +51,10 @@ class RepackController extends Controller
             }
         }
 
-        // 4. Ambil ICCID yang terkait dengan dokumen RO dan RI
+        // 4. Ambil ICCID yang terkait dengan dokumen RO dan RI (Hanya jika ICCID aktif)
         $allDocNumbers = $roListRaw->pluck('doc_number')->merge($riListRaw->pluck('doc_number'))->unique()->toArray();
         $iccidsByDoc = [];
-        if (!empty($allDocNumbers)) {
+        if ($iccidEnabled && !empty($allDocNumbers)) {
             $iccids = DB::table('iccid_units')
                 ->whereIn('last_doc_type', ['RPKOUT', 'RPKIN'])
                 ->whereIn('last_doc_number', $allDocNumbers)
@@ -78,17 +83,22 @@ class RepackController extends Controller
             return $ro->status === 'OPEN';
         })->values();
 
-        // 6. Master data pendukung
-        $warehouses = DB::table('warehouses')->where('status', 'ACTIVE')->get();
+        // 6. Master data pendukung terfilter wilayah user
+        $whQuery = DB::table('warehouses')->where('status', 'ACTIVE')->orderBy('type')->orderBy('name');
+        TerritoryScope::applyWarehouseScope($whQuery, 'id');
+        $warehouses = $whQuery->get();
 
-        // Produk Bahan 1 (Fisik 0K / ICCID)
-        $rawPhysicalProducts = DB::table('products')
-            ->where('status', 'ACTIVE')
-            ->where('tracking_method', 'ICCID')
-            ->where(function ($q) {
+        // Produk Bahan 1 (Fisik 0K / Blank Card)
+        $rawPhysicalQuery = DB::table('products')
+            ->where('status', 'ACTIVE');
+        if ($iccidEnabled) {
+            $rawPhysicalQuery->where('tracking_method', 'ICCID');
+        }
+        $rawPhysicalProducts = $rawPhysicalQuery->where(function ($q) {
                 $q->where('sku', 'like', 'RAW%')
                   ->orWhere('name', 'like', '%0K%')
-                  ->orWhere('name', 'like', '%Blank%');
+                  ->orWhere('name', 'like', '%Blank%')
+                  ->orWhere('type', 'SA');
             })
             ->get();
 
@@ -99,7 +109,8 @@ class RepackController extends Controller
             ->where(function ($q) {
                 $q->where('sku', 'like', 'BULK%')
                   ->orWhere('name', 'like', '%BULK%')
-                  ->orWhere('name', 'like', '%Saldo%');
+                  ->orWhere('name', 'like', '%Saldo%')
+                  ->orWhere('name', 'like', '%NGRS%');
             })
             ->get();
 
@@ -110,12 +121,19 @@ class RepackController extends Controller
             ->where('sku', 'not like', 'BULK%')
             ->get();
 
-        // Saldo stok & unit ICCID available
-        $stockBalances = DB::table('stock_balances')->get();
-        $availableIccids = DB::table('iccid_units')
-            ->where('status', 'AVAILABLE')
-            ->select('id', 'iccid_number', 'warehouse_id', 'product_id')
-            ->get();
+        // Saldo stok terfilter wilayah & unit ICCID available jika aktif
+        $balQuery = DB::table('stock_balances');
+        TerritoryScope::applyWarehouseScope($balQuery, 'warehouse_id');
+        $stockBalances = $balQuery->get();
+
+        $availableIccids = collect();
+        if ($iccidEnabled) {
+            $iccidQuery = DB::table('iccid_units')
+                ->where('status', 'AVAILABLE')
+                ->select('id', 'iccid_number', 'warehouse_id', 'product_id');
+            TerritoryScope::applyWarehouseScope($iccidQuery, 'warehouse_id');
+            $availableIccids = $iccidQuery->get();
+        }
 
         return view('inventory.repack', compact(
             'roList',
@@ -126,7 +144,8 @@ class RepackController extends Controller
             'bulkProducts',
             'outputProducts',
             'stockBalances',
-            'availableIccids'
+            'availableIccids',
+            'iccidEnabled'
         ));
     }
 
@@ -155,6 +174,11 @@ class RepackController extends Controller
         $repackDate = $request->input('repack_date', date('Y-m-d'));
         $notes = $request->input('notes', 'Pengeluaran Komponen Bahan Repack');
 
+        // Validasi hak akses wilayah user terhadap gudang
+        if (!TerritoryScope::canAccessWarehouse($warehouseId)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Anda tidak memiliki wewenang untuk gudang ini.');
+        }
+
         // Komponen 1 (Fisik 0K)
         $comp1Id = (int)$request->input('comp1_product_id');
         $iccidMode = $request->input('comp1_iccid_mode', 'SELECT');
@@ -175,38 +199,47 @@ class RepackController extends Controller
         $prod1 = DB::table('products')->where('id', $comp1Id)->first();
         $prod2 = DB::table('products')->where('id', $comp2Id)->first();
 
-        // Kumpulkan ICCID untuk Komponen 1
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
         $targetIccids = [];
-        if ($iccidMode === 'SELECT') {
-            $targetIccids = $request->input('comp1_selected_iccids', []);
-        } elseif ($iccidMode === 'PASTE') {
-            $rawText = $request->input('comp1_iccid_text', '');
-            $lines = preg_split('/[\r\n,]+/', $rawText);
-            foreach ($lines as $line) {
-                $clean = trim($line);
-                if (!empty($clean)) $targetIccids[] = $clean;
-            }
-        } elseif ($iccidMode === 'UPLOAD') {
-            if ($request->hasFile('comp1_iccid_file')) {
-                $file = $request->file('comp1_iccid_file');
-                $handle = fopen($file->getRealPath(), 'r');
-                $first = true;
-                while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                    if ($first) { $first = false; continue; }
-                    if (isset($data[0]) && trim($data[0]) !== '') {
-                        $targetIccids[] = trim($data[0]);
-                    }
+
+        if ($iccidEnabled) {
+            // Kumpulkan ICCID untuk Komponen 1 jika feature flag aktif
+            if ($iccidMode === 'SELECT') {
+                $targetIccids = $request->input('comp1_selected_iccids', []);
+            } elseif ($iccidMode === 'PASTE') {
+                $rawText = $request->input('comp1_iccid_text', '');
+                $lines = preg_split('/[\r\n,]+/', $rawText);
+                foreach ($lines as $line) {
+                    $clean = trim($line);
+                    if (!empty($clean)) $targetIccids[] = $clean;
                 }
-                fclose($handle);
+            } elseif ($iccidMode === 'UPLOAD') {
+                if ($request->hasFile('comp1_iccid_file')) {
+                    $file = $request->file('comp1_iccid_file');
+                    $handle = fopen($file->getRealPath(), 'r');
+                    $first = true;
+                    while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                        if ($first) { $first = false; continue; }
+                        if (isset($data[0]) && trim($data[0]) !== '') {
+                            $targetIccids[] = trim($data[0]);
+                        }
+                    }
+                    fclose($handle);
+                }
+            }
+
+            $targetIccids = array_values(array_unique(array_filter($targetIccids)));
+            if (empty($targetIccids)) {
+                return redirect()->back()->with('error', "Pilih atau upload nomor ICCID untuk komponen {$prod1->name}!");
+            }
+            $comp1Qty = count($targetIccids);
+        } else {
+            // Mode QUANTITY murni (ICCID Dinonaktifkan)
+            $comp1Qty = (int) $request->input('comp1_quantity', 0);
+            if ($comp1Qty <= 0) {
+                return redirect()->back()->with('error', "Isi jumlah kuantitas fisik untuk komponen {$prod1->name}!");
             }
         }
-
-        $targetIccids = array_values(array_unique(array_filter($targetIccids)));
-        if (empty($targetIccids)) {
-            return redirect()->back()->with('error', "Pilih atau upload nomor ICCID untuk komponen {$prod1->name}!");
-        }
-
-        $comp1Qty = count($targetIccids);
 
         // Hitung Nilai Finansial RO
         $cost1 = (float)$prod1->cost_price;
@@ -219,16 +252,27 @@ class RepackController extends Controller
 
         DB::beginTransaction();
         try {
-            // Validasi saldo Komponen 1 (ICCID)
-            $validIccidCount = DB::table('iccid_units')
-                ->where('warehouse_id', $warehouseId)
-                ->where('product_id', $comp1Id)
-                ->where('status', 'AVAILABLE')
-                ->whereIn('iccid_number', $targetIccids)
-                ->count();
+            // Validasi saldo Komponen 1
+            if ($iccidEnabled) {
+                $validIccidCount = DB::table('iccid_units')
+                    ->where('warehouse_id', $warehouseId)
+                    ->where('product_id', $comp1Id)
+                    ->where('status', 'AVAILABLE')
+                    ->whereIn('iccid_number', $targetIccids)
+                    ->count();
 
-            if ($validIccidCount !== $comp1Qty) {
-                throw new \Exception("Beberapa nomor ICCID tidak valid atau bukan status AVAILABLE di {$warehouse->name}!");
+                if ($validIccidCount !== $comp1Qty) {
+                    throw new \Exception("Beberapa nomor ICCID tidak valid atau bukan status AVAILABLE di {$warehouse->name}!");
+                }
+            } else {
+                $currBal1 = DB::table('stock_balances')
+                    ->where('warehouse_id', $warehouseId)
+                    ->where('product_id', $comp1Id)
+                    ->value('quantity') ?? 0;
+
+                if ($currBal1 < $comp1Qty) {
+                    throw new \Exception("Saldo {$prod1->name} di {$warehouse->name} tidak mencukupi (Tersedia: {$currBal1}, Diminta: {$comp1Qty})!");
+                }
             }
 
             // Validasi saldo Komponen 2 (Bulk)
@@ -281,15 +325,17 @@ class RepackController extends Controller
                 ]
             ]);
 
-            // Update status ICCID menjadi RESERVED untuk repack ini
-            DB::table('iccid_units')
-                ->whereIn('iccid_number', $targetIccids)
-                ->update([
-                    'status' => 'RESERVED',
-                    'last_doc_type' => 'RPKOUT',
-                    'last_doc_number' => $docNumber,
-                    'updated_at' => now(),
-                ]);
+            // Update status ICCID menjadi RESERVED jika fitur ICCID aktif
+            if ($iccidEnabled && !empty($targetIccids)) {
+                DB::table('iccid_units')
+                    ->whereIn('iccid_number', $targetIccids)
+                    ->update([
+                        'status' => 'RESERVED',
+                        'last_doc_type' => 'RPKOUT',
+                        'last_doc_number' => $docNumber,
+                        'updated_at' => now(),
+                    ]);
+            }
 
             // Potong Saldo Komponen 1
             $currBal1 = DB::table('stock_balances')->where('warehouse_id', $warehouseId)->where('product_id', $comp1Id)->value('quantity') ?? 0;
@@ -365,6 +411,11 @@ class RepackController extends Controller
             return redirect()->back()->with('error', "Dokumen RO {$roDocNumber} tidak ditemukan!");
         }
 
+        // Validasi hak akses wilayah user terhadap gudang dokumen RO
+        if (!TerritoryScope::canAccessWarehouse((int)$ro->warehouse_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Anda tidak memiliki wewenang untuk gudang ini.');
+        }
+
         if ($ro->status !== 'OPEN') {
             return redirect()->back()->with('error', "Dokumen RO {$roDocNumber} sudah selesai di-repack sebelumnya!");
         }
@@ -374,12 +425,13 @@ class RepackController extends Controller
             return redirect()->back()->with('error', 'Produk hasil tidak valid!');
         }
 
-        // Ambil komponen fisik dari RO ini
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
+
+        // Ambil komponen fisik pertama dari RO ini
         $comp1Item = DB::table('repack_items')
-            ->join('products', 'repack_items.product_id', '=', 'products.id')
-            ->where('repack_items.repack_id', $ro->id)
-            ->where('products.tracking_method', 'ICCID')
-            ->select('repack_items.*')
+            ->where('repack_id', $ro->id)
+            ->where('item_type', 'INPUT')
+            ->orderBy('id', 'asc')
             ->first();
 
         $outputQty = $comp1Item ? (int)$comp1Item->quantity : 1;
@@ -424,17 +476,19 @@ class RepackController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Konversi unit ICCID dari bahan 0K menjadi Produk Baru
-            DB::table('iccid_units')
-                ->where('last_doc_type', 'RPKOUT')
-                ->where('last_doc_number', $ro->doc_number)
-                ->update([
-                    'product_id' => $outputProductId,
-                    'status' => 'AVAILABLE',
-                    'last_doc_type' => 'RPKIN',
-                    'last_doc_number' => $docNumber,
-                    'updated_at' => now(),
-                ]);
+            // Konversi unit ICCID jika fitur ICCID aktif
+            if ($iccidEnabled) {
+                DB::table('iccid_units')
+                    ->where('last_doc_type', 'RPKOUT')
+                    ->where('last_doc_number', $ro->doc_number)
+                    ->update([
+                        'product_id' => $outputProductId,
+                        'status' => 'AVAILABLE',
+                        'last_doc_type' => 'RPKIN',
+                        'last_doc_number' => $docNumber,
+                        'updated_at' => now(),
+                    ]);
+            }
 
             // Tambah stok Produk Baru di gudang
             $destBalanceRow = DB::table('stock_balances')

@@ -70,7 +70,7 @@
             <form method="GET" action="{{ route('reports.index') }}" class="space-y-4">
                 <input type="hidden" name="type" value="{{ $reportType }}">
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 items-end">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-{{ $reportType === 'REPACK' ? '6' : '5' }} gap-3.5 items-end">
                     <!-- 1. SINGLE-FIELD SMART DATE RANGE PICKER -->
                     <div>
                         <x-filter-date-range
@@ -79,6 +79,19 @@
                             :end-date="$endDate"
                             label="Periode Tanggal" />
                     </div>
+
+                    @if($reportType === 'REPACK')
+                        <!-- FILTER JENIS REPACK (RO / RI) -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Repack</label>
+                            <select name="doc_type"
+                                    class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500 cursor-pointer shadow-2xs">
+                                <option value="ALL" {{ ($docType ?? 'ALL') === 'ALL' ? 'selected' : '' }}>-- Semua (RO & RI) --</option>
+                                <option value="RPKOUT" {{ ($docType ?? '') === 'RPKOUT' ? 'selected' : '' }}>RO (RPKOUT - Bahan Keluar)</option>
+                                <option value="RPKIN" {{ ($docType ?? '') === 'RPKIN' ? 'selected' : '' }}>RI (RPKIN - Produk Masuk)</option>
+                            </select>
+                        </div>
+                    @endif
 
                     <!-- 2. FILTER AREA -->
                     <div>
@@ -357,6 +370,62 @@
                                     </a>
                                 </div>
                             </div>
+                        @elseif($reportType === 'REPACK')
+                            <!-- Dropdown Export Excel REPACK (Rekap & Detail Item) -->
+                            <div class="relative inline-block text-left" x-data="{ openExcel: false }">
+                                <button type="button" @click="openExcel = !openExcel" @click.outside="openExcel = false"
+                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                                    <span>Download Excel</span>
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-0.5"></i>
+                                </button>
+                                <div x-show="openExcel" x-cloak class="absolute right-0 mt-1.5 w-64 rounded-xl bg-white shadow-xl border border-slate-200 py-1.5 z-50 text-xs">
+                                    <a href="{{ route('reports.export-excel', array_merge(request()->all(), ['format' => 'summary'])) }}" 
+                                       class="px-3.5 py-2.5 hover:bg-emerald-50 text-slate-800 flex items-start gap-2.5 transition-colors">
+                                        <i data-lucide="file-text" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <span class="font-bold block text-slate-900">Rekap Ringkas (Header)</span>
+                                            <span class="text-[10px] text-slate-500">1 baris per Dokumen (RO / RI)</span>
+                                        </div>
+                                    </a>
+                                    <a href="{{ route('reports.export-excel', array_merge(request()->all(), ['format' => 'detailed'])) }}" 
+                                       class="px-3.5 py-2.5 hover:bg-emerald-50 text-slate-800 flex items-start gap-2.5 transition-colors border-t border-slate-100">
+                                        <i data-lucide="table-properties" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <span class="font-bold block text-slate-900">Rincian Lengkap (Per Item)</span>
+                                            <span class="text-[10px] text-slate-500">Header + Detail Komponen & Hasil Repack</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Dropdown Cetak PDF REPACK (Rekap & Detail Item) -->
+                            <div class="relative inline-block text-left" x-data="{ openPdf: false }">
+                                <button type="button" @click="openPdf = !openPdf" @click.outside="openPdf = false"
+                                        class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                                    <i data-lucide="printer" class="w-4 h-4"></i>
+                                    <span>Cetak PDF</span>
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-0.5"></i>
+                                </button>
+                                <div x-show="openPdf" x-cloak class="absolute right-0 mt-1.5 w-64 rounded-xl bg-white shadow-xl border border-slate-200 py-1.5 z-50 text-xs">
+                                    <a href="{{ route('reports.print-pdf', array_merge(request()->all(), ['format' => 'summary'])) }}" target="_blank"
+                                       class="px-3.5 py-2.5 hover:bg-rose-50 text-slate-800 flex items-start gap-2.5 transition-colors">
+                                        <i data-lucide="file-text" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <span class="font-bold block text-slate-900">Cetak Rekap Ringkas</span>
+                                            <span class="text-[10px] text-slate-500">Tabel ringkasan landscape 1 baris per Repack</span>
+                                        </div>
+                                    </a>
+                                    <a href="{{ route('reports.print-pdf', array_merge(request()->all(), ['format' => 'detailed'])) }}" target="_blank"
+                                       class="px-3.5 py-2.5 hover:bg-rose-50 text-slate-800 flex items-start gap-2.5 transition-colors border-t border-slate-100">
+                                        <i data-lucide="layers" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <span class="font-bold block text-slate-900">Cetak Rincian Lengkap Resmi</span>
+                                            <span class="text-[10px] text-slate-500">Format berjenjang per RO/RI + breakdown item</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
                         @else
                             <a href="{{ route('reports.export-excel', request()->all()) }}" 
                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all">
@@ -428,6 +497,31 @@
                             </span>
                         </div>
                     @endif
+                @elseif($reportType === 'REPACK')
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Total RO / RI:</span>
+                        <span class="font-mono text-base font-extrabold text-slate-800">
+                            <span class="text-amber-700">{{ number_format($summary['total_ro_count'] ?? 0) }} RO</span> / <span class="text-indigo-700">{{ number_format($summary['total_ri_count'] ?? 0) }} RI</span>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Bahan Fisik Terpakai:</span>
+                        <span class="font-mono text-base font-extrabold text-amber-800">
+                            {{ number_format($summary['total_comp1_qty'] ?? 0) }} pcs
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Produk Jadi Masuk:</span>
+                        <span class="font-mono text-base font-extrabold text-emerald-700">
+                            {{ number_format($summary['total_output_qty'] ?? 0) }} pcs
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Total Nilai Konversi:</span>
+                        <span class="font-mono text-base font-extrabold text-rose-600">
+                            Rp {{ number_format($summary['total_amount'] ?? 0, 0, ',', '.') }}
+                        </span>
+                    </div>
                 @elseif(isset($summary['total_amount']))
                     <div>
                         <span class="text-[10px] font-bold text-slate-400 block uppercase">Total Nilai / Volume:</span>
@@ -961,46 +1055,198 @@
                     </div>
 
                 @elseif($reportType === 'REPACK')
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                            <tr>
-                                <th class="py-3 px-4">No. Dokumen</th>
-                                <th class="py-3 px-4 text-center">Tipe</th>
-                                <th class="py-3 px-4">Tanggal Repack</th>
-                                <th class="py-3 px-4">Gudang</th>
-                                <th class="py-3 px-4">Ref Dokumen</th>
-                                <th class="py-3 px-4 text-center">Status</th>
-                                <th class="py-3 px-4 text-right">Nilai Konversi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium">
-                            @forelse($records as $r)
-                                <tr class="hover:bg-slate-50">
-                                    <td class="py-3 px-4 font-mono font-bold text-amber-800">{{ $r->doc_number }}</td>
-                                    <td class="py-3 px-4 text-center">
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ $r->doc_type === 'RPKOUT' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800' }}">
-                                            {{ $r->doc_type }}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4 text-slate-600">{{ date('d M Y', strtotime($r->repack_date)) }}</td>
-                                    <td class="py-3 px-4 text-slate-800 font-semibold">{{ $r->warehouse_name }}</td>
-                                    <td class="py-3 px-4 font-mono text-slate-500">{{ $r->ref_doc_number ?? '-' }}</td>
-                                    <td class="py-3 px-4 text-center">
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                                            {{ $r->status }}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4 text-right font-mono font-extrabold text-slate-900">
-                                        Rp {{ number_format($r->total_amount, 0, ',', '.') }}
-                                    </td>
-                                </tr>
-                            @empty
+                    <div x-data="reportRepackTable()">
+                        <!-- Toolbar Quick Expand / Collapse -->
+                        <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded font-mono font-bold bg-amber-100 text-amber-800 text-[10px]">
+                                    RO &rarr; RI
+                                </span>
+                                <span class="text-slate-600 font-medium">
+                                    Klik tombol <strong class="text-slate-900 font-bold">[+]</strong> atau baris tabel untuk melihat rincian bahan keluar (RO) &amp; produk jadi masuk (RI).
+                                </span>
+                            </div>
+
+                            @if(count($records) > 0)
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button type="button" @click="expandAll()"
+                                            class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
+                                        <i data-lucide="chevrons-down" class="w-3.5 h-3.5 text-amber-600"></i>
+                                        <span>Buka Semua Item</span>
+                                    </button>
+                                    <button type="button" @click="collapseAll()"
+                                            class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
+                                        <i data-lucide="chevrons-up" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        <span>Tutup Semua</span>
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
                                 <tr>
-                                    <td colspan="7" class="py-8 text-center text-slate-400">Tidak ada transaksi pada filter periode ini.</td>
+                                    <th class="py-3 px-3 w-10 text-center"></th>
+                                    <th class="py-3 px-4">No. Dokumen</th>
+                                    <th class="py-3 px-4 text-center">Jenis Repack</th>
+                                    <th class="py-3 px-4">Tanggal Repack</th>
+                                    <th class="py-3 px-4">Gudang</th>
+                                    <th class="py-3 px-4">Ref Dokumen RO</th>
+                                    <th class="py-3 px-4 text-center">Status</th>
+                                    <th class="py-3 px-4 text-right">Nilai Konversi</th>
                                 </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium">
+                                @forelse($records as $r)
+                                    <!-- Baris Utama Dokumen Repack -->
+                                    <tr class="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                                        :class="expanded[{{ $r->id }}] ? 'bg-amber-50/40 border-l-4 border-amber-600' : ''"
+                                        @click="toggleRow({{ $r->id }})">
+                                        <td class="py-3 px-3 text-center" @click.stop="toggleRow({{ $r->id }})">
+                                            <button type="button" 
+                                                    class="w-6 h-6 rounded-md border flex items-center justify-center transition-all cursor-pointer"
+                                                    :class="expanded[{{ $r->id }}] ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-100'">
+                                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform duration-200"
+                                                   :class="expanded[{{ $r->id }}] ? 'rotate-180' : ''"></i>
+                                            </button>
+                                        </td>
+                                        <td class="py-3 px-4 font-mono font-bold text-slate-900">
+                                            <span class="text-amber-800">{{ $r->doc_number }}</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono {{ $r->doc_type === 'RPKOUT' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-indigo-100 text-indigo-800 border border-indigo-200' }}">
+                                                {{ $r->doc_type === 'RPKOUT' ? 'RO (Bahan Keluar)' : 'RI (Produk Masuk)' }}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 text-slate-600">{{ date('d M Y', strtotime($r->repack_date)) }}</td>
+                                        <td class="py-3 px-4 text-slate-800 font-semibold">{{ $r->warehouse_name }}</td>
+                                        <td class="py-3 px-4 font-mono text-slate-600">
+                                            @if(!empty($r->ref_doc_number))
+                                                <span class="text-amber-700 font-bold">{{ $r->ref_doc_number }}</span>
+                                            @else
+                                                <span class="text-slate-400">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $r->status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                                                {{ $r->status }}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 text-right font-mono font-extrabold text-slate-900">
+                                            Rp {{ number_format($r->total_amount, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+
+                                    <!-- Baris Sub-Tabel Rincian Komponen / Produk Hasil -->
+                                    <tr x-show="expanded[{{ $r->id }}]" x-cloak class="bg-slate-50/80">
+                                        <td colspan="8" class="p-0 border-y border-amber-200/80">
+                                            <div class="p-4 bg-white/90 m-2 rounded-xl border border-slate-200 shadow-2xs">
+                                                <!-- Header Strip Sub-Table -->
+                                                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-200 gap-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 {{ $r->doc_type === 'RPKOUT' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800' }}">
+                                                            <i data-lucide="{{ $r->doc_type === 'RPKOUT' ? 'boxes' : 'package-plus' }}" class="w-3.5 h-3.5"></i>
+                                                            <span>{{ $r->doc_type === 'RPKOUT' ? '2 KOMPONEN BAHAN YANG DIKELUARKAN (RO)' : 'PRODUK HASIL REPACK YANG MASUK (RI)' }}</span>
+                                                        </span>
+                                                        <span class="text-xs text-slate-500 font-medium">
+                                                            Gudang: <strong>{{ $r->warehouse_name }}</strong>
+                                                            @if(!empty($r->ref_doc_number)) &bull; Ref RO: <strong class="text-amber-700 font-mono">{{ $r->ref_doc_number }}</strong> @endif
+                                                        </span>
+                                                    </div>
+                                                    <div class="text-xs text-slate-600 font-bold">
+                                                        Total {{ count($r->items ?? []) }} Item &bull;
+                                                        Nilai: <span class="font-mono text-slate-900 text-sm font-extrabold">Rp {{ number_format($r->total_amount, 0, ',', '.') }}</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Sub-Table Items -->
+                                                <div class="overflow-x-auto">
+                                                    <table class="w-full text-left text-xs border border-slate-100 rounded-lg overflow-hidden">
+                                                        <thead class="bg-slate-100 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+                                                            <tr>
+                                                                <th class="py-2 px-3 w-10 text-center">No</th>
+                                                                <th class="py-2 px-3">Peran / Komponen</th>
+                                                                <th class="py-2 px-3">Kode SKU</th>
+                                                                <th class="py-2 px-3">Nama Produk</th>
+                                                                <th class="py-2 px-3 text-center">Tracking</th>
+                                                                <th class="py-2 px-3 text-center">Kuantitas</th>
+                                                                <th class="py-2 px-3 text-right">Harga Modal Satuan</th>
+                                                                <th class="py-2 px-3 text-right">Subtotal</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-slate-100 font-medium">
+                                                            @forelse($r->items as $iIdx => $item)
+                                                                <tr class="hover:bg-slate-50">
+                                                                    <td class="py-2.5 px-3 text-center text-slate-400 font-mono">{{ $iIdx + 1 }}</td>
+                                                                    <td class="py-2.5 px-3">
+                                                                        @if($r->doc_type === 'RPKOUT')
+                                                                            @if($item->item_type === 'INPUT')
+                                                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                                                                                    Komponen 1: Kartu Fisik 0K
+                                                                                </span>
+                                                                            @else
+                                                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                                                                                    Komponen 2: Saldo Bulk
+                                                                                </span>
+                                                                            @endif
+                                                                        @else
+                                                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                                                Produk Jadi (Hasil Repack)
+                                                                            </span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="py-2.5 px-3 font-mono font-bold text-slate-700">{{ $item->sku }}</td>
+                                                                    <td class="py-2.5 px-3 font-bold text-slate-900">{{ $item->product_name }}</td>
+                                                                    <td class="py-2.5 px-3 text-center">
+                                                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-600">
+                                                                            QUANTITY
+                                                                        </span>
+                                                                    </td>
+                                                                    <td class="py-2.5 px-3 text-center font-mono font-extrabold text-slate-800">
+                                                                        {{ number_format($item->quantity) }} pcs
+                                                                    </td>
+                                                                    <td class="py-2.5 px-3 text-right font-mono text-slate-600">
+                                                                        Rp {{ number_format($item->unit_cost, 0, ',', '.') }}
+                                                                    </td>
+                                                                    <td class="py-2.5 px-3 text-right font-mono font-extrabold text-slate-900">
+                                                                        Rp {{ number_format($item->subtotal, 0, ',', '.') }}
+                                                                    </td>
+                                                                </tr>
+                                                            @empty
+                                                                <tr>
+                                                                    <td colspan="8" class="py-3 text-center text-slate-400 italic">Tidak ada item tercatat pada dokumen ini.</td>
+                                                                </tr>
+                                                            @endforelse
+                                                        </tbody>
+                                                        <tfoot class="bg-slate-50 border-t border-slate-200 font-bold text-xs">
+                                                            <tr>
+                                                                <td colspan="7" class="py-2.5 px-3 text-right uppercase tracking-wider text-slate-600">Total Nilai Transaksi:</td>
+                                                                <td class="py-2.5 px-3 text-right font-mono font-extrabold text-slate-900">Rp {{ number_format($r->total_amount, 0, ',', '.') }}</td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
+
+                                                @if(!empty($r->notes))
+                                                    <div class="mt-3 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-2">
+                                                        <i data-lucide="file-text" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                                                        <div>
+                                                            <strong class="text-slate-800">Catatan / Keterangan:</strong>
+                                                            <span>{{ $r->notes }}</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="py-8 text-center text-slate-400">Tidak ada transaksi repack (RO/RI) pada filter periode ini.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
 
                 @elseif($reportType === 'AR')
                     <table class="w-full text-left text-xs">
@@ -1358,6 +1604,36 @@
                 expandAll() {
                     var all = {};
                     @if(isset($records) && $reportType === 'SM')
+                        @foreach($records as $r)
+                            all[{{ $r->id }}] = true;
+                        @endforeach
+                    @endif
+                    this.expanded = all;
+                    this.$nextTick(function() {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                },
+                collapseAll() {
+                    this.expanded = {};
+                    this.$nextTick(function() {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                }
+            };
+        }
+
+        function reportRepackTable() {
+            return {
+                expanded: {},
+                toggleRow(id) {
+                    this.expanded[id] = !this.expanded[id];
+                    this.$nextTick(function() {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                },
+                expandAll() {
+                    var all = {};
+                    @if(isset($records) && $reportType === 'REPACK')
                         @foreach($records as $r)
                             all[{{ $r->id }}] = true;
                         @endforeach

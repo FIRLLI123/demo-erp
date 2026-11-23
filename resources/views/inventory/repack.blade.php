@@ -5,6 +5,9 @@
 
     <div x-data="repackApp()" x-init="initData()">
         
+        <!-- Flash Alert -->
+        <x-alert />
+
         <!-- Top Action & Navigation Tabs -->
         <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -80,8 +83,9 @@
 
                 <form method="POST" action="{{ route('inventory.repack.store-ro') }}" 
                       enctype="multipart/form-data"
-                      data-loading-title="Memproses Repack Out"
-                      data-loading-sub="Mengurangi stok 2 komponen bahan & merilis dokumen RO..."
+                      @submit="isSubmittingRo = true"
+                      data-loading-title="Memproses Repack Out (RO)"
+                      data-loading-sub="{{ $iccidEnabled ? 'Mengurangi stok 2 komponen bahan & merilis dokumen RO...' : 'Mengurangi stok bahan baku & merilis dokumen RO...' }}"
                       data-doctype="RPKOUT">
                     @csrf
 
@@ -117,25 +121,29 @@
                     <!-- 2 KOMPONEN BAHAN REPACK -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                         
-                        <!-- KOMPONEN 1: BAHAN FISIK 0K (ICCID) -->
+                        <!-- KOMPONEN 1: BAHAN FISIK 0K (ICCID / QUANTITY) -->
                         <div class="border-2 border-slate-200 rounded-2xl p-4 bg-slate-50/50">
                             <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
                                 <div class="flex items-center gap-1.5">
                                     <span class="w-5 h-5 rounded-full bg-amber-500 text-white font-mono font-bold text-[11px] flex items-center justify-center">1</span>
-                                    <span class="text-xs font-extrabold text-slate-800">Komponen Fisik (Kartu 0K)</span>
+                                    <span class="text-xs font-extrabold text-slate-800">Komponen Fisik (Kartu 0K / Blank)</span>
                                 </div>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-100 text-purple-700">Tracking: ICCID</span>
+                                @if($iccidEnabled)
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-100 text-purple-700">Tracking: ICCID</span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 text-slate-700">Tracking: QUANTITY</span>
+                                @endif
                             </div>
 
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Pilih Produk Bahan 0K</label>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Pilih Produk Bahan Fisik</label>
                                     <select name="comp1_product_id" 
                                             x-model="comp1Id" 
                                             @change="onComp1Change()"
                                             required 
                                             class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
-                                        <option value="">-- Pilih Produk Fisik 0K --</option>
+                                        <option value="">-- Pilih Produk Fisik --</option>
                                         @foreach($rawPhysicalProducts as $rp)
                                             <option value="{{ $rp->id }}" data-cost="{{ $rp->cost_price }}" data-sku="{{ $rp->sku }}">
                                                 [{{ $rp->type }}] {{ $rp->name }}
@@ -145,77 +153,97 @@
                                 </div>
 
                                 <div class="flex items-center justify-between text-xs font-mono">
-                                    <span class="text-slate-500">Harga Modal:</span>
+                                    <span class="text-slate-500">Harga Modal Satuan:</span>
                                     <span class="font-bold text-slate-800">Rp <span x-text="comp1Cost.toLocaleString('id-ID')"></span></span>
                                 </div>
 
-                                <!-- Input ICCID -->
-                                <div class="pt-2 border-t border-slate-200">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <label class="text-[11px] font-bold text-slate-700">Metode Serial ICCID:</label>
-                                        <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100 text-[10px] font-bold">
-                                            <button type="button" @click="comp1IccidMode = 'SELECT'" :class="comp1IccidMode === 'SELECT' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">Pilih Stok</button>
-                                            <button type="button" @click="comp1IccidMode = 'PASTE'" :class="comp1IccidMode === 'PASTE' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">Paste Teks</button>
-                                            <button type="button" @click="comp1IccidMode = 'UPLOAD'" :class="comp1IccidMode === 'UPLOAD' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">Upload CSV</button>
-                                        </div>
-                                    </div>
-
-                                    <input type="hidden" name="comp1_iccid_mode" :value="comp1IccidMode">
-
-                                    <!-- Mode Select -->
-                                    <div x-show="comp1IccidMode === 'SELECT'">
-                                        <div class="flex items-center justify-between text-[11px] mb-1">
-                                            <span class="text-slate-500">Centang unit di gudang asal:</span>
-                                            <div class="flex items-center gap-2">
-                                                <button type="button" @click="selectAllComp1Iccids()" class="text-amber-600 font-bold hover:underline">Pilih Semua</button>
-                                                <span>&bull;</span>
-                                                <button type="button" @click="comp1SelectedIccids = []" class="text-slate-400 font-bold hover:underline">Reset</button>
+                                @if($iccidEnabled)
+                                    <!-- Input ICCID -->
+                                    <div class="pt-2 border-t border-slate-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <label class="text-[11px] font-bold text-slate-700">Metode Serial ICCID:</label>
+                                            <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100 text-[10px] font-bold">
+                                                <button type="button" @click="comp1IccidMode = 'SELECT'" :class="comp1IccidMode === 'SELECT' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">Pilih Stok</button>
+                                                <button type="button" @click="comp1IccidMode = 'PASTE'" :class="comp1IccidMode === 'PASTE' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">Paste Teks</button>
+                                                <button type="button" @click="comp1IccidMode = 'UPLOAD'" :class="comp1IccidMode === 'UPLOAD' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'" class="px-2 py-0.5 rounded-md">Upload CSV</button>
                                             </div>
                                         </div>
-                                        <div class="max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 grid grid-cols-2 gap-1.5 bg-white">
-                                            <template x-for="iccid in getComp1AvailableIccids()" :key="iccid.id">
-                                                <label class="flex items-center gap-1.5 text-[10px] font-mono bg-slate-50 p-1 rounded border border-slate-200 cursor-pointer hover:bg-amber-50">
-                                                    <input type="checkbox" 
-                                                           name="comp1_selected_iccids[]" 
-                                                           :value="iccid.iccid_number"
-                                                           x-model="comp1SelectedIccids"
-                                                           class="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5">
-                                                    <span x-text="iccid.iccid_number" class="truncate"></span>
-                                                </label>
-                                            </template>
-                                            <template x-if="getComp1AvailableIccids().length === 0">
-                                                <div class="col-span-full py-2 text-center text-slate-400 text-xs">
-                                                    Tidak ada ICCID berstatus AVAILABLE di gudang ini.
+
+                                        <input type="hidden" name="comp1_iccid_mode" :value="comp1IccidMode">
+
+                                        <!-- Mode Select -->
+                                        <div x-show="comp1IccidMode === 'SELECT'">
+                                            <div class="flex items-center justify-between text-[11px] mb-1">
+                                                <span class="text-slate-500">Centang unit di gudang asal:</span>
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button" @click="selectAllComp1Iccids()" class="text-amber-600 font-bold hover:underline">Pilih Semua</button>
+                                                    <span>&bull;</span>
+                                                    <button type="button" @click="comp1SelectedIccids = []" class="text-slate-400 font-bold hover:underline">Reset</button>
                                                 </div>
-                                            </template>
+                                            </div>
+                                            <div class="max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 grid grid-cols-2 gap-1.5 bg-white">
+                                                <template x-for="iccid in getComp1AvailableIccids()" :key="iccid.id">
+                                                    <label class="flex items-center gap-1.5 text-[10px] font-mono bg-slate-50 p-1 rounded border border-slate-200 cursor-pointer hover:bg-amber-50">
+                                                        <input type="checkbox" 
+                                                               name="comp1_selected_iccids[]" 
+                                                               :value="iccid.iccid_number"
+                                                               x-model="comp1SelectedIccids"
+                                                               class="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5">
+                                                        <span x-text="iccid.iccid_number" class="truncate"></span>
+                                                    </label>
+                                                </template>
+                                                <template x-if="getComp1AvailableIccids().length === 0">
+                                                    <div class="col-span-full py-2 text-center text-slate-400 text-xs">
+                                                        Tidak ada ICCID berstatus AVAILABLE di gudang ini.
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+
+                                        <!-- Mode Paste -->
+                                        <div x-show="comp1IccidMode === 'PASTE'">
+                                            <textarea name="comp1_iccid_text" 
+                                                      x-model="comp1IccidText" 
+                                                      rows="3" 
+                                                      placeholder="Paste serial ICCID disini (1 serial per baris)..." 
+                                                      class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:outline-none"></textarea>
+                                        </div>
+
+                                        <!-- Mode Upload -->
+                                        <div x-show="comp1IccidMode === 'UPLOAD'">
+                                            <input type="file" name="comp1_iccid_file" accept=".csv,.txt" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-amber-50 file:text-amber-700">
+                                            <div class="mt-1 text-[10px]">
+                                                <a href="{{ route('inventory.repack.download-template') }}" class="text-amber-600 hover:underline font-bold">Download Template CSV</a>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <!-- Mode Paste -->
-                                    <div x-show="comp1IccidMode === 'PASTE'">
-                                        <textarea name="comp1_iccid_text" 
-                                                  x-model="comp1IccidText" 
-                                                  rows="3" 
-                                                  placeholder="Paste serial ICCID disini (1 serial per baris)..." 
-                                                  class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:outline-none"></textarea>
-                                    </div>
-
-                                    <!-- Mode Upload -->
-                                    <div x-show="comp1IccidMode === 'UPLOAD'">
-                                        <input type="file" name="comp1_iccid_file" accept=".csv,.txt" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-amber-50 file:text-amber-700">
-                                        <div class="mt-1 text-[10px]">
-                                            <a href="{{ route('inventory.repack.download-template') }}" class="text-amber-600 hover:underline font-bold">Download Template CSV</a>
+                                @else
+                                    <!-- Input Kuantitas Fisik Biasa jika ICCID mati -->
+                                    <div class="pt-2 border-t border-slate-200">
+                                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Jumlah Fisik yang Digunakan (Qty Pcs) <span class="text-rose-500">*</span></label>
+                                        <div class="relative">
+                                            <input type="number" 
+                                                   name="comp1_quantity" 
+                                                   x-model.number="comp1ManualQty" 
+                                                   min="1" 
+                                                   required 
+                                                   placeholder="Contoh: 100" 
+                                                   class="w-full text-xs font-mono font-bold text-slate-800 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                                            <span class="absolute right-3 top-1.5 text-[10px] font-bold text-slate-400">PCS</span>
                                         </div>
+                                        <template x-if="roWarehouseId && comp1Id">
+                                            <span class="text-[10px] text-slate-400 block mt-1">Stok fisik tersedia di gudang: <strong class="text-emerald-600 font-mono" x-text="getComp1Stock().toLocaleString('id-ID') + ' pcs'"></strong></span>
+                                        </template>
                                     </div>
+                                @endif
 
-                                    <div class="mt-2 flex items-center justify-between text-xs font-bold pt-2 border-t border-slate-200">
-                                        <span class="text-slate-600">Total Unit Terpilih:</span>
-                                        <span class="font-mono text-purple-700 font-extrabold"><span x-text="comp1Qty"></span> pcs</span>
-                                    </div>
-                                    <div class="flex items-center justify-between text-xs font-bold mt-1">
-                                        <span class="text-slate-600">Subtotal Komponen 1:</span>
-                                        <span class="font-mono text-slate-900">Rp <span x-text="(comp1Qty * comp1Cost).toLocaleString('id-ID')"></span></span>
-                                    </div>
+                                <div class="mt-2 flex items-center justify-between text-xs font-bold pt-2 border-t border-slate-200">
+                                    <span class="text-slate-600">Total Kuantitas Komponen 1:</span>
+                                    <span class="font-mono text-purple-700 font-extrabold"><span x-text="comp1Qty"></span> pcs</span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs font-bold mt-1">
+                                    <span class="text-slate-600">Subtotal Komponen 1:</span>
+                                    <span class="font-mono text-slate-900">Rp <span x-text="(comp1Qty * comp1Cost).toLocaleString('id-ID')"></span></span>
                                 </div>
                             </div>
                         </div>
@@ -295,9 +323,13 @@
                             <button type="button" @click="createRoOpen = false" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs border border-slate-200">
                                 Batal
                             </button>
-                            <button type="submit" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                                <span>Simpan & Rilis RO (RPKOUT)</span>
+                            <button type="submit" 
+                                    :disabled="isSubmittingRo"
+                                    :class="isSubmittingRo ? 'opacity-50 cursor-not-allowed bg-amber-400' : 'bg-amber-600 hover:bg-amber-700'"
+                                    class="px-5 py-2.5 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer">
+                                <i x-show="!isSubmittingRo" data-lucide="check" class="w-4 h-4"></i>
+                                <span x-show="isSubmittingRo" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                <span x-text="isSubmittingRo ? 'Memproses RO...' : 'Simpan & Rilis RO (RPKOUT)'"></span>
                             </button>
                         </div>
                     </div>
@@ -443,8 +475,8 @@
                                             </td>
                                             <td class="py-3 px-4">
                                                 <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold"
-                                                      :class="item.tracking_method === 'ICCID' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'"
-                                                      x-text="item.tracking_method">
+                                                      :class="(!iccidEnabled || item.tracking_method !== 'ICCID') ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
+                                                      x-text="!iccidEnabled ? 'QUANTITY' : item.tracking_method">
                                                 </span>
                                             </td>
                                             <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">
@@ -463,7 +495,7 @@
                         </div>
 
                         <!-- Accordion ICCID jika ada -->
-                        <template x-if="selectedRo && selectedRo.iccids && selectedRo.iccids.length > 0">
+                        <template x-if="iccidEnabled && selectedRo && selectedRo.iccids && selectedRo.iccids.length > 0">
                             <div class="p-3.5 rounded-xl bg-purple-50/60 border border-purple-200">
                                 <span class="text-xs font-bold text-purple-900 block mb-2">
                                     Daftar ICCID Komponen Fisik yang Dikeluarkan (<span x-text="selectedRo.iccids.length"></span> unit):
@@ -515,8 +547,9 @@
                 </div>
 
                 <form method="POST" action="{{ route('inventory.repack.store-ri') }}" 
+                      @submit="isSubmittingRi = true"
                       data-loading-title="Memproses Repack In"
-                      data-loading-sub="Memasukkan produk hasil repack & update serial ICCID..."
+                      data-loading-sub="{{ $iccidEnabled ? 'Memasukkan produk hasil repack & update serial ICCID...' : 'Memasukkan produk hasil repack & menambah stok gudang...' }}"
                       data-doctype="RPKIN">
                     @csrf
 
@@ -593,9 +626,25 @@
                         <button type="button" @click="createRiOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
                             Batal
                         </button>
-                        <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
-                            <i data-lucide="check" class="w-4 h-4"></i>
-                            <span>Simpan & Masukkan ke Stok (RPKIN)</span>
+                        <button type="submit" 
+                                :disabled="isSubmittingRi"
+                                :class="isSubmittingRi ? 'opacity-70 cursor-not-allowed' : ''"
+                                class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
+                            <template x-if="!isSubmittingRi">
+                                <div class="flex items-center gap-1.5">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                    <span>Simpan & Masukkan ke Stok (RPKIN)</span>
+                                </div>
+                            </template>
+                            <template x-if="isSubmittingRi">
+                                <div class="flex items-center gap-1.5">
+                                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                    </svg>
+                                    <span>Memproses RI...</span>
+                                </div>
+                            </template>
                         </button>
                     </div>
 
@@ -745,7 +794,9 @@
                                                 <span x-text="item.product_name"></span>
                                             </td>
                                             <td class="py-3 px-4">
-                                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-100 text-purple-700" x-text="item.tracking_method"></span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold"
+                                                      :class="(!iccidEnabled || item.tracking_method !== 'ICCID') ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
+                                                      x-text="!iccidEnabled ? 'QUANTITY' : item.tracking_method"></span>
                                             </td>
                                             <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">
                                                 <span x-text="item.quantity.toLocaleString('id-ID')"></span> pcs
@@ -763,7 +814,7 @@
                         </div>
 
                         <!-- Accordion ICCID yang kini dimiliki produk baru -->
-                        <template x-if="selectedRi && selectedRi.iccids && selectedRi.iccids.length > 0">
+                        <template x-if="iccidEnabled && selectedRi && selectedRi.iccids && selectedRi.iccids.length > 0">
                             <div class="p-3.5 rounded-xl bg-purple-50/60 border border-purple-200">
                                 <span class="text-xs font-bold text-purple-900 block mb-2">
                                     Unit Serial ICCID Hasil Konversi (<span x-text="selectedRi.iccids.length"></span> unit):
@@ -792,6 +843,10 @@
                 createRiOpen: false,
                 selectedRo: null,
                 selectedRi: null,
+                iccidEnabled: @json($iccidEnabled),
+                isSubmittingRo: false,
+                isSubmittingRi: false,
+                comp1ManualQty: 100,
 
                 // RO Form States
                 roWarehouseId: '',
@@ -814,6 +869,9 @@
                 openRoList: @json($openRoList),
 
                 get comp1Qty() {
+                    if (!this.iccidEnabled) {
+                        return Number(this.comp1ManualQty) || 0;
+                    }
                     if (this.comp1IccidMode === 'SELECT') {
                         return this.comp1SelectedIccids.length;
                     } else if (this.comp1IccidMode === 'PASTE') {
@@ -882,6 +940,12 @@
                     }
                 },
 
+                getComp1Stock() {
+                    if (!this.roWarehouseId || !this.comp1Id) return 0;
+                    const found = this.stockBalances.find(b => b.warehouse_id == this.roWarehouseId && b.product_id == this.comp1Id);
+                    return found ? parseInt(found.quantity) : 0;
+                },
+
                 getComp1AvailableIccids() {
                     if (!this.roWarehouseId || !this.comp1Id) return [];
                     return this.availableIccids.filter(u => u.warehouse_id == this.roWarehouseId && u.product_id == this.comp1Id);
@@ -904,7 +968,7 @@
 
                 getRoOutputQty() {
                     if (!this.currentRoObj || !this.currentRoObj.items) return 1;
-                    const item1 = this.currentRoObj.items.find(i => i.tracking_method === 'ICCID');
+                    const item1 = this.currentRoObj.items.find(i => i.item_type === 'INPUT') || this.currentRoObj.items[0];
                     return item1 ? parseInt(item1.quantity) : 1;
                 }
             }
