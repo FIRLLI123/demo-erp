@@ -21,6 +21,7 @@ class ProcurementController extends Controller
             ->join('areas', 'clusters.area_id', '=', 'areas.id')
             ->leftJoin('vendors', 'purchase_orders.vendor_id', '=', 'vendors.id')
             ->leftJoin('goods_receipts', 'goods_receipts.purchase_order_id', '=', 'purchase_orders.id')
+            ->leftJoin('users as creator', 'purchase_orders.created_by', '=', 'creator.id')
             ->select(
                 'purchase_orders.*',
                 'taps.name as tap_name',
@@ -34,7 +35,8 @@ class ProcurementController extends Controller
                 'goods_receipts.doc_number as gr_number',
                 'goods_receipts.do_number',
                 'goods_receipts.do_file_path',
-                'goods_receipts.received_date as gr_received_date'
+                'goods_receipts.received_date as gr_received_date',
+                'creator.name as creator_name'
             )
             ->orderBy('purchase_orders.id', 'desc');
 
@@ -86,14 +88,71 @@ class ProcurementController extends Controller
             return $po;
         });
 
-        $receipts = TerritoryScope::applyWarehouseScope(
-            DB::table('goods_receipts')
-                ->join('taps', 'goods_receipts.tap_id', '=', 'taps.id')
-                ->join('warehouses', 'goods_receipts.warehouse_id', '=', 'warehouses.id')
-                ->select('goods_receipts.*', 'taps.name as tap_name', 'warehouses.name as warehouse_name')
-                ->orderBy('goods_receipts.id', 'desc'),
-            'goods_receipts.warehouse_id'
-        )->get();
+        // 2. Ambil data Penerimaan Barang Fisik (Goods Receipts - GR)
+        $grQuery = DB::table('goods_receipts')
+            ->join('taps', 'goods_receipts.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->join('areas', 'clusters.area_id', '=', 'areas.id')
+            ->join('warehouses', 'goods_receipts.warehouse_id', '=', 'warehouses.id')
+            ->leftJoin('purchase_orders', 'goods_receipts.purchase_order_id', '=', 'purchase_orders.id')
+            ->leftJoin('vendors', 'purchase_orders.vendor_id', '=', 'vendors.id')
+            ->leftJoin('users as receiver', 'goods_receipts.received_by', '=', 'receiver.id')
+            ->leftJoin('users as creator', 'purchase_orders.created_by', '=', 'creator.id')
+            ->select(
+                'goods_receipts.*',
+                'taps.name as tap_name',
+                'taps.code as tap_code',
+                'taps.cluster_id',
+                'clusters.name as cluster_name',
+                'clusters.area_id',
+                'areas.name as area_name',
+                'warehouses.name as warehouse_name',
+                'warehouses.code as warehouse_code',
+                'purchase_orders.doc_number as po_number',
+                'purchase_orders.order_date as po_order_date',
+                'purchase_orders.created_at as po_created_at',
+                'purchase_orders.total_amount as po_total_amount',
+                'purchase_orders.status as po_status',
+                'vendors.name as vendor_name',
+                'vendors.code as vendor_code',
+                'purchase_orders.supplier_name',
+                'receiver.name as receiver_name',
+                'creator.name as po_creator_name'
+            )
+            ->orderBy('goods_receipts.id', 'desc');
+
+        $receiptsRaw = TerritoryScope::applyWarehouseScope($grQuery, 'goods_receipts.warehouse_id')->get();
+
+        $grIds = $receiptsRaw->pluck('id')->toArray();
+        $itemsByGr = [];
+        if (!empty($grIds)) {
+            $grItems = DB::table('goods_receipt_items')
+                ->join('products', 'goods_receipt_items.product_id', '=', 'products.id')
+                ->whereIn('goods_receipt_items.goods_receipt_id', $grIds)
+                ->select(
+                    'goods_receipt_items.*',
+                    'products.name as product_name',
+                    'products.sku',
+                    'products.type as product_type',
+                    'products.tracking_method',
+                    'products.cost_price'
+                )
+                ->get();
+
+            foreach ($grItems as $gi) {
+                if (!$iccidEnabled) {
+                    $gi->tracking_method = 'QUANTITY';
+                }
+                $itemsByGr[$gi->goods_receipt_id][] = $gi;
+            }
+        }
+
+        $receipts = $receiptsRaw->map(function ($gr) use ($itemsByGr) {
+            $gr->items = $itemsByGr[$gr->id] ?? [];
+            $gr->total_qty = collect($gr->items)->sum('quantity_received');
+            $gr->vendor_display = $gr->vendor_name ?: ($gr->supplier_name ?: 'Vendor Utama');
+            return $gr;
+        });
 
         $products = DB::table('products')
             ->where('status', 'ACTIVE')
@@ -213,6 +272,7 @@ class ProcurementController extends Controller
                 'total_amount' => $totalAmount,
                 'status' => 'ORDERED',
                 'notes' => $notes,
+                'created_by' => Auth::id() ?? 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -438,6 +498,7 @@ class ProcurementController extends Controller
                 'received_date' => $receivedDate,
                 'status' => 'CONFIRMED',
                 'notes' => $request->input('notes', 'Penerimaan fisik barang ke ' . $targetWh->name),
+                'received_by' => Auth::id() ?? 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

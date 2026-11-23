@@ -11,29 +11,62 @@ class ReportController extends Controller
     public function index(Request $request)
     {
         $reportType = $request->input('type', 'SALES');
+        $format = $request->input('format', 'summary');
         $startDate = $request->input('start_date', date('Y-m-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));
+        $areaId = $request->input('area_id', '');
+        $clusterId = $request->input('cluster_id', '');
         $tapId = $request->input('tap_id', 'ALL');
         $warehouseId = $request->input('warehouse_id', 'ALL');
 
         // Master data filter dibatasi sesuai TerritoryScope user
+        $areas = TerritoryScope::applyAreaScope(
+            DB::table('areas')->where('status', 'ACTIVE')->orderBy('name'),
+            'areas.id'
+        )->get();
+
+        $clusters = TerritoryScope::applyClusterScope(
+            DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name'),
+            'clusters.id'
+        )->get();
+
         $taps = TerritoryScope::applyTapScope(
-            DB::table('taps')->where('status', 'ACTIVE')->orderBy('name'),
+            DB::table('taps')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->where('taps.status', 'ACTIVE')
+                ->select('taps.*', 'clusters.area_id')
+                ->orderBy('taps.name'),
             'taps.id'
         )->get();
+
+        $whQuery = DB::table('warehouses')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->where('warehouses.status', 'ACTIVE')
+            ->select('warehouses.*', 'taps.cluster_id', 'clusters.area_id');
+
+        if ($reportType === 'PO_GR') {
+            $whQuery->where('warehouses.type', 'MAIN');
+        }
+
         $warehouses = TerritoryScope::applyWarehouseScope(
-            DB::table('warehouses')->where('status', 'ACTIVE')->orderBy('name'),
+            $whQuery->orderBy('warehouses.name'),
             'warehouses.id'
         )->get();
 
-        $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId);
+        $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId, $format, $areaId, $clusterId);
 
         return view('reports.index', [
             'reportType' => $reportType,
+            'format' => $format,
             'startDate' => $startDate,
             'endDate' => $endDate,
+            'areaId' => $areaId,
+            'clusterId' => $clusterId,
             'tapId' => $tapId,
             'warehouseId' => $warehouseId,
+            'areas' => $areas,
+            'clusters' => $clusters,
             'taps' => $taps,
             'warehouses' => $warehouses,
             'records' => $data['records'],
@@ -45,14 +78,18 @@ class ReportController extends Controller
     public function exportExcel(Request $request)
     {
         $reportType = $request->input('type', 'SALES');
+        $format = $request->input('format', 'summary');
         $startDate = $request->input('start_date', date('Y-m-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));
+        $areaId = $request->input('area_id', '');
+        $clusterId = $request->input('cluster_id', '');
         $tapId = $request->input('tap_id', 'ALL');
         $warehouseId = $request->input('warehouse_id', 'ALL');
 
-        $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId);
+        $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId, $format, $areaId, $clusterId);
 
-        $fileName = "Laporan_{$reportType}_PT_Wahana_Putra_Yudha_" . date('Ymd_His') . ".csv";
+        $formatSuffix = ($reportType === 'PO_GR' && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
+        $fileName = "Laporan_{$reportType}_{$formatSuffix}_PT_Wahana_Putra_Yudha_" . date('Ymd_His') . ".csv";
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -97,15 +134,19 @@ class ReportController extends Controller
     public function printPdf(Request $request)
     {
         $reportType = $request->input('type', 'SALES');
+        $format = $request->input('format', 'summary');
         $startDate = $request->input('start_date', date('Y-m-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));
+        $areaId = $request->input('area_id', '');
+        $clusterId = $request->input('cluster_id', '');
         $tapId = $request->input('tap_id', 'ALL');
         $warehouseId = $request->input('warehouse_id', 'ALL');
 
-        $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId);
+        $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId, $format, $areaId, $clusterId);
 
         return view('reports.print-pdf', [
             'reportType' => $reportType,
+            'format' => $format,
             'startDate' => $startDate,
             'endDate' => $endDate,
             'title' => $data['title'],
@@ -116,17 +157,17 @@ class ReportController extends Controller
         ]);
     }
 
-    private function getReportData($type, $start, $end, $tapId, $whId)
+    private function getReportData($type, $start, $end, $tapId, $whId, $format = 'summary', $areaId = '', $clusterId = '')
     {
         switch ($type) {
             case 'PO_GR':
-                return $this->getPoGrData($start, $end, $tapId, $whId);
+                return $this->getPoGrData($start, $end, $tapId, $whId, $format, $areaId, $clusterId);
             case 'SM':
                 return $this->getSmData($start, $end, $whId);
             case 'REPACK':
                 return $this->getRepackData($start, $end, $whId);
             case 'SALES':
-                return $this->getSalesData($start, $end, $tapId, $whId);
+                return $this->getSalesData($start, $end, $tapId, $whId, $areaId, $clusterId);
             case 'AR':
                 return $this->getArData($start, $end, $tapId);
             case 'CASH_BANK':
@@ -134,16 +175,18 @@ class ReportController extends Controller
             case 'STOCK':
                 return $this->getStockData($start, $end, $tapId, $whId);
             default:
-                return $this->getSalesData($start, $end, $tapId, $whId);
+                return $this->getSalesData($start, $end, $tapId, $whId, $areaId, $clusterId);
         }
     }
 
-    private function getSalesData($start, $end, $tapId, $whId)
+    private function getSalesData($start, $end, $tapId, $whId, $areaId = '', $clusterId = '')
     {
         $query = DB::table('sales_orders')
             ->join('customers', 'sales_orders.customer_id', '=', 'customers.id')
             ->join('sales', 'sales_orders.sales_id', '=', 'sales.id')
             ->join('warehouses', 'sales_orders.warehouse_id', '=', 'warehouses.id')
+            ->join('taps', 'sales_orders.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
             ->leftJoin('goods_deliveries', 'sales_orders.id', '=', 'goods_deliveries.sales_order_id')
             ->leftJoin('accounts_receivable', 'sales_orders.id', '=', 'accounts_receivable.sales_order_id')
             ->whereBetween('sales_orders.order_date', [$start, $end])
@@ -162,8 +205,14 @@ class ReportController extends Controller
         TerritoryScope::applyTapScope($query, 'sales_orders.tap_id');
         TerritoryScope::applyWarehouseScope($query, 'sales_orders.warehouse_id');
 
-        if ($tapId !== 'ALL') $query->where('sales_orders.tap_id', $tapId);
-        if ($whId !== 'ALL') $query->where('sales_orders.warehouse_id', $whId);
+        if (!empty($areaId)) {
+            $query->where('clusters.area_id', $areaId);
+        }
+        if (!empty($clusterId)) {
+            $query->where('taps.cluster_id', $clusterId);
+        }
+        if ($tapId !== 'ALL' && !empty($tapId)) $query->where('sales_orders.tap_id', $tapId);
+        if ($whId !== 'ALL' && !empty($whId)) $query->where('sales_orders.warehouse_id', $whId);
 
         $records = $query->get();
 
@@ -198,57 +247,260 @@ class ReportController extends Controller
         ];
     }
 
-    private function getPoGrData($start, $end, $tapId, $whId = 'ALL')
+    private function getPoGrData($start, $end, $tapId, $whId = 'ALL', $format = 'summary', $areaId = '', $clusterId = '')
     {
         $query = DB::table('purchase_orders')
             ->join('taps', 'purchase_orders.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->join('areas', 'clusters.area_id', '=', 'areas.id')
+            ->leftJoin('vendors', 'purchase_orders.vendor_id', '=', 'vendors.id')
+            ->leftJoin('users as creator', 'purchase_orders.created_by', '=', 'creator.id')
             ->leftJoin('goods_receipts', 'purchase_orders.id', '=', 'goods_receipts.purchase_order_id')
+            ->leftJoin('users as receiver', 'goods_receipts.received_by', '=', 'receiver.id')
             ->leftJoin('warehouses', 'goods_receipts.warehouse_id', '=', 'warehouses.id')
             ->whereBetween('purchase_orders.order_date', [$start, $end])
             ->select(
                 'purchase_orders.*',
                 'taps.name as tap_name',
+                'taps.code as tap_code',
+                'clusters.name as cluster_name',
+                'areas.name as area_name',
+                'vendors.name as vendor_name',
+                'vendors.code as vendor_code',
+                'creator.name as creator_name',
+                'goods_receipts.id as gr_id',
                 'goods_receipts.doc_number as gr_number',
                 'goods_receipts.received_date',
+                'goods_receipts.created_at as gr_created_at',
+                'goods_receipts.do_number',
+                'goods_receipts.do_file_path',
+                'receiver.name as receiver_name',
                 'warehouses.name as destination_warehouse'
             )
             ->orderBy('purchase_orders.id', 'desc');
 
         TerritoryScope::applyTapScope($query, 'purchase_orders.tap_id');
 
-        if ($tapId !== 'ALL') $query->where('purchase_orders.tap_id', $tapId);
-        if ($whId !== 'ALL') $query->where('goods_receipts.warehouse_id', $whId);
-
-        $records = $query->get();
-        $rows = [];
-        $totalNominal = 0;
-
-        foreach ($records as $r) {
-            $totalNominal += (float)$r->total_amount;
-            $rows[] = [
-                $r->doc_number,
-                $r->order_date,
-                $r->supplier_name,
-                $r->tap_name,
-                $r->gr_number ?? '-',
-                $r->received_date ?? '-',
-                $r->destination_warehouse ?? '-',
-                $r->status,
-                number_format($r->total_amount, 0, ',', '.'),
-            ];
+        if (!empty($areaId)) {
+            $query->where('clusters.area_id', $areaId);
+        }
+        if (!empty($clusterId)) {
+            $query->where('taps.cluster_id', $clusterId);
+        }
+        if ($tapId !== 'ALL' && !empty($tapId)) $query->where('purchase_orders.tap_id', $tapId);
+        if ($whId !== 'ALL' && !empty($whId)) {
+            $whTapId = DB::table('warehouses')->where('id', $whId)->value('tap_id');
+            $query->where(function($q) use ($whId, $whTapId) {
+                $q->where('goods_receipts.warehouse_id', $whId);
+                if ($whTapId) {
+                    $q->orWhere(function($sq) use ($whTapId) {
+                        $sq->whereNull('goods_receipts.id')->where('purchase_orders.tap_id', $whTapId);
+                    });
+                }
+            });
         }
 
-        return [
-            'title' => 'Laporan Rekapitulasi Pengadaan Barang & Penerimaan Fisik (PO - GR)',
-            'headers' => ['No. PO', 'Tgl PO', 'Supplier', 'TAP Tujuan', 'No. GR (Fisik Masuk)', 'Tgl Diterima', 'Gudang Penerima', 'Status PO', 'Total Nilai Pengadaan (Rp)'],
-            'records' => $records,
-            'rows' => $rows,
-            'summary' => [
-                'total_records' => count($records),
-                'total_amount' => $totalNominal,
-            ],
-            'excel_summary' => ['TOTAL PENGADAAN', '', '', '', '', '', '', '', number_format($totalNominal, 0, ',', '.')],
-        ];
+        $records = $query->get();
+
+        $poIds = $records->pluck('id')->toArray();
+        $grIds = $records->pluck('gr_id')->filter()->unique()->toArray();
+
+        $itemsByPo = [];
+        if (!empty($poIds)) {
+            $poItems = DB::table('purchase_order_items')
+                ->join('products', 'purchase_order_items.product_id', '=', 'products.id')
+                ->whereIn('purchase_order_items.purchase_order_id', $poIds)
+                ->select(
+                    'purchase_order_items.*',
+                    'products.sku',
+                    'products.name as product_name',
+                    'products.type as product_type'
+                )
+                ->get();
+
+            $grItemsMap = [];
+            if (!empty($grIds)) {
+                $rawGrItems = DB::table('goods_receipt_items')
+                    ->whereIn('goods_receipt_id', $grIds)
+                    ->select('goods_receipt_id', 'product_id', 'quantity_received')
+                    ->get();
+                foreach ($rawGrItems as $gi) {
+                    $grItemsMap[$gi->goods_receipt_id][$gi->product_id] = (int)$gi->quantity_received;
+                }
+            }
+
+            foreach ($poItems as $item) {
+                $parentPo = $records->firstWhere('id', $item->purchase_order_id);
+                $grId = $parentPo->gr_id ?? null;
+                $item->quantity_received = ($grId && isset($grItemsMap[$grId][$item->product_id]))
+                    ? $grItemsMap[$grId][$item->product_id]
+                    : 0;
+                $itemsByPo[$item->purchase_order_id][] = $item;
+            }
+        }
+
+        // Attach items and compute aggregations
+        $records = $records->map(function ($po) use ($itemsByPo) {
+            $po->items = $itemsByPo[$po->id] ?? [];
+            $po->total_po_qty = collect($po->items)->sum('quantity');
+            $po->total_gr_qty = collect($po->items)->sum('quantity_received');
+            $po->vendor_display = $po->vendor_name ?: ($po->supplier_name ?: 'Vendor Utama');
+            return $po;
+        });
+
+        $totalNominal = 0;
+        $totalPoQtyAll = 0;
+        $totalGrQtyAll = 0;
+        $rows = [];
+
+        if ($format === 'detailed') {
+            $headers = [
+                'No. PO',
+                'Waktu PO',
+                'Pembuat PO',
+                'Vendor / Supplier',
+                'TAP',
+                'Cluster',
+                'No. GR (Penerimaan)',
+                'Waktu GR',
+                'Petugas Gudang',
+                'No. DO Telkomsel',
+                'Gudang Penerima',
+                'Status PO',
+                'SKU',
+                'Nama Produk',
+                'Tipe Produk',
+                'Qty Dipesan (PO)',
+                'Qty Diterima (GR)',
+                'Harga Modal (Rp)',
+                'Subtotal (Rp)'
+            ];
+
+            foreach ($records as $r) {
+                $totalNominal += (float)$r->total_amount;
+                $totalPoQtyAll += (int)$r->total_po_qty;
+                $totalGrQtyAll += (int)$r->total_gr_qty;
+
+                if (!empty($r->items)) {
+                    foreach ($r->items as $item) {
+                        $rows[] = [
+                            $r->doc_number,
+                            date('d/m/Y H:i', strtotime($r->created_at ?? $r->order_date)),
+                            $r->creator_name ?? 'Admin',
+                            $r->vendor_display,
+                            $r->tap_name,
+                            $r->cluster_name,
+                            $r->gr_number ?? '-',
+                            $r->gr_created_at ? date('d/m/Y H:i', strtotime($r->gr_created_at)) : ($r->received_date ? date('d/m/Y', strtotime($r->received_date)) : '-'),
+                            $r->receiver_name ?? '-',
+                            $r->do_number ?? '-',
+                            $r->destination_warehouse ?? '-',
+                            $r->status,
+                            $item->sku,
+                            $item->product_name,
+                            $item->product_type,
+                            (int)$item->quantity,
+                            $r->gr_number ? (int)$item->quantity_received : 0,
+                            number_format($item->cost_price, 0, ',', '.'),
+                            number_format($item->subtotal, 0, ',', '.'),
+                        ];
+                    }
+                } else {
+                    $rows[] = [
+                        $r->doc_number,
+                        date('d/m/Y H:i', strtotime($r->created_at ?? $r->order_date)),
+                        $r->creator_name ?? 'Admin',
+                        $r->vendor_display,
+                        $r->tap_name,
+                        $r->cluster_name,
+                        $r->gr_number ?? '-',
+                        $r->gr_created_at ? date('d/m/Y H:i', strtotime($r->gr_created_at)) : ($r->received_date ? date('d/m/Y', strtotime($r->received_date)) : '-'),
+                        $r->receiver_name ?? '-',
+                        $r->do_number ?? '-',
+                        $r->destination_warehouse ?? '-',
+                        $r->status,
+                        '-',
+                        'Tidak ada item',
+                        '-',
+                        0,
+                        0,
+                        '0',
+                        number_format($r->total_amount, 0, ',', '.'),
+                    ];
+                }
+            }
+
+            return [
+                'title' => 'Laporan Rincian Detail Pengadaan & Penerimaan Barang (PO - GR per Item)',
+                'headers' => $headers,
+                'records' => $records,
+                'rows' => $rows,
+                'format' => 'detailed',
+                'summary' => [
+                    'total_records' => count($records),
+                    'total_amount' => $totalNominal,
+                    'total_po_qty' => $totalPoQtyAll,
+                    'total_gr_qty' => $totalGrQtyAll,
+                ],
+                'excel_summary' => ['TOTAL RINCIAN', '', '', '', '', '', '', '', '', '', '', '', '', '', '', number_format($totalPoQtyAll, 0, ',', '.'), number_format($totalGrQtyAll, 0, ',', '.'), '', number_format($totalNominal, 0, ',', '.')],
+            ];
+        } else {
+            // Mode Summary
+            $headers = [
+                'No. PO',
+                'Waktu PO',
+                'Pembuat PO',
+                'Vendor / Supplier',
+                'TAP & Cluster',
+                'No. GR (Penerimaan)',
+                'Waktu GR',
+                'Petugas Gudang',
+                'No. DO Telkomsel',
+                'Gudang Penerima',
+                'Total Qty PO',
+                'Total Qty GR',
+                'Status PO',
+                'Total Nilai Pengadaan (Rp)'
+            ];
+
+            foreach ($records as $r) {
+                $totalNominal += (float)$r->total_amount;
+                $totalPoQtyAll += (int)$r->total_po_qty;
+                $totalGrQtyAll += (int)$r->total_gr_qty;
+
+                $rows[] = [
+                    $r->doc_number,
+                    date('d/m/Y H:i', strtotime($r->created_at ?? $r->order_date)),
+                    $r->creator_name ?? 'Admin',
+                    $r->vendor_display,
+                    $r->tap_name . ' (' . $r->cluster_name . ')',
+                    $r->gr_number ?? '-',
+                    $r->gr_created_at ? date('d/m/Y H:i', strtotime($r->gr_created_at)) : ($r->received_date ? date('d/m/Y', strtotime($r->received_date)) : '-'),
+                    $r->receiver_name ?? '-',
+                    $r->do_number ?? '-',
+                    $r->destination_warehouse ?? '-',
+                    number_format($r->total_po_qty, 0, ',', '.') . ' pcs',
+                    $r->gr_number ? number_format($r->total_gr_qty, 0, ',', '.') . ' pcs' : '-',
+                    $r->status,
+                    number_format($r->total_amount, 0, ',', '.'),
+                ];
+            }
+
+            return [
+                'title' => 'Laporan Rekapitulasi Pengadaan Barang & Penerimaan Fisik (PO - GR)',
+                'headers' => $headers,
+                'records' => $records,
+                'rows' => $rows,
+                'format' => 'summary',
+                'summary' => [
+                    'total_records' => count($records),
+                    'total_amount' => $totalNominal,
+                    'total_po_qty' => $totalPoQtyAll,
+                    'total_gr_qty' => $totalGrQtyAll,
+                ],
+                'excel_summary' => ['TOTAL PENGADAAN', '', '', '', '', '', '', '', '', '', number_format($totalPoQtyAll, 0, ',', '.'), number_format($totalGrQtyAll, 0, ',', '.'), '', number_format($totalNominal, 0, ',', '.')],
+            ];
+        }
     }
 
     private function getSmData($start, $end, $whId)
