@@ -90,7 +90,7 @@ class ReportController extends Controller
 
         $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId, $format, $areaId, $clusterId);
 
-        $formatSuffix = (($reportType === 'PO_GR' || $reportType === 'SM' || $reportType === 'REPACK') && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
+        $formatSuffix = (in_array($reportType, ['PO_GR', 'SM', 'REPACK', 'SALES']) && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
         $fileName = "Laporan_{$reportType}_{$formatSuffix}_PT_Wahana_Putra_Yudha_" . date('Ymd_His') . ".csv";
 
         $headers = [
@@ -169,7 +169,7 @@ class ReportController extends Controller
             case 'REPACK':
                 return $this->getRepackData($start, $end, $whId, $format, $areaId, $clusterId, $tapId, request()->input('doc_type', 'ALL'));
             case 'SALES':
-                return $this->getSalesData($start, $end, $tapId, $whId, $areaId, $clusterId);
+                return $this->getSalesData($start, $end, $tapId, $whId, $format, $areaId, $clusterId);
             case 'AR':
                 return $this->getArData($start, $end, $tapId);
             case 'CASH_BANK':
@@ -177,11 +177,11 @@ class ReportController extends Controller
             case 'STOCK':
                 return $this->getStockData($start, $end, $tapId, $whId);
             default:
-                return $this->getSalesData($start, $end, $tapId, $whId, $areaId, $clusterId);
+                return $this->getSalesData($start, $end, $tapId, $whId, $format, $areaId, $clusterId);
         }
     }
 
-    private function getSalesData($start, $end, $tapId, $whId, $areaId = '', $clusterId = '')
+    private function getSalesData($start, $end, $tapId, $whId, $format = 'summary', $areaId = '', $clusterId = '')
     {
         $query = DB::table('sales_orders')
             ->join('customers', 'sales_orders.customer_id', '=', 'customers.id')
@@ -196,9 +196,13 @@ class ReportController extends Controller
                 'sales_orders.*',
                 'customers.name as customer_name',
                 'customers.code as customer_code',
+                'customers.type as customer_type',
                 'sales.name as sales_name',
                 'warehouses.name as warehouse_name',
+                'taps.name as tap_name',
+                'clusters.name as cluster_name',
                 'goods_deliveries.doc_number as gd_number',
+                'goods_deliveries.delivery_date as gd_date',
                 'accounts_receivable.doc_number as ar_number',
                 'accounts_receivable.status as ar_status'
             )
@@ -218,34 +222,149 @@ class ReportController extends Controller
 
         $records = $query->get();
 
-        $rows = [];
+        // Ambil item produk untuk masing-masing SO
+        $soIds = $records->pluck('id')->toArray();
+        $itemsBySo = [];
+        if (!empty($soIds)) {
+            $soItems = DB::table('sales_order_items')
+                ->join('products', 'sales_order_items.product_id', '=', 'products.id')
+                ->whereIn('sales_order_items.sales_order_id', $soIds)
+                ->select(
+                    'sales_order_items.*',
+                    'products.sku',
+                    'products.name as product_name',
+                    'products.type as product_type',
+                    'products.tracking_method'
+                )
+                ->get();
+
+            foreach ($soItems as $item) {
+                $itemsBySo[$item->sales_order_id][] = $item;
+            }
+        }
+
         $totalNominal = 0;
-        foreach ($records as $r) {
-            $totalNominal += (float)$r->grand_total;
-            $rows[] = [
-                $r->doc_number,
-                $r->order_date,
-                $r->customer_name . " ({$r->customer_code})",
-                $r->sales_name,
-                $r->warehouse_name,
-                $r->channel,
-                $r->gd_number ?? '-',
-                $r->ar_number ?? '-',
-                $r->status,
-                number_format($r->grand_total, 0, ',', '.'),
+        $totalQtyAll = 0;
+        $totalDeliveredCount = 0;
+
+        $records = $records->map(function ($so) use ($itemsBySo, &$totalQtyAll, &$totalDeliveredCount) {
+            $so->items = $itemsBySo[$so->id] ?? [];
+            $so->total_qty = collect($so->items)->sum('quantity');
+            $totalQtyAll += $so->total_qty;
+            if ($so->status === 'DELIVERED') {
+                $totalDeliveredCount++;
+            }
+            return $so;
+        });
+
+        $rows = [];
+
+        if ($format === 'detailed') {
+            $headers = [
+                'No. SO',
+                'Tanggal SO',
+                'Toko / Outlet',
+                'Kode Toko',
+                'Sales Kanvaser',
+                'Gudang Asal',
+                'Channel',
+                'No. GD (Surat Jalan)',
+                'No. Faktur AR',
+                'Status AR',
+                'Status SO',
+                'SKU',
+                'Nama Produk',
+                'Tipe Produk',
+                'Qty (pcs)',
+                'Harga Jual Satuan (Rp)',
+                'Subtotal (Rp)',
+                'Catatan'
             ];
+
+            foreach ($records as $r) {
+                $totalNominal += (float)$r->grand_total;
+                if (!empty($r->items)) {
+                    foreach ($r->items as $it) {
+                        $rows[] = [
+                            $r->doc_number,
+                            $r->order_date,
+                            $r->customer_name,
+                            $r->customer_code,
+                            $r->sales_name,
+                            $r->warehouse_name,
+                            $r->channel,
+                            $r->gd_number ?? '-',
+                            $r->ar_number ?? '-',
+                            $r->ar_status ?? '-',
+                            $r->status,
+                            $it->sku,
+                            $it->product_name,
+                            $it->product_type,
+                            number_format($it->quantity, 0, ',', '.'),
+                            number_format($it->unit_price, 0, ',', '.'),
+                            number_format($it->subtotal, 0, ',', '.'),
+                            $r->notes ?? '-',
+                        ];
+                    }
+                } else {
+                    $rows[] = [
+                        $r->doc_number,
+                        $r->order_date,
+                        $r->customer_name,
+                        $r->customer_code,
+                        $r->sales_name,
+                        $r->warehouse_name,
+                        $r->channel,
+                        $r->gd_number ?? '-',
+                        $r->ar_number ?? '-',
+                        $r->ar_status ?? '-',
+                        $r->status,
+                        '-',
+                        '-',
+                        '-',
+                        '0',
+                        '0',
+                        '0',
+                        $r->notes ?? '-',
+                    ];
+                }
+            }
+
+            $excelSummary = ['TOTAL KESELURUHAN', '', '', '', '', '', '', '', '', '', '', '', '', '', number_format($totalQtyAll, 0, ',', '.'), '', number_format($totalNominal, 0, ',', '.'), ''];
+        } else {
+            // Summary Format
+            $headers = ['No. SO', 'Tanggal', 'Toko / Pelanggan', 'Sales Kanvaser', 'Gudang Asal', 'Channel', 'No. GD (Surat Jalan)', 'No. Faktur AR', 'Status SO', 'Total Qty (pcs)', 'Total Penjualan (Rp)'];
+            foreach ($records as $r) {
+                $totalNominal += (float)$r->grand_total;
+                $rows[] = [
+                    $r->doc_number,
+                    $r->order_date,
+                    $r->customer_name . " ({$r->customer_code})",
+                    $r->sales_name,
+                    $r->warehouse_name,
+                    $r->channel,
+                    $r->gd_number ?? '-',
+                    $r->ar_number ?? '-',
+                    $r->status,
+                    number_format($r->total_qty, 0, ',', '.'),
+                    number_format($r->grand_total, 0, ',', '.'),
+                ];
+            }
+            $excelSummary = ['TOTAL PENJUALAN', '', '', '', '', '', '', '', '', number_format($totalQtyAll, 0, ',', '.'), number_format($totalNominal, 0, ',', '.')];
         }
 
         return [
             'title' => 'Laporan Rekapitulasi Penjualan & Pengiriman Barang (SO - GD - AR)',
-            'headers' => ['No. SO', 'Tanggal', 'Toko / Pelanggan', 'Sales Kanvaser', 'Gudang Asal', 'Channel', 'No. GD (Surat Jalan)', 'No. Faktur AR', 'Status SO', 'Total Penjualan (Rp)'],
+            'headers' => $headers,
             'records' => $records,
             'rows' => $rows,
             'summary' => [
                 'total_records' => count($records),
                 'total_amount' => $totalNominal,
+                'total_qty' => $totalQtyAll,
+                'total_delivered' => $totalDeliveredCount,
             ],
-            'excel_summary' => ['TOTAL PENJUALAN', '', '', '', '', '', '', '', '', number_format($totalNominal, 0, ',', '.')],
+            'excel_summary' => $excelSummary,
         ];
     }
 

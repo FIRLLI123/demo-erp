@@ -258,7 +258,63 @@
 
                     <!-- Export Actions -->
                     <div class="flex items-center gap-2">
-                        @if($reportType === 'PO_GR')
+                        @if($reportType === 'SALES')
+                            <!-- Dropdown Export Excel SALES (Rekap & Detail Item) -->
+                            <div class="relative inline-block text-left" x-data="{ openExcel: false }">
+                                <button type="button" @click="openExcel = !openExcel" @click.outside="openExcel = false"
+                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                                    <span>Download Excel</span>
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-0.5"></i>
+                                </button>
+                                <div x-show="openExcel" x-cloak class="absolute right-0 mt-1.5 w-64 rounded-xl bg-white shadow-xl border border-slate-200 py-1.5 z-50 text-xs">
+                                    <a href="{{ route('reports.export-excel', array_merge(request()->all(), ['format' => 'summary'])) }}" 
+                                       class="px-3.5 py-2.5 hover:bg-emerald-50 text-slate-800 flex items-start gap-2.5 transition-colors">
+                                        <i data-lucide="file-text" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <span class="font-bold block text-slate-900">Rekap Ringkas (Header)</span>
+                                            <span class="text-[10px] text-slate-500">1 baris per SO (No SO, Toko, Omset)</span>
+                                        </div>
+                                    </a>
+                                    <a href="{{ route('reports.export-excel', array_merge(request()->all(), ['format' => 'detailed'])) }}" 
+                                       class="px-3.5 py-2.5 hover:bg-emerald-50 text-slate-800 flex items-start gap-2.5 transition-colors border-t border-slate-100">
+                                        <i data-lucide="table-properties" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <span class="font-bold block text-slate-900">Rincian Lengkap (Per Item)</span>
+                                            <span class="text-[10px] text-slate-500">Header + Detail SKU barang terjual</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Dropdown Cetak PDF SALES (Rekap & Detail Item) -->
+                            <div class="relative inline-block text-left" x-data="{ openPdf: false }">
+                                <button type="button" @click="openPdf = !openPdf" @click.outside="openPdf = false"
+                                        class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                                    <i data-lucide="printer" class="w-4 h-4"></i>
+                                    <span>Cetak PDF</span>
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-0.5"></i>
+                                </button>
+                                <div x-show="openPdf" x-cloak class="absolute right-0 mt-1.5 w-64 rounded-xl bg-white shadow-xl border border-slate-200 py-1.5 z-50 text-xs">
+                                    <a href="{{ route('reports.print-pdf', array_merge(request()->all(), ['format' => 'summary'])) }}" target="_blank"
+                                       class="px-3.5 py-2.5 hover:bg-rose-50 text-slate-800 flex items-start gap-2.5 transition-colors">
+                                        <i data-lucide="file-text" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <span class="font-bold block text-slate-900">Cetak Rekap Ringkas</span>
+                                            <span class="text-[10px] text-slate-500">Tabel ringkasan landscape 1 baris per SO</span>
+                                        </div>
+                                    </a>
+                                    <a href="{{ route('reports.print-pdf', array_merge(request()->all(), ['format' => 'detailed'])) }}" target="_blank"
+                                       class="px-3.5 py-2.5 hover:bg-rose-50 text-slate-800 flex items-start gap-2.5 transition-colors border-t border-slate-100">
+                                        <i data-lucide="layers" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <span class="font-bold block text-slate-900">Cetak Rincian Lengkap Resmi</span>
+                                            <span class="text-[10px] text-slate-500">Format berjenjang per SO + rincian item</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                        @elseif($reportType === 'PO_GR')
                             <!-- Dropdown Export Excel PO-GR (Rekap & Detail Item) -->
                             <div class="relative inline-block text-left" x-data="{ openExcel: false }">
                                 <button type="button" @click="openExcel = !openExcel" @click.outside="openExcel = false"
@@ -463,7 +519,26 @@
                     <span class="font-mono text-base font-extrabold text-slate-900">{{ number_format($summary['total_records']) }}</span>
                 </div>
 
-                @if($reportType === 'PO_GR')
+                @if($reportType === 'SALES')
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Total Fisik Terjual:</span>
+                        <span class="font-mono text-base font-extrabold text-slate-800">
+                            {{ number_format($summary['total_qty'] ?? 0) }} pcs
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Realisasi Kirim:</span>
+                        <span class="font-mono text-base font-extrabold text-emerald-700">
+                            {{ number_format($summary['total_delivered'] ?? 0) }} / {{ number_format($summary['total_records']) }} SO
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 block uppercase">Total Omset Penjualan:</span>
+                        <span class="font-mono text-base font-extrabold text-rose-600">
+                            Rp {{ number_format($summary['total_amount'] ?? 0, 0, ',', '.') }}
+                        </span>
+                    </div>
+                @elseif($reportType === 'PO_GR')
                     @if(isset($summary['total_po_qty']))
                         <div>
                             <span class="text-[10px] font-bold text-slate-400 block uppercase">Fisik Dipesan (PO):</span>
@@ -539,53 +614,239 @@
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden mb-8">
             <div class="overflow-x-auto">
                 @if($reportType === 'SALES')
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                            <tr>
-                                <th class="py-3 px-4">No. SO</th>
-                                <th class="py-3 px-4">Tanggal</th>
-                                <th class="py-3 px-4">Toko / Outlet</th>
-                                <th class="py-3 px-4">Sales Kanvaser</th>
-                                <th class="py-3 px-4">Gudang</th>
-                                <th class="py-3 px-4 text-center">Channel</th>
-                                <th class="py-3 px-4">No. GD (Surat Jalan)</th>
-                                <th class="py-3 px-4">No. Faktur AR</th>
-                                <th class="py-3 px-4 text-center">Status SO</th>
-                                <th class="py-3 px-4 text-right">Total Penjualan</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium">
-                            @forelse($records as $r)
-                                <tr class="hover:bg-slate-50">
-                                    <td class="py-3 px-4 font-mono font-bold text-rose-800">{{ $r->doc_number }}</td>
-                                    <td class="py-3 px-4 text-slate-600">{{ date('d M Y', strtotime($r->order_date)) }}</td>
-                                    <td class="py-3 px-4 font-bold text-slate-900">{{ $r->customer_name }}</td>
-                                    <td class="py-3 px-4 text-slate-800 font-semibold">{{ $r->sales_name }}</td>
-                                    <td class="py-3 px-4 text-slate-600">{{ $r->warehouse_name }}</td>
-                                    <td class="py-3 px-4 text-center">
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $r->channel === 'MOBILE_SALES' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700' }}">
-                                            {{ $r->channel }}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4 font-mono text-slate-600">{{ $r->gd_number ?? '-' }}</td>
-                                    <td class="py-3 px-4 font-mono text-amber-800 font-bold">{{ $r->ar_number ?? '-' }}</td>
-                                    <td class="py-3 px-4 text-center">
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                                            {{ $r->status }}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4 text-right font-mono font-extrabold text-slate-900">
-                                        Rp {{ number_format($r->grand_total, 0, ',', '.') }}
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="10" class="py-8 text-center text-slate-400">Tidak ada transaksi pada filter periode ini.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    <div x-data="reportSalesTable()">
+                        <!-- Toolbar Quick Expand / Collapse -->
+                        <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded font-mono font-bold bg-amber-100 text-amber-800 text-[10px]">
+                                    SO &rarr; GD &rarr; AR
+                                </span>
+                                <span class="text-slate-600 font-medium">
+                                    Klik tombol <strong class="text-slate-900 font-bold">[+]</strong> atau baris tabel untuk melihat rincian barang yang dipesan.
+                                </span>
+                            </div>
 
+                            @if(count($records) > 0)
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button type="button" @click="expandAll()"
+                                            class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
+                                        <i data-lucide="chevrons-down" class="w-3.5 h-3.5 text-amber-600"></i>
+                                        <span>Buka Semua Item</span>
+                                    </button>
+                                    <button type="button" @click="collapseAll()"
+                                            class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
+                                        <i data-lucide="chevrons-up" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        <span>Tutup Semua</span>
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-3 w-10 text-center"></th>
+                                    <th class="py-3 px-4">No. SO</th>
+                                    <th class="py-3 px-4">Tanggal SO</th>
+                                    <th class="py-3 px-4">Toko / Outlet</th>
+                                    <th class="py-3 px-4">Sales Kanvaser</th>
+                                    <th class="py-3 px-4">Gudang Sumber</th>
+                                    <th class="py-3 px-4">Surat Jalan (GD)</th>
+                                    <th class="py-3 px-4">Faktur Piutang (AR)</th>
+                                    <th class="py-3 px-4 text-center">Total Fisik</th>
+                                    <th class="py-3 px-4 text-center">Status SO</th>
+                                    <th class="py-3 px-4 text-right">Nilai Penjualan</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium">
+                                @forelse($records as $r)
+                                    <!-- Baris Utama (Header Dokumen SO) -->
+                                    <tr @click="toggleRow({{ $r->id }})"
+                                        :class="expanded[{{ $r->id }}] ? 'bg-amber-50/40' : 'hover:bg-slate-50'"
+                                        class="cursor-pointer transition-colors">
+
+                                        <!-- Tombol Toggle Expand -->
+                                        <td class="py-3 px-3 text-center" @click.stop="toggleRow({{ $r->id }})">
+                                            <button type="button"
+                                                    class="w-6 h-6 rounded-lg flex items-center justify-center border transition-all cursor-pointer mx-auto"
+                                                    :class="expanded[{{ $r->id }}] ? 'bg-amber-600 text-white border-amber-600 shadow-2xs' : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-100'">
+                                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 transition-transform"
+                                                   :class="expanded[{{ $r->id }}] ? 'rotate-90' : ''"></i>
+                                            </button>
+                                        </td>
+
+                                        <!-- No. SO & Channel -->
+                                        <td class="py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-white font-mono">SO</span>
+                                                <span class="text-amber-900 font-bold">{{ $r->doc_number }}</span>
+                                            </div>
+                                            <span class="text-[10px] text-slate-400 font-normal block">{{ $r->channel }}</span>
+                                        </td>
+
+                                        <!-- Tanggal SO -->
+                                        <td class="py-3 px-4 whitespace-nowrap text-slate-700">
+                                            <div class="flex items-center gap-1">
+                                                <i data-lucide="calendar" class="w-3 h-3 text-slate-400"></i>
+                                                <span>{{ date('d M Y', strtotime($r->order_date)) }}</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Toko / Outlet -->
+                                        <td class="py-3 px-4 whitespace-nowrap">
+                                            <div class="flex flex-col">
+                                                <span class="font-bold text-slate-900">{{ $r->customer_name }}</span>
+                                                <span class="text-[11px] text-slate-500 font-mono">{{ $r->customer_code }} &bull; {{ $r->customer_type ?? 'RETAIL' }}</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Sales Kanvaser -->
+                                        <td class="py-3 px-4 whitespace-nowrap">
+                                            <div class="flex flex-col">
+                                                <span class="font-bold text-slate-800">{{ $r->sales_name }}</span>
+                                                <span class="text-[11px] text-slate-500">{{ $r->tap_name }}</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Gudang Sumber -->
+                                        <td class="py-3 px-4 whitespace-nowrap text-slate-700">
+                                            {{ $r->warehouse_name }}
+                                        </td>
+
+                                        <!-- No. GD (Surat Jalan) -->
+                                        <td class="py-3 px-4 whitespace-nowrap">
+                                            @if($r->gd_number)
+                                                <div class="flex flex-col">
+                                                    <span class="font-mono font-bold text-cyan-800 flex items-center gap-1">
+                                                        <span class="px-1 py-0.2 rounded text-[9px] bg-cyan-600 text-white font-mono">GD</span>
+                                                        <span>{{ $r->gd_number }}</span>
+                                                    </span>
+                                                    @if(isset($r->gd_date))
+                                                        <span class="text-[10px] text-slate-500">{{ date('d M Y', strtotime($r->gd_date)) }}</span>
+                                                    @endif
+                                                </div>
+                                            @else
+                                                <span class="text-slate-400 italic text-[11px] flex items-center gap-1">
+                                                    <i data-lucide="clock" class="w-3 h-3"></i>
+                                                    <span>Belum Dikirim</span>
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <!-- No. Faktur AR -->
+                                        <td class="py-3 px-4 whitespace-nowrap">
+                                            @if($r->ar_number)
+                                                <div class="flex flex-col">
+                                                    <span class="font-mono font-bold text-rose-800 flex items-center gap-1">
+                                                        <span class="px-1 py-0.2 rounded text-[9px] bg-rose-600 text-white font-mono">AR</span>
+                                                        <span>{{ $r->ar_number }}</span>
+                                                    </span>
+                                                    <span class="text-[10px] font-bold {{ ($r->ar_status ?? '') === 'PAID' ? 'text-emerald-700' : 'text-amber-700' }}">
+                                                        Status: {{ $r->ar_status ?? 'UNPAID' }}
+                                                    </span>
+                                                </div>
+                                            @else
+                                                <span class="text-slate-400 italic text-[11px]">-</span>
+                                            @endif
+                                        </td>
+
+                                        <!-- Total Fisik Qty -->
+                                        <td class="py-3 px-4 text-center font-mono font-bold text-slate-800 whitespace-nowrap">
+                                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-800">
+                                                {{ number_format($r->total_qty ?? 0) }} pcs
+                                            </span>
+                                        </td>
+
+                                        <!-- Status SO -->
+                                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $r->status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : ($r->status === 'APPROVED' ? 'bg-cyan-100 text-cyan-800 border border-cyan-200' : ($r->status === 'REJECTED' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200')) }}">
+                                                {{ $r->status }}
+                                            </span>
+                                        </td>
+
+                                        <!-- Nilai Penjualan -->
+                                        <td class="py-3 px-4 text-right font-mono font-extrabold text-slate-900 whitespace-nowrap">
+                                            Rp {{ number_format($r->grand_total, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+
+                                    <!-- Sub-Baris Expandable (Rincian Item Produk) -->
+                                    <tr x-show="expanded[{{ $r->id }}]" x-cloak class="bg-slate-50/80 border-b border-amber-200">
+                                        <td colspan="11" class="p-4 pl-12">
+                                            <div class="bg-white rounded-xl border border-slate-200/90 shadow-sm p-4">
+                                                <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-100 flex-wrap gap-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 flex items-center gap-1">
+                                                            <i data-lucide="shopping-bag" class="w-3 h-3"></i>
+                                                            <span>RINCIAN BARANG PESANAN (SO: {{ $r->doc_number }})</span>
+                                                        </span>
+                                                        <span class="text-xs text-slate-500 font-medium">
+                                                            Total {{ count($r->items ?? []) }} varian produk
+                                                        </span>
+                                                    </div>
+                                                    <div class="text-xs text-slate-600 font-bold">
+                                                        Total Qty: <span class="font-mono text-slate-900">{{ number_format($r->total_qty ?? 0) }} pcs</span>
+                                                        &bull; Total Nilai: <span class="font-mono text-amber-700">Rp {{ number_format($r->grand_total, 0, ',', '.') }}</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Notes jika ada -->
+                                                @if(!empty($r->notes))
+                                                    <div class="mb-3 px-3 py-2 bg-amber-50/70 border border-amber-200/70 rounded-lg text-xs flex items-center gap-2">
+                                                        <i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
+                                                        <span class="font-semibold text-slate-700">Catatan Pesanan:</span>
+                                                        <span class="text-slate-600">{{ $r->notes }}</span>
+                                                    </div>
+                                                @endif
+
+                                                <!-- Sub-Table Items -->
+                                                <div class="overflow-x-auto">
+                                                    <table class="w-full text-left text-xs border border-slate-100 rounded-lg overflow-hidden">
+                                                        <thead class="bg-slate-100 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+                                                            <tr>
+                                                                <th class="py-2 px-3 w-10 text-center">No</th>
+                                                                <th class="py-2 px-3">Kode SKU</th>
+                                                                <th class="py-2 px-3">Nama Produk</th>
+                                                                <th class="py-2 px-3">Tipe</th>
+                                                                <th class="py-2 px-3 text-center">Qty Dipesan</th>
+                                                                <th class="py-2 px-3 text-right">Harga Jual Satuan</th>
+                                                                <th class="py-2 px-3 text-right">Subtotal</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-slate-100 font-medium">
+                                                            @forelse($r->items as $iIdx => $item)
+                                                                <tr class="hover:bg-slate-50">
+                                                                    <td class="py-2 px-3 text-center text-slate-400 font-mono">{{ $iIdx + 1 }}</td>
+                                                                    <td class="py-2 px-3 font-mono font-bold text-slate-700">{{ $item->sku }}</td>
+                                                                    <td class="py-2 px-3 font-bold text-slate-900">{{ $item->product_name }}</td>
+                                                                    <td class="py-2 px-3">
+                                                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold {{ $item->product_type === 'SA' ? 'bg-rose-100 text-rose-700' : 'bg-indigo-100 text-indigo-700' }}">
+                                                                            {{ $item->product_type }}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td class="py-2 px-3 text-center font-mono font-bold text-slate-800">{{ number_format($item->quantity) }} pcs</td>
+                                                                    <td class="py-2 px-3 text-right font-mono text-slate-700">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
+                                                                    <td class="py-2 px-3 text-right font-mono font-extrabold text-slate-900">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                                                                </tr>
+                                                            @empty
+                                                                <tr>
+                                                                    <td colspan="7" class="py-3 text-center text-slate-400 italic text-[11px]">Tidak ada rincian item.</td>
+                                                                </tr>
+                                                            @endforelse
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="11" class="py-8 text-center text-slate-400">Tidak ada transaksi penjualan pada filter periode ini.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 @elseif($reportType === 'PO_GR')
                     <div x-data="reportPoGrTable()">
                         <!-- Toolbar Quick Expand / Collapse -->
@@ -1558,6 +1819,36 @@
                     this.tapSearchText = '';
                     this.selectedWarehouse = 'ALL';
                     this.warehouseSearchText = '';
+                }
+            };
+        }
+
+        function reportSalesTable() {
+            return {
+                expanded: {},
+                toggleRow(id) {
+                    this.expanded[id] = !this.expanded[id];
+                    this.$nextTick(function() {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                },
+                expandAll() {
+                    var all = {};
+                    @if(isset($records) && $reportType === 'SALES')
+                        @foreach($records as $r)
+                            all[{{ $r->id }}] = true;
+                        @endforeach
+                    @endif
+                    this.expanded = all;
+                    this.$nextTick(function() {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                },
+                collapseAll() {
+                    this.expanded = {};
+                    this.$nextTick(function() {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
                 }
             };
         }

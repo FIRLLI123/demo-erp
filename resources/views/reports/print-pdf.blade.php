@@ -24,7 +24,7 @@
             &larr; Kembali ke Pusat Laporan
         </a>
 
-        @if(in_array($reportType, ['PO_GR', 'SM']))
+        @if(in_array($reportType, ['PO_GR', 'SM', 'REPACK', 'SALES']))
             <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                 <span class="text-[10px] text-slate-500 font-bold uppercase px-2">Mode:</span>
                 <a href="{{ route('reports.print-pdf', array_merge(request()->all(), ['format' => 'summary'])) }}"
@@ -358,6 +358,96 @@
                     </div>
                 @endforelse
             </div>
+        @elseif($reportType === 'SALES' && ($format ?? 'summary') === 'detailed')
+            <!-- ================================================== -->
+            <!-- FORMAT RINCIAN LENGKAP RESMI PENJUALAN (SO - GD - AR) -->
+            <!-- ================================================== -->
+            <div class="space-y-6 mb-8">
+                @forelse($records as $idx => $r)
+                    <div class="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-2xs" style="page-break-inside: avoid;">
+                        <!-- Header Dokumen SO -->
+                        <div class="bg-slate-100/90 border-b border-slate-300 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-slate-900 text-white">#{{ $idx + 1 }}</span>
+                                <h4 class="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                    <span>SO: {{ $r->doc_number }}</span>
+                                    <span class="text-slate-400 font-sans font-normal">&bull; {{ date('d M Y', strtotime($r->order_date)) }}</span>
+                                </h4>
+                            </div>
+                            <div class="flex items-center gap-3 text-[10px] flex-wrap">
+                                <span>Outlet: <strong class="text-slate-900">{{ $r->customer_name }}</strong> ({{ $r->customer_code }})</span>
+                                <span>&bull;</span>
+                                <span>Sales: <strong class="text-slate-800">{{ $r->sales_name }}</strong></span>
+                                <span>&bull;</span>
+                                <span class="px-2 py-0.5 rounded font-bold font-mono {{ $r->status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : ($r->status === 'APPROVED' ? 'bg-cyan-100 text-cyan-800' : ($r->status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800')) }}">
+                                    {{ $r->status }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Info Strip Surat Jalan GD & AR -->
+                        <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 text-[10px] text-slate-600 flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span>Gudang Asal: <strong class="text-slate-900">{{ $r->warehouse_name }}</strong></span>
+                                <span>&bull;</span>
+                                <span>No. GD (Surat Jalan): <strong class="text-cyan-800 font-mono">{{ $r->gd_number ?? 'Belum Dikirim' }}</strong></span>
+                                <span>&bull;</span>
+                                <span>No. Faktur AR: <strong class="text-rose-800 font-mono">{{ $r->ar_number ?? 'Belum Terbit' }}</strong></span>
+                                @if(!empty($r->notes))
+                                    <span>&bull;</span>
+                                    <span>Catatan: <em>{{ $r->notes }}</em></span>
+                                @endif
+                            </div>
+                            <div>
+                                Total Qty: <strong class="font-mono text-slate-900">{{ number_format($r->total_qty ?? 0) }} pcs</strong>
+                                &bull; Total Nilai: <strong class="font-mono text-slate-900">Rp {{ number_format($r->grand_total, 0, ',', '.') }}</strong>
+                            </div>
+                        </div>
+
+                        <!-- Tabel Items Produk -->
+                        <table class="w-full text-left text-[11px] border-collapse">
+                            <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-1.5 px-3 w-8 text-center">No</th>
+                                    <th class="py-1.5 px-3">Kode SKU</th>
+                                    <th class="py-1.5 px-3">Nama Produk</th>
+                                    <th class="py-1.5 px-3">Tipe</th>
+                                    <th class="py-1.5 px-3 text-center">Kuantitas</th>
+                                    <th class="py-1.5 px-3 text-right">Harga Jual Satuan</th>
+                                    <th class="py-1.5 px-3 text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200">
+                                @forelse($r->items as $iIdx => $item)
+                                    <tr class="{{ $iIdx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white' }}">
+                                        <td class="py-1.5 px-3 text-center font-mono text-slate-400">{{ $iIdx + 1 }}</td>
+                                        <td class="py-1.5 px-3 font-mono font-bold text-slate-700">{{ $item->sku }}</td>
+                                        <td class="py-1.5 px-3 font-semibold text-slate-900">{{ $item->product_name }}</td>
+                                        <td class="py-1.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 font-semibold">{{ $item->product_type }}</span></td>
+                                        <td class="py-1.5 px-3 text-center font-mono font-bold text-slate-800">{{ number_format($item->quantity) }} pcs</td>
+                                        <td class="py-1.5 px-3 text-right font-mono text-slate-600">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
+                                        <td class="py-1.5 px-3 text-right font-mono font-bold text-slate-900">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="py-2.5 text-center text-slate-400 italic">Tidak ada item tercatat.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot class="bg-slate-100/70 border-t border-slate-300 font-bold text-[11px]">
+                                <tr>
+                                    <td colspan="6" class="py-2 px-3 text-right uppercase tracking-wider text-slate-700">Total Nilai Tagihan SO:</td>
+                                    <td class="py-2 px-3 text-right font-mono font-extrabold text-slate-900">Rp {{ number_format($r->grand_total, 0, ',', '.') }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @empty
+                    <div class="py-8 text-center text-slate-400 border border-slate-300 rounded-xl bg-slate-50">
+                        Tidak ada data transaksi penjualan (SO) yang ditemukan untuk periode ini.
+                    </div>
+                @endforelse
+            </div>
         @else
             <!-- Tabel Data Laporan (Mode Standar / Rekap Ringkas) -->
             <div class="mb-6 overflow-x-auto">
@@ -394,7 +484,19 @@
         <div class="mb-8 p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between text-xs gap-3">
             <span class="font-bold text-slate-700">Total Dokumen: {{ number_format($summary['total_records']) }} Transaksi</span>
 
-            @if($reportType === 'PO_GR')
+            @if($reportType === 'SALES')
+                @if(isset($summary['total_qty']))
+                    <span class="font-bold text-slate-800 font-mono">
+                        Total Fisik: {{ number_format($summary['total_qty']) }} pcs
+                    </span>
+                @endif
+                <span class="font-bold text-emerald-800 font-mono">
+                    Realisasi Kirim: {{ number_format($summary['total_delivered'] ?? 0) }} / {{ number_format($summary['total_records']) }} SO
+                </span>
+                <span class="font-extrabold text-slate-900 font-mono">
+                    Total Penjualan: Rp {{ number_format($summary['total_amount'] ?? 0, 0, ',', '.') }}
+                </span>
+            @elseif($reportType === 'PO_GR')
                 @if(isset($summary['total_po_qty']))
                     <span class="font-bold text-slate-800 font-mono">
                         Total Pesan: {{ number_format($summary['total_po_qty']) }} pcs
@@ -447,7 +549,7 @@
         <div class="grid grid-cols-3 gap-6 pt-6 text-center border-t border-slate-200">
             <div>
                 <p class="text-slate-500 font-medium mb-2">
-                    {{ $reportType === 'SM' ? 'Dibuat Oleh (Petugas Mutasi / Admin),' : ($reportType === 'REPACK' ? 'Dibuat Oleh (Petugas Repack / Admin),' : 'Dibuat Oleh (Admin Operasional),') }}
+                    {{ $reportType === 'SM' ? 'Dibuat Oleh (Petugas Mutasi / Admin),' : ($reportType === 'REPACK' ? 'Dibuat Oleh (Petugas Repack / Admin),' : ($reportType === 'SALES' ? 'Dibuat Oleh (Admin Sales / PIC),' : 'Dibuat Oleh (Admin Operasional),')) }}
                 </p>
                 <div class="h-14 flex items-center justify-center">
                     @if($authSignUser && $authSignUser->signature && file_exists(public_path($authSignUser->signature)))
@@ -460,7 +562,7 @@
 
             <div>
                 <p class="text-slate-500 font-medium mb-2">
-                    {{ $reportType === 'SM' ? 'Diserahkan Oleh (Kepala Gudang Asal),' : ($reportType === 'REPACK' ? 'Diperiksa Oleh (Kepala Gudang),' : 'Diperiksa Oleh (Finance/Akunting),') }}
+                    {{ $reportType === 'SM' ? 'Diserahkan Oleh (Kepala Gudang Asal),' : ($reportType === 'REPACK' ? 'Diperiksa Oleh (Kepala Gudang),' : ($reportType === 'SALES' ? 'Dikirim Oleh (Logistik / Gudang),' : 'Diperiksa Oleh (Finance/Akunting),')) }}
                 </p>
                 <div class="h-14 flex items-center justify-center">
                     @if($reportType !== 'SM' && $financeSignUser && file_exists(public_path($financeSignUser->signature)))
@@ -469,13 +571,13 @@
                 </div>
                 <div class="border-b border-slate-400 w-36 mx-auto"></div>
                 <p class="font-bold text-slate-800 mt-1">
-                    ( {{ $reportType === 'SM' ? 'Kepala Gudang Asal' : ($reportType === 'REPACK' ? 'Kepala Gudang' : ($financeSignUser ? $financeSignUser->name : 'Finance TAP')) }} )
+                    ( {{ $reportType === 'SM' ? 'Kepala Gudang Asal' : ($reportType === 'REPACK' ? 'Kepala Gudang' : ($reportType === 'SALES' ? 'Logistik & Gudang' : ($financeSignUser ? $financeSignUser->name : 'Finance TAP'))) }} )
                 </p>
             </div>
 
             <div>
                 <p class="text-slate-500 font-medium mb-2">
-                    {{ $reportType === 'SM' ? 'Diterima Oleh (Kepala Gudang Tujuan),' : ($reportType === 'REPACK' ? 'Disetujui Oleh (Pimpinan Cabang),' : 'Disetujui Oleh (Pimpinan Cabang),') }}
+                    {{ $reportType === 'SM' ? 'Diterima Oleh (Kepala Gudang Tujuan),' : ($reportType === 'REPACK' ? 'Disetujui Oleh (Pimpinan Cabang),' : 'Disetujui Oleh (Pimpinan Cabang / Finance),') }}
                 </p>
                 <div class="h-14 flex items-center justify-center">
                     @if($reportType !== 'SM' && $headSignUser && file_exists(public_path($headSignUser->signature)))

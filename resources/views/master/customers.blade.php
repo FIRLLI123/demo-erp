@@ -42,7 +42,10 @@
                     <span class="p-1.5 rounded-lg bg-amber-100 text-amber-700">
                         <i data-lucide="store" class="w-4 h-4"></i>
                     </span>
-                    <h3 class="font-bold text-slate-900 text-sm">Registrasi Outlet / Toko Baru</h3>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm">Registrasi Outlet / Toko Baru</h3>
+                        <p class="text-[11px] text-slate-500">Lengkapi profil toko, status DigiPOS & konsinyasi, data pajak (NPWP), dan limit kredit</p>
+                    </div>
                 </div>
                 <button @click="createOpen = false" class="text-slate-400 hover:text-slate-600">
                     <i data-lucide="x" class="w-4 h-4"></i>
@@ -51,116 +54,179 @@
 
             <form method="POST" action="{{ route('master.customers.store') }}">
                 @csrf
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet <span class="text-rose-500">*</span></label>
-                        <input type="text" name="name" required placeholder="Contoh: Toko Berkah Cell" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                
+                <!-- Section 1: Profil Toko, Tipe & Limit Plafon -->
+                <div class="mb-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <h4 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <span>1. Profil Toko</span>
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet <span class="text-rose-500">*</span></label>
+                            <input type="text" name="name" required placeholder="Contoh: Toko Berkah Cell" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Tipe Outlet <span class="text-rose-500">*</span></label>
+                            <select name="type" required class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                                <option value="RETAIL">Retail (Outlet / Konter Reguler)</option>
+                                <option value="GROSIR">Grosir (Sub-Dealer / Toko Besar)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios Utama</label>
+                            <input type="text" name="nomor_rs" placeholder="Contoh: 081288990011" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Limit Plafon Piutang (Rp) <span class="text-rose-500">*</span></label>
+                            <input type="number" name="credit_limit" value="10000000" min="0" step="500000" required class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                            <span class="text-[10px] text-slate-500 block mt-0.5">Batas maksimal piutang penjualan toko</span>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">ID DigiPOS Toko</label>
-                        <input type="text" name="digipos_id" placeholder="Contoh: DGP-100234" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
-                    </div>
+                    <!-- Toggle Checkbox DigiPOS & Konsinyasi -->
+                    <div class="mt-4 pt-3.5 border-t border-slate-200/90 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Checkbox DigiPOS -->
+                        <div class="p-3.5 rounded-xl border transition-all" :class="isDigipos ? 'bg-rose-50/50 border-rose-200' : 'bg-white border-slate-200'">
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="checkbox" name="is_digipos" value="1" x-model="isDigipos" class="mt-0.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-slate-900">Outlet DigiPOS Telkomsel</span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="isDigipos ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-slate-200 text-slate-600'" x-text="isDigipos ? 'DigiPOS Aktif' : 'Non-DigiPOS'"></span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">Centang jika outlet memiliki akun DigiPOS resmi dari Telkomsel</p>
+                                    
+                                    <div x-show="isDigipos" x-cloak class="mt-2.5">
+                                        <label class="block text-[11px] font-bold text-slate-700 mb-1">ID DigiPOS Toko</label>
+                                        <input type="text" name="digipos_id" placeholder="Contoh: DGP-100234" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500/20">
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios</label>
-                        <input type="text" name="nomor_rs" placeholder="Contoh: 081288990011" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                        <!-- Checkbox Konsinyasi -->
+                        <div class="p-3.5 rounded-xl border transition-all" :class="isConsignment ? 'bg-amber-50/50 border-amber-200' : 'bg-white border-slate-200'">
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="checkbox" name="is_consignment" value="1" x-model="isConsignment" class="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-slate-900">Outlet Konsinyasi (Titip Jual)</span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="isConsignment ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-slate-200 text-slate-600'" x-text="isConsignment ? 'Ya (Konsinyasi)' : 'Tidak (Putus)'"></span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">Centang jika barang dagangan dititip jual dan pembayaran dihitung sesuai barang yang laku</p>
+                                </div>
+                            </label>
+                        </div>
                     </div>
+                </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Tipe Outlet <span class="text-rose-500">*</span></label>
-                        <select name="type" required class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
-                            <option value="RETAIL">Retail (Outlet / Konter Reguler)</option>
-                            <option value="GROSIR">Grosir (Sub-Dealer / Toko Besar)</option>
-                        </select>
+                <!-- Section 2: Data Pemilik & Identitas Pajak (KTP & NPWP) -->
+                <div class="mb-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <h4 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-indigo-600"></i>
+                        <span>2. Identitas Pemilik & Pajak (KTP & NPWP)</span>
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama PIC / Pemilik Toko</label>
+                            <input type="text" name="customer_pic" placeholder="Contoh: H. Ahmad Subarjo" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor KTP Pemilik</label>
+                            <input type="text" name="customer_ktp" placeholder="16 digit NIK KTP" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor NPWP Toko / PIC</label>
+                            <input type="text" name="npwp" placeholder="Contoh: 01.234.567.8-901.000 / 16 digit NPWP" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Sesuai NPWP</label>
+                            <input type="text" name="alamat_npwp" placeholder="Alamat terdaftar pada kartu NPWP" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
                     </div>
+                </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama PIC / Pemilik Toko</label>
-                        <input type="text" name="customer_pic" placeholder="Contoh: H. Ahmad Subarjo" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
-                    </div>
+                <!-- Section 3: Wilayah Distribusi, Kontak & Alamat (Kelurahan di-hide) -->
+                <div class="mb-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <h4 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>3. Wilayah Operasional, Jadwal PJP & Alamat</span>
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Wilayah TAP <span class="text-rose-500">*</span></label>
+                            <select name="tap_id" required class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                                @foreach($taps as $tap)
+                                    <option value="{{ $tap->id }}">{{ $tap->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor KTP Pemilik Outlet</label>
-                        <input type="text" name="customer_ktp" placeholder="16 digit NIK KTP" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Salesman Pembina (PJP)</label>
+                            <select name="sales_id" class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                                <option value="">-- Pilih Salesman --</option>
+                                @foreach($salesList as $sl)
+                                    <option value="{{ $sl->id }}">[{{ $sl->code }}] {{ $sl->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Salesman Pembina (PJP)</label>
-                        <select name="sales_id" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                            <option value="">-- Pilih Salesman --</option>
-                            @foreach($salesList as $sl)
-                                <option value="{{ $sl->id }}">[{{ $sl->code }}] {{ $sl->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Hari Kunjungan PJP</label>
+                            <select name="hari_pjp" class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                                <option value="">-- Pilih Hari PJP --</option>
+                                <option value="SENIN">SENIN</option>
+                                <option value="SELASA">SELASA</option>
+                                <option value="RABU">RABU</option>
+                                <option value="KAMIS">KAMIS</option>
+                                <option value="JUMAT">JUMAT</option>
+                                <option value="SABTU">SABTU</option>
+                                <option value="MINGGU">MINGGU</option>
+                            </select>
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Hari Kunjungan PJP</label>
-                        <select name="hari_pjp" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                            <option value="">-- Pilih Hari PJP --</option>
-                            <option value="SENIN">SENIN</option>
-                            <option value="SELASA">SELASA</option>
-                            <option value="RABU">RABU</option>
-                            <option value="KAMIS">KAMIS</option>
-                            <option value="JUMAT">JUMAT</option>
-                            <option value="SABTU">SABTU</option>
-                            <option value="MINGGU">MINGGU</option>
-                        </select>
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WA Toko</label>
+                            <input type="text" name="phone" placeholder="0812xxxxxxxx" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Wilayah TAP <span class="text-rose-500">*</span></label>
-                        <select name="tap_id" required class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
-                            @foreach($taps as $tap)
-                                <option value="{{ $tap->id }}">{{ $tap->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
+                            <input type="text" name="kecamatan_name" placeholder="Contoh: Pasar Minggu" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WA Toko</label>
-                        <input type="text" name="phone" placeholder="0812xxxxxxxx" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Kota / Kabupaten</label>
+                            <input type="text" name="kota_name" placeholder="Contoh: Jakarta Selatan" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Limit Plafon Kredit (Rp)</label>
-                        <input type="number" name="credit_limit" value="10000000" min="0" step="500000" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
+                            <input type="text" name="provinsi_name" placeholder="Contoh: DKI Jakarta" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Kelurahan / Desa</label>
-                        <input type="text" name="kelurahan_name" placeholder="Contoh: Kebagusan" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Lengkap Toko</label>
+                            <input type="text" name="address" placeholder="Nama Jalan, No. Bangunan, Patokan" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
-                        <input type="text" name="kecamatan_name" placeholder="Contoh: Pasar Minggu" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Latitude</label>
+                            <input type="number" step="any" name="latitude" placeholder="Contoh: -6.2087634" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Kota / Kabupaten</label>
-                        <input type="text" name="kota_name" placeholder="Contoh: Jakarta Selatan" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
-                        <input type="text" name="provinsi_name" placeholder="Contoh: DKI Jakarta" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Lengkap Toko</label>
-                        <input type="text" name="address" placeholder="Nama Jalan, No. Bangunan, Patokan" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Latitude</label>
-                        <input type="number" step="any" name="latitude" placeholder="Contoh: -6.2087634" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Longitude</label>
-                        <input type="number" step="any" name="longitude" placeholder="Contoh: 106.845599" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Longitude</label>
+                            <input type="number" step="any" name="longitude" placeholder="Contoh: 106.845599" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                        </div>
                     </div>
                 </div>
 
@@ -181,11 +247,11 @@
         <!-- ============================================== -->
         <template x-if="editModalOpen && editData">
             <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                <div class="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto" @click.outside="editModalOpen = false">
+                <div class="bg-white rounded-2xl border border-slate-200 max-w-3xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto" @click.outside="editModalOpen = false">
                     <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 sticky top-0 bg-white z-10">
                         <div>
                             <h3 class="font-bold text-slate-900 text-sm">Edit Data Toko [<span x-text="editData.code"></span>]</h3>
-                            <p class="text-[11px] text-slate-400">Perbarui rincian identitas outlet, kepemilikan, dan jadwal PJP</p>
+                            <p class="text-[11px] text-slate-400">Perbarui rincian profil outlet, status DigiPOS, NPWP, dan plafon kredit</p>
                         </div>
                         <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
                     </div>
@@ -193,123 +259,179 @@
                     <form :action="'/master/customers/update/' + editData.id" method="POST">
                         @csrf
                         <div class="space-y-4 mb-5">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet <span class="text-rose-500">*</span></label>
-                                    <input type="text" name="name" x-model="editData.name" required class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                            <!-- Section Profil & Plafon -->
+                            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                                <h4 class="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+                                    <i data-lucide="store" class="w-3.5 h-3.5 text-amber-600"></i>
+                                    <span>Profil Toko & Status Kerjasama</span>
+                                </h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet <span class="text-rose-500">*</span></label>
+                                        <input type="text" name="name" x-model="editData.name" required class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Tipe Outlet</label>
+                                        <select name="type" x-model="editData.type" class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                                            <option value="RETAIL">RETAIL (Outlet Konter)</option>
+                                            <option value="GROSIR">GROSIR (Sub Dealer)</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Tipe Outlet</label>
-                                    <select name="type" x-model="editData.type" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                        <option value="RETAIL">RETAIL (Outlet Konter)</option>
-                                        <option value="GROSIR">GROSIR (Sub Dealer)</option>
-                                    </select>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios Utama</label>
+                                        <input type="text" name="nomor_rs" x-model="editData.nomor_rs" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Limit Plafon Piutang (Rp)</label>
+                                        <input type="number" name="credit_limit" x-model.number="editData.credit_limit" min="0" step="500000" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none">
+                                    </div>
+                                </div>
+
+                                <!-- Toggle Checkbox DigiPOS & Konsinyasi Edit -->
+                                <div class="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div class="p-3 rounded-xl border transition-all" :class="editData.is_digipos ? 'bg-rose-50/50 border-rose-200' : 'bg-white border-slate-200'">
+                                        <label class="flex items-start gap-2.5 cursor-pointer">
+                                            <input type="checkbox" name="is_digipos" value="1" x-model="editData.is_digipos" class="mt-0.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-slate-900">Outlet DigiPOS</span>
+                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold" :class="editData.is_digipos ? 'bg-rose-100 text-rose-800' : 'bg-slate-200 text-slate-600'" x-text="editData.is_digipos ? 'DigiPOS Aktif' : 'Non-DigiPOS'"></span>
+                                                </div>
+                                                <div x-show="editData.is_digipos" class="mt-2">
+                                                    <label class="block text-[10px] font-bold text-slate-600 mb-0.5">ID DigiPOS Toko</label>
+                                                    <input type="text" name="digipos_id" x-model="editData.digipos_id" placeholder="DGP-100234" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-2.5 py-1.5 focus:outline-none">
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div class="p-3 rounded-xl border transition-all" :class="editData.is_consignment ? 'bg-amber-50/50 border-amber-200' : 'bg-white border-slate-200'">
+                                        <label class="flex items-start gap-2.5 cursor-pointer">
+                                            <input type="checkbox" name="is_consignment" value="1" x-model="editData.is_consignment" class="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-slate-900">Outlet Konsinyasi</span>
+                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold" :class="editData.is_consignment ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'" x-text="editData.is_consignment ? 'Konsinyasi' : 'Reguler/Putus'"></span>
+                                                </div>
+                                                <p class="text-[10px] text-slate-500 mt-1">Status titip jual produk outlet</p>
+                                            </div>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">ID DigiPOS Toko</label>
-                                    <input type="text" name="digipos_id" x-model="editData.digipos_id" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                            <!-- Section Pajak (NPWP) & Pemilik -->
+                            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                                <h4 class="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+                                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-indigo-600"></i>
+                                    <span>Identitas Pemilik & Pajak (KTP & NPWP)</span>
+                                </h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama PIC / Pemilik Toko</label>
+                                        <input type="text" name="customer_pic" x-model="editData.customer_pic" placeholder="Nama pemilik" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">No. KTP Pemilik</label>
+                                        <input type="text" name="customer_ktp" x-model="editData.customer_ktp" placeholder="16 digit NIK" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios</label>
-                                    <input type="text" name="nomor_rs" x-model="editData.nomor_rs" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nama PIC / Pemilik Toko</label>
-                                    <input type="text" name="customer_pic" x-model="editData.customer_pic" placeholder="Nama pemilik" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">No. KTP Pemilik Outlet</label>
-                                    <input type="text" name="customer_ktp" x-model="editData.customer_ktp" placeholder="16 digit NIK" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Salesman Pembina (PJP)</label>
-                                    <select name="sales_id" x-model="editData.sales_id" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                        <option value="">-- Tanpa Salesman --</option>
-                                        @foreach($salesList as $sl)
-                                            <option value="{{ $sl->id }}">[{{ $sl->code }}] {{ $sl->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Hari Kunjungan PJP</label>
-                                    <select name="hari_pjp" x-model="editData.hari_pjp" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                        <option value="">-- Pilih Hari PJP --</option>
-                                        <option value="SENIN">SENIN</option>
-                                        <option value="SELASA">SELASA</option>
-                                        <option value="RABU">RABU</option>
-                                        <option value="KAMIS">KAMIS</option>
-                                        <option value="JUMAT">JUMAT</option>
-                                        <option value="SABTU">SABTU</option>
-                                        <option value="MINGGU">MINGGU</option>
-                                    </select>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor NPWP Toko / PIC</label>
+                                        <input type="text" name="npwp" x-model="editData.npwp" placeholder="01.234.567.8-901.000 / 16 digit NPWP" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Sesuai NPWP</label>
+                                        <input type="text" name="alamat_npwp" x-model="editData.alamat_npwp" placeholder="Alamat terdaftar kartu NPWP" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Wilayah TAP <span class="text-rose-500">*</span></label>
-                                    <select name="tap_id" x-model="editData.tap_id" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                        @foreach($taps as $tap)
-                                            <option value="{{ $tap->id }}">{{ $tap->name }}</option>
-                                        @endforeach
-                                    </select>
+                            <!-- Section Operasional & Wilayah (Kelurahan di-hide) -->
+                            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                                <h4 class="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                    <span>Operasional, Wilayah & Alamat</span>
+                                </h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Wilayah TAP <span class="text-rose-500">*</span></label>
+                                        <select name="tap_id" x-model="editData.tap_id" class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                            @foreach($taps as $tap)
+                                                <option value="{{ $tap->id }}">{{ $tap->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Salesman PJP</label>
+                                        <select name="sales_id" x-model="editData.sales_id" class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                            <option value="">-- Tanpa Salesman --</option>
+                                            @foreach($salesList as $sl)
+                                                <option value="{{ $sl->id }}">[{{ $sl->code }}] {{ $sl->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Hari Kunjungan PJP</label>
+                                        <select name="hari_pjp" x-model="editData.hari_pjp" class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                            <option value="">-- Pilih Hari PJP --</option>
+                                            <option value="SENIN">SENIN</option>
+                                            <option value="SELASA">SELASA</option>
+                                            <option value="RABU">RABU</option>
+                                            <option value="KAMIS">KAMIS</option>
+                                            <option value="JUMAT">JUMAT</option>
+                                            <option value="SABTU">SABTU</option>
+                                            <option value="MINGGU">MINGGU</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WA</label>
-                                    <input type="text" name="phone" x-model="editData.phone" class="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Limit Kredit (Rp)</label>
-                                    <input type="number" name="credit_limit" x-model.number="editData.credit_limit" class="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                </div>
-                            </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Kelurahan / Desa</label>
-                                    <input type="text" name="kelurahan_name" x-model="editData.kelurahan_name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WA</label>
+                                        <input type="text" name="phone" x-model="editData.phone" class="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
+                                        <input type="text" name="kecamatan_name" x-model="editData.kecamatan_name" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Kota / Kabupaten</label>
+                                        <input type="text" name="kota_name" x-model="editData.kota_name" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
-                                    <input type="text" name="kecamatan_name" x-model="editData.kecamatan_name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Kota / Kabupaten</label>
-                                    <input type="text" name="kota_name" x-model="editData.kota_name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                </div>
-                            </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div class="sm:col-span-2">
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Lengkap</label>
-                                    <input type="text" name="address" x-model="editData.address" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
+                                        <input type="text" name="provinsi_name" x-model="editData.provinsi_name" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
+                                    <div class="sm:col-span-2">
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Lengkap</label>
+                                        <input type="text" name="address" x-model="editData.address" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Status Keaktifan</label>
-                                    <select name="status" x-model="editData.status" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                        <option value="ACTIVE">ACTIVE (Aktif)</option>
-                                        <option value="INACTIVE">INACTIVE (Nonaktif)</option>
-                                    </select>
-                                </div>
-                            </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Latitude</label>
-                                    <input type="number" step="any" name="latitude" x-model="editData.latitude" placeholder="Contoh: -6.2087634" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Longitude</label>
-                                    <input type="number" step="any" name="longitude" x-model="editData.longitude" placeholder="Contoh: 106.845599" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Status Keaktifan</label>
+                                        <select name="status" x-model="editData.status" class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                            <option value="ACTIVE">ACTIVE (Aktif)</option>
+                                            <option value="INACTIVE">INACTIVE (Nonaktif)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Latitude</label>
+                                        <input type="number" step="any" name="latitude" x-model="editData.latitude" placeholder="Contoh: -6.2087634" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Longitude</label>
+                                        <input type="number" step="any" name="longitude" x-model="editData.longitude" placeholder="Contoh: 106.845599" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -318,8 +440,9 @@
                             <button type="button" @click="editModalOpen = false" class="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs">
                                 Batal
                             </button>
-                            <button type="submit" class="px-5 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs">
-                                Perbarui Toko
+                            <button type="submit" class="px-5 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                                <span>Perbarui Toko</span>
                             </button>
                         </div>
                     </form>
@@ -388,13 +511,25 @@
                                             @endif
                                         </span>
                                     @endif
-                                    <span class="text-[11px] text-slate-400 block truncate max-w-xs">{{ $c->address }}</span>
+                                    @if($c->npwp)
+                                        <span class="text-[10px] text-slate-500 font-mono block mt-0.5">
+                                            <strong class="text-slate-600">NPWP:</strong> {{ $c->npwp }}
+                                        </span>
+                                    @endif
+                                    <span class="text-[11px] text-slate-400 block truncate max-w-xs mt-0.5">{{ $c->address }}</span>
                                 </td>
                                 <td class="py-3.5 px-4 text-xs">
-                                    <div class="flex items-center gap-1.5 text-slate-900 font-bold font-mono">
-                                        <i data-lucide="smartphone" class="w-3.5 h-3.5 text-rose-500 shrink-0"></i>
-                                        <span>{{ $c->digipos_id ?? '-' }}</span>
-                                    </div>
+                                    @if($c->is_digipos)
+                                        <div class="flex items-center gap-1.5 text-slate-900 font-bold font-mono">
+                                            <i data-lucide="smartphone" class="w-3.5 h-3.5 text-rose-500 shrink-0"></i>
+                                            <span>{{ $c->digipos_id ?? '-' }}</span>
+                                            <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200">DigiPOS</span>
+                                        </div>
+                                    @else
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">Non-DigiPOS</span>
+                                        </div>
+                                    @endif
                                     <div class="mt-1 flex items-center gap-1.5 flex-wrap">
                                         <span class="font-mono text-[11px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" title="Nomor RS Utama Toko">
                                             RS: {{ $c->primary_rs_number }}
@@ -440,16 +575,24 @@
                                     @endif
                                     @if($c->latitude && $c->longitude)
                                         <a href="https://maps.google.com/?q={{ $c->latitude }},{{ $c->longitude }}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-mono text-indigo-600 hover:underline mt-0.5">
-                                            <i data-lucide="map-pin" class="w-3 h-3"></i>
+                                             <i data-lucide="map-pin" class="w-3 h-3"></i>
                                             <span>{{ number_format($c->latitude, 5) }}, {{ number_format($c->longitude, 5) }}</span>
                                         </a>
                                     @endif
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold 
-                                        {{ $c->type === 'GROSIR' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200' }}">
-                                        {{ $c->type }}
-                                    </span>
+                                    <div class="flex flex-col items-center gap-1">
+                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold 
+                                            {{ $c->type === 'GROSIR' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200' }}">
+                                            {{ $c->type }}
+                                        </span>
+                                        @if($c->is_consignment)
+                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-0.5" title="Toko Konsinyasi (Titip Jual)">
+                                                <i data-lucide="repeat" class="w-2.5 h-2.5"></i>
+                                                <span>Konsinyasi</span>
+                                            </span>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-800">
                                     Rp {{ number_format($c->credit_limit, 0, ',', '.') }}
@@ -744,6 +887,8 @@
         function customerMasterApp() {
             return {
                 createOpen: false,
+                isDigipos: true,
+                isConsignment: false,
                 editModalOpen: false,
                 editData: null,
 
@@ -819,6 +964,8 @@
 
                 openEditModal(customer) {
                     this.editData = Object.assign({}, customer);
+                    this.editData.is_digipos = customer.is_digipos === 1 || customer.is_digipos === '1' || customer.is_digipos === true;
+                    this.editData.is_consignment = customer.is_consignment === 1 || customer.is_consignment === '1' || customer.is_consignment === true;
                     this.editModalOpen = true;
                 },
 

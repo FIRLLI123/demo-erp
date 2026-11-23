@@ -1449,11 +1449,15 @@ class MasterController extends Controller
             'tap_id' => 'required|exists:taps,id',
             'sales_id' => 'nullable|exists:sales,id',
             'type' => 'required|in:RETAIL,GROSIR',
+            'is_digipos' => 'nullable',
             'digipos_id' => 'nullable|string|max:50',
+            'is_consignment' => 'nullable',
             'nomor_rs' => 'nullable|string|max:30',
             'phone' => 'nullable|string|max:20',
             'customer_pic' => 'nullable|string|max:100',
             'customer_ktp' => 'nullable|string|max:30',
+            'npwp' => 'nullable|string|max:30',
+            'alamat_npwp' => 'nullable|string|max:500',
             'hari_pjp' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'kelurahan_name' => 'nullable|string|max:100',
@@ -1472,17 +1476,25 @@ class MasterController extends Controller
         $nextId = DB::table('customers')->count() + 1;
         $customerCode = 'CST-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
 
+        $isDigipos = $request->boolean('is_digipos');
+        $isConsignment = $request->boolean('is_consignment');
+        $digiposId = $isDigipos ? ($request->digipos_id ?: 'DGP-' . rand(100000, 999999)) : null;
+
         DB::table('customers')->insert([
             'tap_id' => $request->tap_id,
             'sales_id' => $request->sales_id,
             'code' => $customerCode,
-            'digipos_id' => $request->digipos_id ?? ('DGP-' . rand(100000, 999999)),
+            'is_digipos' => $isDigipos,
+            'digipos_id' => $digiposId,
+            'is_consignment' => $isConsignment,
             'nomor_rs' => $request->nomor_rs ?? ($request->phone ?? '0812' . rand(10000000, 99999999)),
             'name' => $request->name,
             'type' => $request->type,
             'phone' => $request->phone ?? '0812' . rand(10000000, 99999999),
             'customer_pic' => $request->customer_pic,
             'customer_ktp' => $request->customer_ktp,
+            'npwp' => $request->npwp ? trim($request->npwp) : null,
+            'alamat_npwp' => $request->alamat_npwp ? trim($request->alamat_npwp) : null,
             'hari_pjp' => $request->hari_pjp,
             'address' => $request->address ?? 'Area Operasional TAP',
             'latitude' => $request->latitude,
@@ -1491,7 +1503,7 @@ class MasterController extends Controller
             'kecamatan_name' => $request->kecamatan_name,
             'kota_name' => $request->kota_name,
             'provinsi_name' => $request->provinsi_name,
-            'credit_limit' => $request->credit_limit ?? 10000000,
+            'credit_limit' => $request->credit_limit !== null ? (float) $request->credit_limit : 10000000,
             'status' => 'ACTIVE',
             'created_at' => now(),
             'updated_at' => now(),
@@ -1507,11 +1519,15 @@ class MasterController extends Controller
             'tap_id' => 'required|exists:taps,id',
             'sales_id' => 'nullable|exists:sales,id',
             'type' => 'required|in:RETAIL,GROSIR',
+            'is_digipos' => 'nullable',
             'digipos_id' => 'nullable|string|max:50',
+            'is_consignment' => 'nullable',
             'nomor_rs' => 'nullable|string|max:30',
             'phone' => 'nullable|string|max:20',
             'customer_pic' => 'nullable|string|max:100',
             'customer_ktp' => 'nullable|string|max:30',
+            'npwp' => 'nullable|string|max:30',
+            'alamat_npwp' => 'nullable|string|max:500',
             'hari_pjp' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'kelurahan_name' => 'nullable|string|max:100',
@@ -1528,16 +1544,24 @@ class MasterController extends Controller
             return redirect()->route('master.customers')->with('error', 'Akses ditolak: Anda tidak memiliki otorisasi wilayah untuk TAP tersebut.');
         }
 
+        $isDigipos = $request->boolean('is_digipos');
+        $isConsignment = $request->boolean('is_consignment');
+        $digiposId = $isDigipos ? ($request->digipos_id ?: null) : null;
+
         DB::table('customers')->where('id', $id)->update([
             'name' => $request->name,
             'tap_id' => $request->tap_id,
             'sales_id' => $request->sales_id,
             'type' => $request->type,
-            'digipos_id' => $request->digipos_id,
+            'is_digipos' => $isDigipos,
+            'digipos_id' => $digiposId,
+            'is_consignment' => $isConsignment,
             'nomor_rs' => $request->nomor_rs,
             'phone' => $request->phone,
             'customer_pic' => $request->customer_pic,
             'customer_ktp' => $request->customer_ktp,
+            'npwp' => $request->npwp ? trim($request->npwp) : null,
+            'alamat_npwp' => $request->alamat_npwp ? trim($request->alamat_npwp) : null,
             'hari_pjp' => $request->hari_pjp,
             'address' => $request->address,
             'latitude' => $request->latitude,
@@ -1546,7 +1570,7 @@ class MasterController extends Controller
             'kecamatan_name' => $request->kecamatan_name,
             'kota_name' => $request->kota_name,
             'provinsi_name' => $request->provinsi_name,
-            'credit_limit' => $request->credit_limit ?? 0,
+            'credit_limit' => $request->credit_limit !== null ? (float) $request->credit_limit : 0,
             'status' => $request->status,
             'updated_at' => now(),
         ]);
