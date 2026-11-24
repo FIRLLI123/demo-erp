@@ -44,7 +44,7 @@
                     </span>
                     <div>
                         <h3 class="font-bold text-slate-900 text-sm">Registrasi Outlet / Toko Baru</h3>
-                        <p class="text-[11px] text-slate-500">Lengkapi profil toko, status DigiPOS & konsinyasi, data pajak (NPWP), dan limit kredit</p>
+                        <p class="text-[11px] text-slate-500">Lengkapi profil toko, status DigiPOS, data pajak (NPWP), dan limit kredit</p>
                     </div>
                 </div>
                 <button @click="createOpen = false" class="text-slate-400 hover:text-slate-600">
@@ -64,7 +64,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet <span class="text-rose-500">*</span></label>
-                            <input type="text" name="name" required placeholder="" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                            <input type="text" name="name" required class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                         </div>
 
                         <div>
@@ -77,7 +77,7 @@
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios Utama</label>
-                            <input type="text" name="nomor_rs" placeholder="" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                            <input type="text" name="nomor_rs" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                         </div>
 
                         <div>
@@ -87,9 +87,11 @@
                         </div>
                     </div>
 
-                    <!-- Toggle Checkbox DigiPOS & Konsinyasi -->
-                    <div class="mt-4 pt-3.5 border-t border-slate-200/90 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Checkbox DigiPOS -->
+                    <!-- Hidden Default Konsinyasi -->
+                    <input type="hidden" name="is_consignment" value="1">
+
+                    <!-- Toggle Checkbox DigiPOS -->
+                    <div class="mt-4 pt-3.5 border-t border-slate-200/90">
                         <div class="p-3.5 rounded-xl border transition-all" :class="isDigipos ? 'bg-rose-50/50 border-rose-200' : 'bg-white border-slate-200'">
                             <label class="flex items-start gap-2.5 cursor-pointer">
                                 <input type="checkbox" name="is_digipos" value="1" x-model="isDigipos" class="mt-0.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer">
@@ -102,22 +104,8 @@
                                     
                                     <div x-show="isDigipos" x-cloak class="mt-2.5">
                                         <label class="block text-[11px] font-bold text-slate-700 mb-1">ID DigiPOS Toko</label>
-                                        <input type="text" name="digipos_id" placeholder="" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500/20">
+                                        <input type="text" name="digipos_id" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500/20">
                                     </div>
-                                </div>
-                            </label>
-                        </div>
-
-                        <!-- Checkbox Konsinyasi -->
-                        <div class="p-3.5 rounded-xl border transition-all" :class="isConsignment ? 'bg-amber-50/50 border-amber-200' : 'bg-white border-slate-200'">
-                            <label class="flex items-start gap-2.5 cursor-pointer">
-                                <input type="checkbox" name="is_consignment" value="1" x-model="isConsignment" class="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-xs font-bold text-slate-900">Outlet Konsinyasi (Titip Jual)</span>
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="isConsignment ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-slate-200 text-slate-600'" x-text="isConsignment ? 'Ya (Konsinyasi)' : 'Tidak (Putus)'"></span>
-                                    </div>
-                                    <p class="text-[11px] text-slate-500 mt-0.5">Centang jika barang dagangan dititip jual dan pembayaran dihitung sesuai barang yang laku</p>
                                 </div>
                             </label>
                         </div>
@@ -290,8 +278,11 @@
                                     </div>
                                 </div>
 
-                                <!-- Toggle Checkbox DigiPOS & Konsinyasi Edit -->
-                                <div class="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <!-- Hidden Default Konsinyasi -->
+                                <input type="hidden" name="is_consignment" value="1">
+
+                                <!-- Toggle Checkbox DigiPOS Edit -->
+                                <div class="pt-3 border-t border-slate-200">
                                     <div class="p-3 rounded-xl border transition-all" :class="editData.is_digipos ? 'bg-rose-50/50 border-rose-200' : 'bg-white border-slate-200'">
                                         <label class="flex items-start gap-2.5 cursor-pointer">
                                             <input type="checkbox" name="is_digipos" value="1" x-model="editData.is_digipos" class="mt-0.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer">
@@ -302,21 +293,8 @@
                                                 </div>
                                                 <div x-show="editData.is_digipos" class="mt-2">
                                                     <label class="block text-[10px] font-bold text-slate-600 mb-0.5">ID DigiPOS Toko</label>
-                                                    <input type="text" name="digipos_id" x-model="editData.digipos_id" placeholder=" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-2.5 py-1.5 focus:outline-none">
+                                                    <input type="text" name="digipos_id" x-model="editData.digipos_id" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-2.5 py-1.5 focus:outline-none">
                                                 </div>
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    <div class="p-3 rounded-xl border transition-all" :class="editData.is_consignment ? 'bg-amber-50/50 border-amber-200' : 'bg-white border-slate-200'">
-                                        <label class="flex items-start gap-2.5 cursor-pointer">
-                                            <input type="checkbox" name="is_consignment" value="1" x-model="editData.is_consignment" class="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer">
-                                            <div class="flex-1">
-                                                <div class="flex items-center gap-1.5">
-                                                    <span class="text-xs font-bold text-slate-900">Outlet Konsinyasi</span>
-                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold" :class="editData.is_consignment ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'" x-text="editData.is_consignment ? 'Konsinyasi' : 'Reguler/Putus'"></span>
-                                                </div>
-                                                <p class="text-[10px] text-slate-500 mt-1">Status titip jual produk outlet</p>
                                             </div>
                                         </label>
                                     </div>
@@ -581,18 +559,10 @@
                                     @endif
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
-                                    <div class="flex flex-col items-center gap-1">
-                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold 
-                                            {{ $c->type === 'GROSIR' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200' }}">
-                                            {{ $c->type }}
-                                        </span>
-                                        @if($c->is_consignment)
-                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-0.5" title="Toko Konsinyasi (Titip Jual)">
-                                                <i data-lucide="repeat" class="w-2.5 h-2.5"></i>
-                                                <span>Konsinyasi</span>
-                                            </span>
-                                        @endif
-                                    </div>
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold 
+                                        {{ $c->type === 'GROSIR' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200' }}">
+                                        {{ $c->type }}
+                                    </span>
                                 </td>
                                 <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-800">
                                     Rp {{ number_format($c->credit_limit, 0, ',', '.') }}
@@ -888,7 +858,6 @@
             return {
                 createOpen: false,
                 isDigipos: true,
-                isConsignment: false,
                 editModalOpen: false,
                 editData: null,
 

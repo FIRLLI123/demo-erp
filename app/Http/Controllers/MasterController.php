@@ -1477,7 +1477,7 @@ class MasterController extends Controller
         $customerCode = 'CST-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
 
         $isDigipos = $request->boolean('is_digipos');
-        $isConsignment = $request->boolean('is_consignment');
+        $isConsignment = $request->has('is_consignment') ? $request->boolean('is_consignment') : true;
         $digiposId = $isDigipos ? ($request->digipos_id ?: 'DGP-' . rand(100000, 999999)) : null;
 
         DB::table('customers')->insert([
@@ -1545,7 +1545,7 @@ class MasterController extends Controller
         }
 
         $isDigipos = $request->boolean('is_digipos');
-        $isConsignment = $request->boolean('is_consignment');
+        $isConsignment = $request->has('is_consignment') ? $request->boolean('is_consignment') : true;
         $digiposId = $isDigipos ? ($request->digipos_id ?: null) : null;
 
         DB::table('customers')->where('id', $id)->update([
