@@ -76,6 +76,16 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/customers/rs-numbers/update/{id}', [MasterController::class, 'updateRsNumber'])->name('customers.rs-numbers.update');
         Route::post('/customers/rs-numbers/delete/{id}', [MasterController::class, 'deleteRsNumber'])->name('customers.rs-numbers.delete');
         Route::post('/customers/rs-numbers/set-primary/{id}', [MasterController::class, 'setPrimaryRsNumber'])->name('customers.rs-numbers.set-primary');
+        
+        // Master Rencana Kunjungan (PJP) & Upload Excel
+        Route::get('/pjp', [MasterController::class, 'pjp'])->name('pjp');
+        Route::post('/pjp', [MasterController::class, 'storePjp'])->name('pjp.store');
+        Route::post('/pjp/update/{id}', [MasterController::class, 'updatePjp'])->name('pjp.update');
+        Route::post('/pjp/delete/{id}', [MasterController::class, 'deletePjp'])->name('pjp.delete');
+        Route::get('/pjp/template', [MasterController::class, 'downloadPjpTemplate'])->name('pjp.template');
+        Route::post('/pjp/preview-upload', [MasterController::class, 'previewPjpUpload'])->name('pjp.preview-upload');
+        Route::post('/pjp/confirm-upload', [MasterController::class, 'confirmPjpUpload'])->name('pjp.confirm-upload');
+        
         Route::get('/users', [MasterController::class, 'users'])->name('users');
         Route::post('/users', [MasterController::class, 'storeUser'])->name('users.store');
         Route::post('/users/update/{id}', [MasterController::class, 'updateUser'])->name('users.update');

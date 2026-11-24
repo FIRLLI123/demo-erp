@@ -2380,4 +2380,485 @@ class MasterController extends Controller
 
         return redirect()->back()->with('success', $message);
     }
+
+    /**
+     * Master Rencana Kunjungan (PJP)
+     */
+    public function pjp(Request $request)
+    {
+        $salesList = DB::table('sales')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $taps = DB::table('taps')->where('status', 'ACTIVE')->orderBy('name')->get();
+        $days = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU', 'MINGGU'];
+
+        $query = DB::table('customer_pjps')
+            ->join('sales', 'customer_pjps.sales_id', '=', 'sales.id')
+            ->join('customers', 'customer_pjps.customer_id', '=', 'customers.id')
+            ->leftJoin('taps', 'customers.tap_id', '=', 'taps.id')
+            ->select(
+                'customer_pjps.*',
+                'sales.code as sales_code',
+                'sales.name as sales_name',
+                'sales.phone as sales_phone',
+                'customers.code as customer_code',
+                'customers.name as customer_name',
+                'customers.address as customer_address',
+                'customers.customer_pic',
+                'customers.digipos_id',
+                'customers.type as customer_type',
+                'taps.name as tap_name'
+            );
+
+        if ($request->filled('sales_id') && $request->sales_id !== 'ALL') {
+            $query->where('customer_pjps.sales_id', $request->sales_id);
+        }
+
+        if ($request->filled('day') && $request->day !== 'ALL') {
+            $query->where('customer_pjps.day', strtoupper($request->day));
+        }
+
+        if ($request->filled('tap_id') && $request->tap_id !== 'ALL') {
+            $query->where('customers.tap_id', $request->tap_id);
+        }
+
+        if ($request->filled('search')) {
+            $s = trim($request->search);
+            $query->where(function ($q) use ($s) {
+                $q->where('customers.name', 'like', "%{$s}%")
+                    ->orWhere('customers.code', 'like', "%{$s}%")
+                    ->orWhere('customers.digipos_id', 'like', "%{$s}%")
+                    ->orWhere('sales.name', 'like', "%{$s}%")
+                    ->orWhere('sales.code', 'like', "%{$s}%");
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 25);
+        $pjps = $query->orderBy('sales.name')
+            ->orderByRaw("FIELD(customer_pjps.day, 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU', 'MINGGU')")
+            ->orderBy('customer_pjps.sequence')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $totalSchedules = DB::table('customer_pjps')->count();
+        $totalCoveredOutlets = DB::table('customer_pjps')->distinct('customer_id')->count('customer_id');
+        $totalActiveSales = DB::table('customer_pjps')->distinct('sales_id')->count('sales_id');
+
+        $customersList = DB::table('customers')
+            ->select('id', 'code', 'name', 'address')
+            ->where('status', 'ACTIVE')
+            ->orderBy('name')
+            ->get();
+
+        return view('master.pjp', compact(
+            'pjps',
+            'salesList',
+            'taps',
+            'days',
+            'customersList',
+            'totalSchedules',
+            'totalCoveredOutlets',
+            'totalActiveSales',
+            'perPage'
+        ));
+    }
+
+    public function storePjp(Request $request)
+    {
+        $request->validate([
+            'sales_id' => 'required|exists:sales,id',
+            'customer_id' => 'required|exists:customers,id',
+            'day' => 'required|in:SENIN,SELASA,RABU,KAMIS,JUMAT,SABTU,MINGGU',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        $exists = DB::table('customer_pjps')
+            ->where('sales_id', $request->sales_id)
+            ->where('customer_id', $request->customer_id)
+            ->where('day', $request->day)
+            ->first();
+
+        if ($exists) {
+            return redirect()->back()->with('error', 'Toko ini sudah terdaftar pada jadwal hari tersebut untuk sales terpilih.');
+        }
+
+        DB::table('customer_pjps')->insert([
+            'sales_id' => $request->sales_id,
+            'customer_id' => $request->customer_id,
+            'day' => $request->day,
+            'sequence' => 1,
+            'notes' => $request->notes ? trim($request->notes) : null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Jadwal kunjungan baru berhasil ditambahkan.');
+    }
+
+    public function updatePjp(Request $request, $id)
+    {
+        $request->validate([
+            'day' => 'required|in:SENIN,SELASA,RABU,KAMIS,JUMAT,SABTU,MINGGU',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        DB::table('customer_pjps')->where('id', $id)->update([
+            'day' => $request->day,
+            'notes' => $request->notes ? trim($request->notes) : null,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Jadwal kunjungan berhasil diperbarui.');
+    }
+
+    public function deletePjp($id)
+    {
+        DB::table('customer_pjps')->where('id', $id)->delete();
+        return redirect()->back()->with('success', 'Jadwal kunjungan berhasil dihapus.');
+    }
+
+    public function downloadPjpTemplate()
+    {
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="Template_Mapping_PJP.csv"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () {
+            $handle = fopen('php://output', 'w');
+            fputs($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+
+            fputcsv($handle, [
+                'KODE_SALES',
+                'NAMA_SALES',
+                'KODE_OUTLET',
+                'NAMA_OUTLET',
+                'HARI_KUNJUNGAN',
+                'CATATAN'
+            ]);
+
+            $sampleSales = DB::table('sales')->where('status', 'ACTIVE')->take(2)->get();
+            $sampleCustomers = DB::table('customers')->where('status', 'ACTIVE')->take(4)->get();
+
+            if ($sampleSales->count() > 0 && $sampleCustomers->count() > 0) {
+                $days = ['SENIN', 'SELASA', 'RABU', 'KAMIS'];
+                $s1 = $sampleSales[0];
+                $seq = 0;
+                foreach ($sampleCustomers->take(3) as $c) {
+                    fputcsv($handle, [
+                        $s1->code,
+                        $s1->name,
+                        $c->code,
+                        $c->name,
+                        $days[$seq] ?? 'SENIN',
+                        'Rute reguler'
+                    ]);
+                    $seq++;
+                }
+
+                if ($sampleSales->count() > 1 && $sampleCustomers->count() > 3) {
+                    $s2 = $sampleSales[1];
+                    $c4 = $sampleCustomers[3];
+                    fputcsv($handle, [
+                        $s2->code,
+                        $s2->name,
+                        $c4->code,
+                        $c4->name,
+                        'JUMAT',
+                        'Kunjungan akhir pekan'
+                    ]);
+                }
+            } else {
+                fputcsv($handle, ['SLS-001', 'Rian Hidayat', 'CST-001', 'Berkah Cell', 'SENIN', 'Contoh']);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function previewPjpUpload(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $ext = strtolower($file->getClientOriginalExtension());
+        if (!in_array($ext, ['csv', 'txt', 'xlsx'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Format file harus berupa .xlsx atau .csv',
+            ], 422);
+        }
+
+        $rawRows = $this->parsePjpFile($file->getRealPath(), $ext);
+        if (empty($rawRows) || count($rawRows) < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File kosong atau tidak memiliki baris data setelah header.',
+            ], 422);
+        }
+
+        // Drop header
+        array_shift($rawRows);
+
+        $salesList = DB::table('sales')->select('id', 'code', 'name')->get()->keyBy(function ($item) {
+            return strtoupper(trim($item->code));
+        });
+        $customersList = DB::table('customers')->select('id', 'code', 'name')->get()->keyBy(function ($item) {
+            return strtoupper(trim($item->code));
+        });
+
+        $validDays = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU', 'MINGGU'];
+        $parsedRows = [];
+        $affectedSales = [];
+        $validCount = 0;
+        $invalidCount = 0;
+
+        foreach ($rawRows as $idx => $cols) {
+            if (empty(array_filter($cols, 'strlen'))) {
+                continue;
+            }
+
+            $salesCode = strtoupper(trim($cols[0] ?? ''));
+            $salesNameInput = trim($cols[1] ?? '');
+            $customerCode = strtoupper(trim($cols[2] ?? ''));
+            $customerNameInput = trim($cols[3] ?? '');
+            $day = strtoupper(trim($cols[4] ?? ''));
+            $notes = trim($cols[5] ?? '');
+            if (!empty($cols[6])) {
+                $notes = trim($cols[6]);
+            }
+
+            $errors = [];
+
+            $salesObj = $salesList->get($salesCode);
+            if (!$salesObj) {
+                $errors[] = "Sales [{$salesCode}] tidak ditemukan";
+            }
+
+            $customerObj = $customersList->get($customerCode);
+            if (!$customerObj) {
+                $errors[] = "Outlet [{$customerCode}] tidak ditemukan";
+            }
+
+            if (!in_array($day, $validDays)) {
+                $errors[] = "Hari '{$day}' tidak valid";
+            }
+
+            $isValid = empty($errors);
+            if ($isValid) {
+                $validCount++;
+                if (!isset($affectedSales[$salesObj->id])) {
+                    $affectedSales[$salesObj->id] = [
+                        'id' => $salesObj->id,
+                        'code' => $salesObj->code,
+                        'name' => $salesObj->name,
+                        'total_outlets' => 0,
+                    ];
+                }
+                $affectedSales[$salesObj->id]['total_outlets']++;
+            } else {
+                $invalidCount++;
+            }
+
+            $parsedRows[] = [
+                'row_num' => $idx + 2,
+                'sales_id' => $salesObj ? $salesObj->id : null,
+                'sales_code' => $salesCode,
+                'sales_name' => $salesObj ? $salesObj->name : ($salesNameInput ?: '-'),
+                'customer_id' => $customerObj ? $customerObj->id : null,
+                'customer_code' => $customerCode,
+                'customer_name' => $customerObj ? $customerObj->name : ($customerNameInput ?: '-'),
+                'day' => $day,
+                'sequence' => $seq,
+                'notes' => $notes,
+                'is_valid' => $isValid,
+                'error_msg' => implode(', ', $errors),
+            ];
+        }
+
+        $previewToken = 'pjp_import_' . uniqid();
+        session()->put($previewToken, [
+            'affected_sales_ids' => array_keys($affectedSales),
+            'valid_rows' => array_values(array_filter($parsedRows, function ($r) { return $r['is_valid']; })),
+            'total_valid' => $validCount,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'preview_token' => $previewToken,
+            'total_rows' => count($parsedRows),
+            'valid_count' => $validCount,
+            'invalid_count' => $invalidCount,
+            'affected_sales' => array_values($affectedSales),
+            'rows' => $parsedRows,
+        ]);
+    }
+
+    public function confirmPjpUpload(Request $request)
+    {
+        $request->validate([
+            'preview_token' => 'required|string',
+        ]);
+
+        $cached = session()->get($request->preview_token);
+        if (!$cached || empty($cached['valid_rows'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi pratinjau kedaluwarsa atau tidak ada data valid. Silakan upload ulang.',
+            ], 422);
+        }
+
+        $affectedSalesIds = $cached['affected_sales_ids'];
+        $validRows = $cached['valid_rows'];
+
+        DB::beginTransaction();
+        try {
+            // HANYA hapus jadwal lama milik sales yang ada di file Excel ini
+            DB::table('customer_pjps')
+                ->whereIn('sales_id', $affectedSalesIds)
+                ->delete();
+
+            $insertBatch = [];
+            $now = now();
+            foreach ($validRows as $row) {
+                $insertBatch[] = [
+                    'sales_id' => $row['sales_id'],
+                    'customer_id' => $row['customer_id'],
+                    'day' => $row['day'],
+                    'sequence' => $row['sequence'] ?? 1,
+                    'notes' => $row['notes'] ?: null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            foreach (array_chunk($insertBatch, 200) as $chunk) {
+                DB::table('customer_pjps')->insert($chunk);
+            }
+
+            DB::commit();
+            session()->forget($request->preview_token);
+
+            $salesCount = count($affectedSalesIds);
+            $rowCount = count($insertBatch);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil memperbarui jadwal PJP untuk {$salesCount} sales dengan total {$rowCount} kunjungan toko.",
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyimpan ke database: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function parsePjpFile($filePath, $extension)
+    {
+        $rows = [];
+        $extension = strtolower($extension);
+
+        if (in_array($extension, ['csv', 'txt'])) {
+            $handle = fopen($filePath, 'r');
+            if (!$handle) return [];
+            $firstLine = fgets($handle);
+            rewind($handle);
+            $delimiter = (strpos($firstLine, ';') !== false && strpos($firstLine, ',') === false) ? ';' : ',';
+
+            while (($data = fgetcsv($handle, 2000, $delimiter)) !== false) {
+                $rows[] = array_map(function ($val) {
+                    return trim($val ?? '');
+                }, $data);
+            }
+            fclose($handle);
+            return $rows;
+        }
+
+        if ($extension === 'xlsx') {
+            $zip = new \ZipArchive();
+            if ($zip->open($filePath) !== true) {
+                return [];
+            }
+
+            $sharedStrings = [];
+            $sharedXmlContent = $zip->getFromName('xl/sharedStrings.xml');
+            if ($sharedXmlContent) {
+                $xml = simplexml_load_string($sharedXmlContent);
+                if ($xml && isset($xml->si)) {
+                    foreach ($xml->si as $si) {
+                        if (isset($si->t)) {
+                            $sharedStrings[] = (string) $si->t;
+                        } elseif (isset($si->r)) {
+                            $text = '';
+                            foreach ($si->r as $r) {
+                                $text .= (string) $r->t;
+                            }
+                            $sharedStrings[] = $text;
+                        } else {
+                            $sharedStrings[] = '';
+                        }
+                    }
+                }
+            }
+
+            $sheetXmlContent = $zip->getFromName('xl/worksheets/sheet1.xml');
+            if (!$sheetXmlContent) {
+                $zip->close();
+                return [];
+            }
+
+            $xml = simplexml_load_string($sheetXmlContent);
+            if (!$xml || !isset($xml->sheetData)) {
+                $zip->close();
+                return [];
+            }
+
+            foreach ($xml->sheetData->row as $row) {
+                $rowData = [];
+                foreach ($row->c as $c) {
+                    $attr = $c->attributes();
+                    $type = isset($attr['t']) ? (string) $attr['t'] : '';
+                    $val = isset($c->v) ? (string) $c->v : '';
+
+                    if ($type === 's' && isset($sharedStrings[(int) $val])) {
+                        $cellValue = $sharedStrings[(int) $val];
+                    } elseif ($type === 'inlineStr' && isset($c->is->t)) {
+                        $cellValue = (string) $c->is->t;
+                    } else {
+                        $cellValue = $val;
+                    }
+
+                    $cellRef = isset($attr['r']) ? (string) $attr['r'] : '';
+                    preg_match('/([A-Z]+)/', $cellRef, $matches);
+                    $colLetters = $matches[1] ?? '';
+                    $colIndex = 0;
+                    for ($i = 0; $i < strlen($colLetters); $i++) {
+                        $colIndex = $colIndex * 26 + (ord($colLetters[$i]) - 64);
+                    }
+                    $colIndex = max(0, $colIndex - 1);
+                    $rowData[$colIndex] = trim($cellValue);
+                }
+                if (!empty($rowData)) {
+                    $maxKey = max(array_keys($rowData));
+                    $fullRow = [];
+                    for ($k = 0; $k <= $maxKey; $k++) {
+                        $fullRow[$k] = $rowData[$k] ?? '';
+                    }
+                    $rows[] = $fullRow;
+                }
+            }
+
+            $zip->close();
+            return $rows;
+        }
+
+        return [];
+    }
 }
