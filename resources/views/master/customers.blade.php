@@ -64,7 +64,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet <span class="text-rose-500">*</span></label>
-                            <input type="text" name="name" required placeholder="Contoh: Toko Berkah Cell" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                            <input type="text" name="name" required placeholder="" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                         </div>
 
                         <div>
@@ -77,7 +77,7 @@
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios Utama</label>
-                            <input type="text" name="nomor_rs" placeholder="Contoh: 081288990011" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                            <input type="text" name="nomor_rs" placeholder="" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                         </div>
 
                         <div>
@@ -102,7 +102,7 @@
                                     
                                     <div x-show="isDigipos" x-cloak class="mt-2.5">
                                         <label class="block text-[11px] font-bold text-slate-700 mb-1">ID DigiPOS Toko</label>
-                                        <input type="text" name="digipos_id" placeholder="Contoh: DGP-100234" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500/20">
+                                        <input type="text" name="digipos_id" placeholder="" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500/20">
                                     </div>
                                 </div>
                             </label>
@@ -133,22 +133,22 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama PIC / Pemilik Toko</label>
-                            <input type="text" name="customer_pic" placeholder="Contoh: H. Ahmad Subarjo" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="text" name="customer_pic" placeholder="" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nomor KTP Pemilik</label>
-                            <input type="text" name="customer_ktp" placeholder="16 digit NIK KTP" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="tesxt" name="customer_ktp" placeholder="" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nomor NPWP Toko / PIC</label>
-                            <input type="text" name="npwp" placeholder="Contoh: 01.234.567.8-901.000 / 16 digit NPWP" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="text" name="npwp" placeholder="" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Sesuai NPWP</label>
-                            <input type="text" name="alamat_npwp" placeholder="Alamat terdaftar pada kartu NPWP" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="text" name="alamat_npwp" placeholder=" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
                     </div>
                 </div>
@@ -195,37 +195,37 @@
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WA Toko</label>
-                            <input type="text" name="phone" placeholder="0812xxxxxxxx" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="text" name="phone" placeholder="" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
-                            <input type="text" name="kecamatan_name" placeholder="Contoh: Pasar Minggu" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="text" name="kecamatan_name" placeholder="" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Kota / Kabupaten</label>
-                            <input type="text" name="kota_name" placeholder="Contoh: Jakarta Selatan" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="text" name="kota_name" placeholder="" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
-                            <input type="text" name="provinsi_name" placeholder="Contoh: DKI Jakarta" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="text" name="provinsi_name" placeholder="" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Lengkap Toko</label>
-                            <input type="text" name="address" placeholder="Nama Jalan, No. Bangunan, Patokan" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="text" name="address" placeholder="" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Latitude</label>
-                            <input type="number" step="any" name="latitude" placeholder="Contoh: -6.2087634" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="number" step="any" name="latitude" placeholder="" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Longitude</label>
-                            <input type="number" step="any" name="longitude" placeholder="Contoh: 106.845599" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <input type="number" step="any" name="longitude" placeholder="" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
                     </div>
                 </div>
@@ -302,7 +302,7 @@
                                                 </div>
                                                 <div x-show="editData.is_digipos" class="mt-2">
                                                     <label class="block text-[10px] font-bold text-slate-600 mb-0.5">ID DigiPOS Toko</label>
-                                                    <input type="text" name="digipos_id" x-model="editData.digipos_id" placeholder="DGP-100234" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-2.5 py-1.5 focus:outline-none">
+                                                    <input type="text" name="digipos_id" x-model="editData.digipos_id" placeholder=" class="w-full text-xs font-mono font-bold bg-white border border-rose-300 rounded-lg px-2.5 py-1.5 focus:outline-none">
                                                 </div>
                                             </div>
                                         </label>
@@ -332,21 +332,21 @@
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Nama PIC / Pemilik Toko</label>
-                                        <input type="text" name="customer_pic" x-model="editData.customer_pic" placeholder="Nama pemilik" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <input type="text" name="customer_pic" x-model="editData.customer_pic" placeholder="" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">No. KTP Pemilik</label>
-                                        <input type="text" name="customer_ktp" x-model="editData.customer_ktp" placeholder="16 digit NIK" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <input type="text" name="customer_ktp" x-model="editData.customer_ktp" placeholder="" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Nomor NPWP Toko / PIC</label>
-                                        <input type="text" name="npwp" x-model="editData.npwp" placeholder="01.234.567.8-901.000 / 16 digit NPWP" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <input type="text" name="npwp" x-model="editData.npwp" placeholder="" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Sesuai NPWP</label>
-                                        <input type="text" name="alamat_npwp" x-model="editData.alamat_npwp" placeholder="Alamat terdaftar kartu NPWP" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <input type="text" name="alamat_npwp" x-model="editData.alamat_npwp" placeholder="" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
                                     </div>
                                 </div>
                             </div>
@@ -426,11 +426,11 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Latitude</label>
-                                        <input type="number" step="any" name="latitude" x-model="editData.latitude" placeholder="Contoh: -6.2087634" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <input type="number" step="any" name="latitude" x-model="editData.latitude" placeholder="" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Longitude</label>
-                                        <input type="number" step="any" name="longitude" x-model="editData.longitude" placeholder="Contoh: 106.845599" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <input type="number" step="any" name="longitude" x-model="editData.longitude" placeholder="" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl px-3 py-2">
                                     </div>
                                 </div>
                             </div>
@@ -463,7 +463,7 @@
             :show-type="true"
             type-mode="customer"
             :show-search="true"
-            search-placeholder="Cari toko, kode, RS, Digipos, PIC..."
+            search-placeholder=""
             :areas="$areas"
             :clusters="$clusters"
             :taps="$taps"
@@ -835,11 +835,11 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Nomor Chip RS (MSISDN) <span class="text-rose-500">*</span></label>
-                                <input type="text" x-model="newRs.rs_number" placeholder="Contoh: 081288990022" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500/20">
+                                <input type="text" x-model="newRs.rs_number" placeholder="" class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500/20">
                             </div>
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Label / Nama Chip</label>
-                                <input type="text" x-model="newRs.rs_name" placeholder="Contoh: RS Kasir 2, RS Owner" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                <input type="text" x-model="newRs.rs_name" placeholder="" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2">
                             </div>
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Peruntukan Transaksi</label>
