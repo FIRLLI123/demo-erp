@@ -151,6 +151,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/returns', [SalesController::class, 'returnsIndex'])->name('returns');
         Route::get('/targets', [SalesController::class, 'targets'])->name('targets');
         Route::post('/store', [SalesController::class, 'store'])->name('store');
+        Route::post('/void/{id}', [SalesController::class, 'void'])->name('void');
+        Route::get('/customer-credit/{customerId}', [SalesController::class, 'getCustomerCreditInfo'])->name('customer-credit');
         Route::post('/approve/{id}', [SalesController::class, 'approve'])->name('approve');
         Route::post('/reject/{id}', [SalesController::class, 'reject'])->name('reject');
         Route::post('/deliver/{id}', [SalesController::class, 'deliver'])->name('deliver');

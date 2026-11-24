@@ -115,7 +115,39 @@ class SalesController extends Controller
 
         // 4. Master Data Pendukung Pembuatan SO (Terfilter TerritoryScope)
         $customers = TerritoryScope::applyTapScope(DB::table('customers')->where('status', 'ACTIVE'), 'customers.tap_id')->orderBy('name')->get();
-        $salesList = TerritoryScope::applyTapScope(DB::table('sales')->where('status', 'ACTIVE'), 'sales.tap_id')->orderBy('name')->get();
+        
+        // Ambil daftar sales beserta gudang kanvas/sales miliknya
+        $salesList = TerritoryScope::applyTapScope(
+            DB::table('sales')
+                ->leftJoin('warehouses', function($join) {
+                    $join->on('sales.id', '=', 'warehouses.sales_id')
+                         ->where('warehouses.status', '=', 'ACTIVE');
+                })
+                ->where('sales.status', 'ACTIVE')
+                ->select(
+                    'sales.*',
+                    'warehouses.id as warehouse_id',
+                    'warehouses.name as warehouse_name',
+                    'warehouses.type as warehouse_type'
+                ),
+            'sales.tap_id'
+        )->orderBy('sales.name')->get();
+
+        // Jika ada sales yang belum punya gudang khusus sales_id, pasangkan ke gudang default TAP
+        foreach ($salesList as $s) {
+            if (!$s->warehouse_id) {
+                $tapWh = DB::table('warehouses')
+                    ->where('tap_id', $s->tap_id)
+                    ->where('status', 'ACTIVE')
+                    ->orderByRaw("FIELD(type, 'SALES', 'INVENTORY', 'MAIN')")
+                    ->first();
+                if ($tapWh) {
+                    $s->warehouse_id = $tapWh->id;
+                    $s->warehouse_name = $tapWh->name;
+                    $s->warehouse_type = $tapWh->type;
+                }
+            }
+        }
         
         // Gudang untuk penjualan: SALES (Kanvas) dan INVENTORY (Stok TAP)
         $warehouses = TerritoryScope::applyWarehouseScope(
@@ -162,8 +194,35 @@ class SalesController extends Controller
         $notes = $request->input('notes', 'Pesanan Penjualan (SO)');
         $itemsData = $request->input('items', []);
 
-        if (!$customerId || !$salesId || !$warehouseId) {
-            return redirect()->back()->with('error', 'Lengkapi pilihan Customer, Sales, dan Gudang Sumber!');
+        if (!$customerId || !$salesId) {
+            return redirect()->back()->with('error', 'Lengkapi pilihan Customer dan Sales!');
+        }
+
+        // Jika warehouse_id tidak dikirim dari form, otomatis cari gudang milik sales tersebut
+        if (!$warehouseId) {
+            $salesWh = DB::table('warehouses')
+                ->where('sales_id', $salesId)
+                ->where('status', 'ACTIVE')
+                ->first();
+
+            if ($salesWh) {
+                $warehouseId = $salesWh->id;
+            } else {
+                // Fallback ke gudang TAP milik sales
+                $salesData = DB::table('sales')->where('id', $salesId)->first();
+                if ($salesData && $salesData->tap_id) {
+                    $tapWh = DB::table('warehouses')
+                        ->where('tap_id', $salesData->tap_id)
+                        ->where('status', 'ACTIVE')
+                        ->orderByRaw("FIELD(type, 'SALES', 'INVENTORY', 'MAIN')")
+                        ->first();
+                    if ($tapWh) $warehouseId = $tapWh->id;
+                }
+            }
+        }
+
+        if (!$warehouseId) {
+            return redirect()->back()->with('error', 'Gudang kanvas/stok untuk sales terpilih tidak ditemukan!');
         }
 
         if (empty($itemsData)) {
@@ -297,6 +356,12 @@ class SalesController extends Controller
                 throw new \Exception('Tidak ada item valid yang dipesan!');
             }
 
+            // Validasi Limit Kredit Customer
+            $creditCheck = \App\Services\CustomerCreditService::validateOrder($customerId, (float)$grandTotal);
+            if (!$creditCheck['allowed']) {
+                throw new \Exception($creditCheck['message']);
+            }
+
             // Simpan Header SO
             $soId = DB::table('sales_orders')->insertGetId([
                 'doc_type' => 'SO',
@@ -402,6 +467,133 @@ class SalesController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Gagal menolak SO: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Endpoint AJAX / JSON untuk mengambil informasi limit kredit customer secara real-time.
+     */
+    public function getCustomerCreditInfo($customerId)
+    {
+        $info = \App\Services\CustomerCreditService::getCreditSummary((int)$customerId);
+        return response()->json($info);
+    }
+
+    /**
+     * Membatalkan / Void Sales Order:
+     * - Dapat di-VOID hingga status DELIVERED (sudah terbit GD),
+     * - TETAPI TIDAK BISA di-VOID jika sudah ada pembayaran pada Faktur Piutang (AR).
+     * - Jika di-VOID pada tahap GD: surat jalan (GD) dan piutang (AR) dibatalkan/dihapus,
+     *   stok barang yang sempat terpotong saat GD dikembalikan utuh ke gudang,
+     *   dan status serial ICCID dipulihkan ke AVAILABLE.
+     */
+    public function void(Request $request, $id)
+    {
+        $so = DB::table('sales_orders')->where('id', $id)->first();
+        if (!$so) return redirect()->back()->with('error', 'SO tidak ditemukan!');
+
+        if (!TerritoryScope::canAccessWarehouse((int)$so->warehouse_id) && !TerritoryScope::canAccessTap((int)$so->tap_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak: Dokumen SO berada di luar wilayah wewenang Anda!');
+        }
+
+        if (in_array($so->status, ['COMPLETED', 'VOID'])) {
+            return redirect()->back()->with('error', "Dokumen SO sudah berstatus {$so->status} dan tidak dapat dibatalkan!");
+        }
+
+        // Cek apakah ada AR terkait
+        $ar = DB::table('accounts_receivable')->where('sales_order_id', $so->id)->first();
+        if ($ar) {
+            // Jika AR sudah ada pembayaran (status PARTIAL atau PAID, atau ada paid_amount > 0)
+            if ($ar->status === 'PAID' || $ar->status === 'PARTIAL' || (float)$ar->paid_amount > 0) {
+                return redirect()->back()->with('error', "SO tidak dapat di-VOID karena Faktur Piutang ({$ar->doc_number}) sudah memiliki riwayat pembayaran!");
+            }
+
+            // Cek apakah ada payment_allocations ke AR ini
+            $hasPayment = DB::table('payment_allocations')->where('accounts_receivable_id', $ar->id)->exists();
+            if ($hasPayment) {
+                return redirect()->back()->with('error', "SO tidak dapat di-VOID karena Faktur Piutang ({$ar->doc_number}) sudah terhubung ke Tanda Terima Kasir (TTK)!");
+            }
+        }
+
+        $iccidEnabled = (bool) config('erp.enable_iccid', false);
+        $soItems = DB::table('sales_order_items')->where('sales_order_id', $so->id)->get();
+        $gd = DB::table('goods_deliveries')->where('sales_order_id', $so->id)->first();
+
+        DB::beginTransaction();
+        try {
+            // 1. Jika barang sudah dikirim (ada GD / DELIVERED), kembalikan fisik stok ke gudang
+            if ($gd || $so->status === 'DELIVERED') {
+                foreach ($soItems as $item) {
+                    $currStock = DB::table('stock_balances')
+                        ->where('warehouse_id', $so->warehouse_id)
+                        ->where('product_id', $item->product_id)
+                        ->value('quantity') ?? 0;
+
+                    $restoredStock = $currStock + $item->quantity;
+                    DB::table('stock_balances')
+                        ->where('warehouse_id', $so->warehouse_id)
+                        ->where('product_id', $item->product_id)
+                        ->update([
+                            'quantity' => $restoredStock,
+                            'updated_at' => now(),
+                        ]);
+
+                    // Catat mutasi pembatalan (IN kembali)
+                    DB::table('stock_mutations')->insert([
+                        'date' => date('Y-m-d'),
+                        'warehouse_id' => $so->warehouse_id,
+                        'product_id' => $item->product_id,
+                        'doc_type' => 'VOID_SO',
+                        'doc_number' => $so->doc_number,
+                        'mutation_type' => 'IN',
+                        'quantity' => $item->quantity,
+                        'balance_after' => $restoredStock,
+                        'notes' => "Pengembalian stok dari VOID SO ({$so->doc_number}) & GD (" . ($gd->doc_number ?? '-') . ")",
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // Hapus data GD atau tandai CANCELLED
+                DB::table('goods_deliveries')->where('sales_order_id', $so->id)->delete();
+            }
+
+            // 2. Hapus dokumen piutang AR (jika belum ada pembayaran sama sekali)
+            if ($ar) {
+                DB::table('accounts_receivable')->where('id', $ar->id)->delete();
+            }
+
+            // 3. Kembalikan status serial ICCID menjadi AVAILABLE (jika fitur aktif)
+            if ($iccidEnabled) {
+                // Untuk serial yang sempat SOLD di GD atau RESERVED di SO
+                DB::table('iccid_units')
+                    ->where(function($q) use ($so, $gd) {
+                        $q->where('last_doc_number', $so->doc_number);
+                        if ($gd) {
+                            $q->orWhere('last_doc_number', $gd->doc_number);
+                        }
+                    })
+                    ->update([
+                        'status' => 'AVAILABLE',
+                        'customer_id' => null,
+                        'last_doc_type' => 'VOID_SO',
+                        'last_doc_number' => $so->doc_number,
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            // 4. Update status SO menjadi VOID
+            DB::table('sales_orders')->where('id', $id)->update([
+                'status' => 'VOID',
+                'notes' => trim(($so->notes ? $so->notes . ' | ' : '') . 'DIBATALKAN (VOID) pada ' . now()->format('d/m/Y H:i')),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', "Sales Order [{$so->doc_number}] berhasil di-VOID (Dibatalkan). Stok barang dan limit kredit customer telah dipulihkan.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal membatalkan SO: ' . $e->getMessage());
         }
     }
 

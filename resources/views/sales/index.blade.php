@@ -56,10 +56,14 @@
                 @csrf
 
                 <!-- Header Info -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Outlet / Customer</label>
-                        <select name="customer_id" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                        <select name="customer_id" 
+                                x-model="selectedCustomerId" 
+                                @change="onCustomerChange()"
+                                required 
+                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                             <option value="">-- Pilih Customer --</option>
                             @foreach($customers as $c)
                                 <option value="{{ $c->id }}">
@@ -71,10 +75,16 @@
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Sales Kanvaser / PIC</label>
-                        <select name="sales_id" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                        <select name="sales_id" 
+                                x-model="selectedSalesId"
+                                @change="onSalesChange()"
+                                required 
+                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                             <option value="">-- Pilih Sales --</option>
                             @foreach($salesList as $s)
-                                <option value="{{ $s->id }}">
+                                <option value="{{ $s->id }}" 
+                                        data-wh-id="{{ $s->warehouse_id }}" 
+                                        data-wh-name="{{ $s->warehouse_name }}">
                                     [{{ $s->code }}] {{ $s->name }}
                                 </option>
                             @endforeach
@@ -83,18 +93,20 @@
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Gudang Sumber Stok</label>
-                        <select name="warehouse_id" 
-                                x-model="selectedWarehouseId" 
-                                @change="onWarehouseChange()"
-                                required 
-                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
-                            <option value="">-- Pilih Gudang Sumber --</option>
-                            @foreach($warehouses as $wh)
-                                <option value="{{ $wh->id }}">
-                                    [{{ $wh->type }}] {{ $wh->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        {{-- Input Hidden untuk warehouse_id yang otomatis diisi dari sales --}}
+                        <input type="hidden" name="warehouse_id" :value="selectedWarehouseId">
+                        
+                        <div class="w-full text-xs font-bold py-2 px-3 rounded-xl border flex items-center justify-between"
+                             :class="selectedWarehouseName ? 'bg-amber-50/70 border-amber-200 text-slate-800' : 'bg-slate-100 border-slate-200 text-slate-400'">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <i data-lucide="warehouse" class="w-3.5 h-3.5 shrink-0" :class="selectedWarehouseName ? 'text-amber-600' : 'text-slate-400'"></i>
+                                <span x-text="selectedWarehouseName || 'Otomatis mengikuti Sales'"></span>
+                            </div>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase shrink-0"
+                                  :class="selectedWarehouseName ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-500'">
+                                KANVAS
+                            </span>
+                        </div>
                     </div>
 
                     <div>
@@ -106,6 +118,44 @@
                         <label class="block text-xs font-bold text-slate-700 mb-1">Catatan / Keterangan (Notes)</label>
                         <input type="text" name="notes" placeholder="e.g. Titip nota asli, kirim sore" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                     </div>
+                </div>
+
+                <!-- Live Customer Credit Info Strip -->
+                <div x-show="creditInfo" x-cloak class="mb-4 p-3 rounded-xl border text-xs transition-all"
+                     :class="creditInfo && (creditInfo.credit_limit <= 0 || grandTotal > creditInfo.remaining_limit) ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-slate-50 border-slate-200 text-slate-700'">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="shield-alert" class="w-4 h-4 shrink-0" 
+                               :class="creditInfo && (creditInfo.credit_limit <= 0 || grandTotal > creditInfo.remaining_limit) ? 'text-rose-600' : 'text-slate-500'"></i>
+                            <div>
+                                <span class="font-bold text-slate-900" x-text="creditInfo ? creditInfo.customer_name : ''"></span>
+                                <span class="text-slate-500 text-[11px] ml-1">
+                                    &bull; Plafon Limit: <strong class="font-mono text-slate-800">Rp <span x-text="creditInfo ? creditInfo.credit_limit.toLocaleString('id-ID') : 0"></span></strong>
+                                    &bull; Piutang + SO Aktif: <strong class="font-mono text-slate-800">Rp <span x-text="creditInfo ? creditInfo.used_limit.toLocaleString('id-ID') : 0"></span></strong>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-semibold text-slate-500">Sisa Limit Tersedia:</span>
+                            <span class="font-mono font-extrabold px-2.5 py-1 rounded-lg text-xs"
+                                  :class="creditInfo && (creditInfo.credit_limit <= 0 || grandTotal > creditInfo.remaining_limit) ? 'bg-rose-200/80 text-rose-900 border border-rose-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'">
+                                Rp <span x-text="creditInfo ? creditInfo.remaining_limit.toLocaleString('id-ID') : 0"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Warning Message Over Limit -->
+                    <template x-if="creditInfo && creditInfo.credit_limit <= 0">
+                        <div class="mt-2 pt-2 border-t border-rose-200 text-[11px] font-bold text-rose-700 flex items-center gap-1.5">
+                            <i data-lucide="alert-octagon" class="w-3.5 h-3.5"></i>
+                            <span>Customer memiliki Limit Rp 0. Tidak diizinkan membuat Sales Order!</span>
+                        </div>
+                    </template>
+                    <template x-if="creditInfo && creditInfo.credit_limit > 0 && grandTotal > creditInfo.remaining_limit">
+                        <div class="mt-2 pt-2 border-t border-rose-200 text-[11px] font-bold text-rose-700 flex items-center gap-1.5">
+                            <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                            <span>Total SO ini melebihi sisa limit kredit customer! Harap kurangi kuantitas item atau lunasi piutang terlebih dahulu.</span>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Multi-Item Rows Table dengan Searchable Product Selector -->
@@ -334,7 +384,7 @@
                             Batal
                         </button>
                         <button type="submit" 
-                                :disabled="isSubmitting"
+                                :disabled="isSubmitting || (creditInfo && (creditInfo.credit_limit <= 0 || grandTotal > creditInfo.remaining_limit))"
                                 class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer">
                             <template x-if="!isSubmitting">
                                 <div class="flex items-center gap-1.5">
@@ -434,18 +484,42 @@
 
                                 <td class="py-3.5 px-4 text-center">
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
-                                        {{ $so->status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : ($so->status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : ($so->status === 'PENDING_APPROVAL' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-rose-100 text-rose-800')) }}">
+                                        {{ $so->status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : ($so->status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : ($so->status === 'PENDING_APPROVAL' ? 'bg-amber-100 text-amber-800 border border-amber-300' : ($so->status === 'VOID' ? 'bg-slate-200 text-slate-700 font-mono' : 'bg-rose-100 text-rose-800'))) }}">
                                         {{ $so->status }}
                                     </span>
                                 </td>
 
                                 <td class="py-3.5 px-4 text-center">
-                                    <button type="button" 
-                                            class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 mx-auto shadow-xs"
-                                            :class="selectedSo && selectedSo.id === {{ $so->id }} ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'">
-                                        <span x-text="selectedSo && selectedSo.id === {{ $so->id }} ? 'Aktif' : 'Detail'"></span>
-                                        <i data-lucide="chevron-down" class="w-3 h-3 transition-transform" :class="selectedSo && selectedSo.id === {{ $so->id }} ? 'rotate-180 text-white' : ''"></i>
-                                    </button>
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <button type="button" 
+                                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+                                                :class="selectedSo && selectedSo.id === {{ $so->id }} ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'">
+                                            <span x-text="selectedSo && selectedSo.id === {{ $so->id }} ? 'Aktif' : 'Detail'"></span>
+                                            <i data-lucide="chevron-down" class="w-3 h-3 transition-transform" :class="selectedSo && selectedSo.id === {{ $so->id }} ? 'rotate-180 text-white' : ''"></i>
+                                        </button>
+
+                                        {{-- Tombol Void Cepat di Baris Tabel jika SO belum lunas/selesai --}}
+                                        @if(!in_array($so->status, ['COMPLETED', 'VOID']) && (!$so->invoice || ($so->invoice->status === 'UNPAID' && (float)$so->invoice->paid_amount == 0)))
+                                            <form method="POST" action="{{ route('sales.void', $so->id) }}"
+                                                  data-confirm="Konfirmasi Void / Pembatalan SO"
+                                                  data-confirm-text="Apakah Anda yakin ingin melakukan VOID (Pembatalan) pada pesanan {{ $so->doc_number }}?{{ $so->status === 'DELIVERED' ? ' Barang yang sudah terkirim akan dikembalikan ke stok gudang.' : '' }} Limit customer dan kuota order akan dipulihkan."
+                                                  data-confirm-type="danger"
+                                                  data-confirm-btn="Ya, Void SO"
+                                                  data-cancel-btn="Tidak, Kembali"
+                                                  data-loading-title="Memproses Void SO"
+                                                  data-loading-sub="Membatalkan dokumen Sales Order {{ $so->doc_number }}..."
+                                                  data-doctype="VOID"
+                                                  class="inline">
+                                                @csrf
+                                                <button type="submit" 
+                                                        title="Batalkan / Void Sales Order"
+                                                        class="px-2 py-1 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer flex items-center gap-1">
+                                                    <i data-lucide="ban" class="w-3 h-3"></i>
+                                                    <span>Void</span>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -485,14 +559,14 @@
                             <div class="flex items-center gap-2">
                                 <form method="POST" :action="`{{ url('sales/approve') }}/${selectedSo.id}`">
                                     @csrf
-                                    <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-sm active:scale-95">
+                                    <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer">
                                         <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                         <span>Setujui SO (Finance)</span>
                                     </button>
                                 </form>
                                 <form method="POST" :action="`{{ url('sales/reject') }}/${selectedSo.id}`">
                                     @csrf
-                                    <button type="submit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-sm active:scale-95">
+                                    <button type="submit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer">
                                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                         <span>Tolak SO</span>
                                     </button>
@@ -507,7 +581,7 @@
                                   data-loading-sub="Menerbitkan Surat Jalan (GD) dan Faktur Piutang (AR)..."
                                   data-doctype="GD">
                                 @csrf
-                                <button type="submit" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm active:scale-95 animate-pulse">
+                                <button type="submit" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm active:scale-95 animate-pulse cursor-pointer">
                                     <i data-lucide="truck" class="w-4 h-4"></i>
                                     <span>Kirim Barang (Sending Good & GD)</span>
                                 </button>
@@ -516,18 +590,31 @@
 
                         <!-- 3. Tombol Cetak Nota jika DELIVERED -->
                         <template x-if="selectedSo && selectedSo.status === 'DELIVERED'">
-                            <div class="flex items-center gap-2">
-                                <a :href="`{{ url('sales/print-nota') }}/${selectedSo.id}`" target="_blank"
-                                   class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-lg text-xs flex items-center gap-1.5 border border-slate-700">
-                                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                                    <span>Cetak Nota Penjualan</span>
-                                </a>
-                                <button type="button" @click="openReturnModal()"
-                                        class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5">
-                                    <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
-                                    <span>Sales Retur</span>
+                            <a :href="`{{ url('sales/print-nota') }}/${selectedSo.id}`" target="_blank"
+                               class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-lg text-xs flex items-center gap-1.5 border border-slate-700">
+                                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                                <span>Cetak Nota Penjualan</span>
+                            </a>
+                        </template>
+
+                        <!-- 4. Tombol Void SO (Hadir di PENDING_APPROVAL, APPROVED, hingga DELIVERED selama belum ada pembayaran AR) -->
+                        <template x-if="selectedSo && !['COMPLETED', 'VOID'].includes(selectedSo.status) && (!selectedSo.invoice || (selectedSo.invoice.status === 'UNPAID' && parseFloat(selectedSo.invoice.paid_amount || 0) === 0))">
+                            <form method="POST" 
+                                  :action="`{{ url('sales/void') }}/${selectedSo.id}`"
+                                  data-confirm="Konfirmasi Void / Pembatalan SO"
+                                  :data-confirm-text="'Apakah Anda yakin ingin membatalkan (VOID) Sales Order ' + selectedSo.doc_number + '?' + (selectedSo.status === 'DELIVERED' ? ' Barang yang sudah terkirim akan dikembalikan ke gudang.' : '') + ' Limit customer dan kuota order akan dipulihkan.'"
+                                  data-confirm-type="danger"
+                                  data-confirm-btn="Ya, Void SO Ini"
+                                  data-cancel-btn="Tidak, Kembali"
+                                  data-loading-title="Memproses Void SO"
+                                  data-loading-sub="Membatalkan Sales Order & memulihkan stok/limit..."
+                                  data-doctype="VOID">
+                                @csrf
+                                <button type="submit" class="px-3.5 py-1.5 bg-rose-900/60 hover:bg-rose-700 text-rose-200 hover:text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm active:scale-95 border border-rose-600/40 cursor-pointer">
+                                    <i data-lucide="ban" class="w-3.5 h-3.5"></i>
+                                    <span>Void SO</span>
                                 </button>
-                            </div>
+                            </form>
                         </template>
 
                     </div>
@@ -677,6 +764,8 @@
         <!-- ============================================== -->
         <!-- MODAL SALES RETUR                              -->
         <!-- ============================================== -->
+        {{-- MODAL SALES RETUR (DI-HIDE SESUAI INSTRUKSI KLIEN) --}}
+        {{--
         <div x-show="returnModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
             <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
                 <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
@@ -745,6 +834,7 @@
                 </form>
             </div>
         </div>
+        --}}
 
     </div>
 
@@ -758,6 +848,10 @@
                 iccidEnabled: {{ ($iccidEnabled ?? config('erp.enable_iccid', false)) ? 'true' : 'false' }},
                 selectedSo: null,
                 selectedWarehouseId: '',
+                selectedWarehouseName: '',
+                selectedSalesId: '',
+                selectedCustomerId: '',
+                creditInfo: null,
 
                 items: [
                     {
@@ -773,6 +867,7 @@
                     }
                 ],
 
+                salesList: @json($salesList),
                 products: @json($products),
                 stockBalances: @json($stockBalances),
                 availableIccids: @json($availableIccids),
@@ -848,6 +943,48 @@
                         row.selected_iccids = [];
                         row.iccid_text = '';
                     });
+                },
+
+                onSalesChange() {
+                    if (!this.selectedSalesId) {
+                        this.selectedWarehouseId = '';
+                        this.selectedWarehouseName = '';
+                        this.onWarehouseChange();
+                        return;
+                    }
+
+                    const sales = this.salesList.find(s => s.id == this.selectedSalesId);
+                    if (sales && sales.warehouse_id) {
+                        this.selectedWarehouseId = sales.warehouse_id;
+                        this.selectedWarehouseName = sales.warehouse_name;
+                    } else {
+                        this.selectedWarehouseId = '';
+                        this.selectedWarehouseName = '';
+                    }
+
+                    // Reset item pilihan agar stok menyesuaikan gudang sales yang baru
+                    this.onWarehouseChange();
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                },
+
+                async onCustomerChange() {
+                    if (!this.selectedCustomerId) {
+                        this.creditInfo = null;
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`{{ url('sales/customer-credit') }}/${this.selectedCustomerId}`);
+                        if (res.ok) {
+                            this.creditInfo = await res.json();
+                            this.$nextTick(() => {
+                                lucide.createIcons();
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Failed to load customer credit info:', e);
+                    }
                 },
 
                 getAvailableProductsInWarehouse() {

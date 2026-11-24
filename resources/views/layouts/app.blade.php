@@ -488,13 +488,16 @@
                             </div>
                             <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">SO-GD</span>
                         </a>
+                        {{-- Menu Sales Retur di-hide sesuai permintaan klien --}}
+                        {{-- 
                         <a href="{{ route('sales.returns') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('sales.returns*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('sales.returns*') ? 'bg-rose-400 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
                                 <span>Sales Retur (Retur SO)</span>
                             </div>
                             <span class="text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-mono font-bold">RETUR SO</span>
-                        </a>
+                        </a> 
+                        --}}
                         <a href="{{ route('sales.targets') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('sales.targets*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('sales.targets*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
