@@ -178,6 +178,12 @@ class SalesController extends Controller
             return redirect()->back()->with('error', 'Akses ditolak: Customer berada di luar wilayah wewenang Anda!');
         }
 
+        // Validasi Jam Close SO (Cutoff Per Cluster)
+        $cutoffCheck = \App\Services\OrderCutoffService::checkByCustomerId($customerId);
+        if (!$cutoffCheck['is_open']) {
+            return redirect()->back()->with('error', 'Pemesanan Ditolak: ' . $cutoffCheck['reason']);
+        }
+
         $sales = DB::table('sales')->where('id', $salesId)->first();
         if (!$sales) {
             return redirect()->back()->with('error', 'Sales tidak ditemukan!');

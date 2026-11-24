@@ -374,6 +374,13 @@
                             </div>
                             <span class="text-[9px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono font-bold">GEO</span>
                         </a>
+                        <a href="{{ route('master.cluster-cutoffs.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.cluster-cutoffs*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.cluster-cutoffs*') ? 'bg-amber-400 ring-2 ring-amber-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Jam Close SO (Cutoff)</span>
+                            </div>
+                            <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">CUTOFF</span>
+                        </a>
                         <!-- <a href="{{ route('master.approval-rules') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.approval-rules*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-rose-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
                             <div class="flex items-center gap-2.5">
                                 <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.approval-rules*') ? 'bg-rose-400 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>

@@ -19,5 +19,10 @@ class Cluster extends Model
     {
         return $this->hasMany(Tap::class);
     }
+
+    public function cutoff()
+    {
+        return $this->hasOne(ClusterSoCutoff::class);
+    }
 }
 

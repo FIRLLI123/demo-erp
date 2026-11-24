@@ -16,6 +16,7 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UiShowcaseController;
+use App\Http\Controllers\ClusterCutoffController;
 
 // ============================================================
 // 1. PUBLIC AUTHENTICATION ROUTES (GUEST ONLY)
@@ -103,7 +104,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/territories', [MasterController::class, 'territories'])->name('territories');
         Route::get('/approval-rules', [MasterController::class, 'approvalRules'])->name('approval-rules');
         Route::post('/toggle-status', [MasterController::class, 'toggleStatus'])->name('toggle-status');
+
+        // Pengaturan Jam Close SO Per Cluster
+        Route::get('/cluster-cutoffs', [ClusterCutoffController::class, 'index'])->name('cluster-cutoffs.index');
+        Route::post('/cluster-cutoffs/{id}', [ClusterCutoffController::class, 'update'])->name('cluster-cutoffs.update');
+        Route::post('/cluster-cutoffs/{id}/toggle-force', [ClusterCutoffController::class, 'toggleForceClose'])->name('cluster-cutoffs.toggle-force');
     });
+
+    // Public API route for APK SO status
+    Route::get('/api/cluster-cutoffs/{id}/status', [ClusterCutoffController::class, 'getStatusApi'])->name('api.cluster-cutoffs.status');
 
     // Procurement (PO & GR)
     Route::prefix('procurement')->name('procurement.')->group(function () {
