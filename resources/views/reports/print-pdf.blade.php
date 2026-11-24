@@ -24,7 +24,7 @@
             &larr; Kembali ke Pusat Laporan
         </a>
 
-        @if(in_array($reportType, ['PO_GR', 'SM', 'REPACK', 'SALES']))
+        @if(in_array($reportType, ['PO_GR', 'SM', 'REPACK', 'SALES', 'AR', 'CASH_BANK']))
             <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                 <span class="text-[10px] text-slate-500 font-bold uppercase px-2">Mode:</span>
                 <a href="{{ route('reports.print-pdf', array_merge(request()->all(), ['format' => 'summary'])) }}"

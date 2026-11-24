@@ -508,10 +508,15 @@ class SalesController extends Controller
                 return redirect()->back()->with('error', "SO tidak dapat di-VOID karena Faktur Piutang ({$ar->doc_number}) sudah memiliki riwayat pembayaran!");
             }
 
-            // Cek apakah ada payment_allocations ke AR ini
-            $hasPayment = DB::table('payment_allocations')->where('accounts_receivable_id', $ar->id)->exists();
-            if ($hasPayment) {
-                return redirect()->back()->with('error', "SO tidak dapat di-VOID karena Faktur Piutang ({$ar->doc_number}) sudah terhubung ke Tanda Terima Kasir (TTK)!");
+            // Cek apakah ada payment_allocations ke AR ini dari TTK yang AKTIF (status bukan VOID)
+            $hasActivePayment = DB::table('payment_allocations')
+                ->join('payments', 'payment_allocations.payment_id', '=', 'payments.id')
+                ->where('payment_allocations.accounts_receivable_id', $ar->id)
+                ->where('payments.status', '!=', 'VOID')
+                ->exists();
+
+            if ($hasActivePayment) {
+                return redirect()->back()->with('error', "SO tidak dapat di-VOID karena Faktur Piutang ({$ar->doc_number}) masih terhubung ke Tanda Terima Kasir (TTK) aktif!");
             }
         }
 

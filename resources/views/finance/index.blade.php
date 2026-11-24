@@ -1,6 +1,6 @@
 <x-app-layout>
-    <x-slot name="title">Piutang (AR), Tanda Terima Kasir (TTK) & Bukti Bank Masuk (BBM)</x-slot>
-    <x-slot name="headerTitle">Pelunasan & Keuangan (AR &bull; TTK &bull; BBM)</x-slot>
+    <x-slot name="title">Keuangan & Piutang</x-slot>
+    <x-slot name="headerTitle">Pelunasan & Keuangan</x-slot>
     <x-slot name="badge">AR &bull; TTK &bull; BBM</x-slot>
 
     <div x-data="financeApp()" x-init="initData()">
@@ -8,26 +8,24 @@
         <!-- Top Action & Navigation Tabs -->
         <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                    <span>Pelunasan Piutang & Penerimaan Kas/Bank</span>
-                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">PT WAHANA PUTRA YUDHA</span>
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">
+                    Pelunasan Piutang & Kas/Bank
                 </h2>
-                <p class="text-xs text-slate-500">Divisi Keuangan PT Wahana Putra Yudha: Tagihan Faktur (AR) &rarr; Tanda Terima Kasir (TTK Multi-AR) &rarr; Bukti Bank Masuk (BBM Tunai & Non Tunai)</p>
             </div>
 
             <div class="flex items-center gap-2">
                 <button type="button" 
                         @click="openTtkModal()"
-                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all">
+                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                    <span>Buat TTK Baru</span>
+                    <span>+ Buat TTK</span>
                 </button>
 
                 <button type="button" 
                         @click="openBbmTunaiModal()"
-                        class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
+                        class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
                     <i data-lucide="landmark" class="w-4 h-4"></i>
-                    <span>Buat BBM Tunai</span>
+                    <span>+ Buat BBM Tunai</span>
                     @if(count($pendingCashTtk) > 0)
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400 text-slate-900 font-extrabold">{{ count($pendingCashTtk) }}</span>
                     @endif
@@ -37,28 +35,28 @@
                 <div class="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-2xl shrink-0">
                     <button type="button" 
                             @click="activeTab = 'AR'"
-                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
+                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                             :class="activeTab === 'AR' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
                         <i data-lucide="receipt" class="w-4 h-4"></i>
-                        <span>1. Piutang (AR)</span>
+                        <span>Piutang (AR)</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($receivables) }}</span>
                     </button>
 
                     <button type="button" 
                             @click="activeTab = 'TTK'"
-                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
+                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                             :class="activeTab === 'TTK' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
                         <i data-lucide="badge-check" class="w-4 h-4"></i>
-                        <span>2. Tanda Terima Kasir (TTK)</span>
+                        <span>Kasir (TTK)</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($payments) }}</span>
                     </button>
 
                     <button type="button" 
                             @click="activeTab = 'BBM'"
-                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
+                            class="px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                             :class="activeTab === 'BBM' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'">
                         <i data-lucide="landmark" class="w-4 h-4"></i>
-                        <span>3. Bukti Bank Masuk (BBM)</span>
+                        <span>Bank Masuk (BBM)</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ count($bankReceipts) }}</span>
                     </button>
                 </div>
@@ -455,26 +453,23 @@
         <!-- ============================================== -->
         <div x-show="activeTab === 'AR'" x-cloak>
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
-                    <div>
-                        <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                            <i data-lucide="receipt" class="w-4 h-4 text-amber-600"></i>
-                            <span>Daftar Faktur Piutang Usaha (Account Receivable - AR)</span>
-                        </h3>
-                        <p class="text-xs text-slate-500">Tagihan penjualan ke toko/outlet hasil pengiriman barang (Sending Good - GD).</p>
-                    </div>
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                        <i data-lucide="receipt" class="w-4 h-4 text-amber-600"></i>
+                        <span>Faktur Piutang Usaha (AR)</span>
+                    </h3>
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                             <tr>
-                                <th class="py-3 px-4">No. Dokumen AR</th>
-                                <th class="py-3 px-4">Ref SO & Channel</th>
-                                <th class="py-3 px-4">Toko / Pelanggan</th>
-                                <th class="py-3 px-4">Sales Penanggung Jawab</th>
+                                <th class="py-3 px-4">No. AR</th>
+                                <th class="py-3 px-4">Ref SO</th>
+                                <th class="py-3 px-4">Customer</th>
+                                <th class="py-3 px-4">Sales</th>
                                 <th class="py-3 px-4">Jatuh Tempo</th>
-                                <th class="py-3 px-4 text-right">Total Tagihan</th>
+                                <th class="py-3 px-4 text-right">Tagihan</th>
                                 <th class="py-3 px-4 text-right">Terbayar</th>
                                 <th class="py-3 px-4 text-right">Sisa Piutang</th>
                                 <th class="py-3 px-4 text-center">Status</th>
@@ -599,28 +594,25 @@
         <!-- ============================================== -->
         <div x-show="activeTab === 'TTK'" x-cloak>
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
-                    <div>
-                        <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                            <i data-lucide="badge-check" class="w-4 h-4 text-emerald-600"></i>
-                            <span>Daftar Tanda Terima Kasir (TTK Multi-AR)</span>
-                        </h3>
-                        <p class="text-xs text-slate-500">Bukti pembayaran resmi kasir dari toko/outlet atas pelunasan satu atau beberapa faktur AR.</p>
-                    </div>
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                        <i data-lucide="badge-check" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Tanda Terima Kasir (TTK)</span>
+                    </h3>
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                             <tr>
-                                <th class="py-3 px-4">No. Dokumen TTK</th>
-                                <th class="py-3 px-4">Tanggal TTK</th>
-                                <th class="py-3 px-4">Toko / Pelanggan</th>
-                                <th class="py-3 px-4">Sales Terkait</th>
-                                <th class="py-3 px-4">Metode Pembayaran</th>
-                                <th class="py-3 px-4 text-center">Faktur Dilunasi</th>
-                                <th class="py-3 px-4 text-right">Total Pembayaran</th>
-                                <th class="py-3 px-4">Ref Dokumen BBM</th>
+                                <th class="py-3 px-4">No. TTK</th>
+                                <th class="py-3 px-4">Tanggal</th>
+                                <th class="py-3 px-4">Customer</th>
+                                <th class="py-3 px-4">Sales</th>
+                                <th class="py-3 px-4">Metode</th>
+                                <th class="py-3 px-4 text-center">Faktur</th>
+                                <th class="py-3 px-4 text-right">Pembayaran</th>
+                                <th class="py-3 px-4">Ref BBM</th>
                                 <th class="py-3 px-4 text-center w-28">Aksi</th>
                             </tr>
                         </thead>
@@ -697,12 +689,38 @@
                                         @endif
                                     </td>
                                     <td class="py-3.5 px-4 text-center" @click.stop>
-                                        <a href="{{ route('finance.print-kwitansi', $p->id) }}" 
-                                           target="_blank"
-                                           class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 transition-all">
-                                            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                                            <span>Kwitansi</span>
-                                        </a>
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <a href="{{ route('finance.print-kwitansi', $p->id) }}" 
+                                               target="_blank"
+                                               class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 transition-all">
+                                                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                                                <span>Kwitansi</span>
+                                            </a>
+
+                                            {{-- Tombol Void TTK jika belum berstatus VOID --}}
+                                            @if(($p->status ?? 'COMPLETED') !== 'VOID')
+                                                <form method="POST" action="{{ route('finance.void-ttk', $p->id) }}"
+                                                      data-confirm="Konfirmasi Void / Pembatalan TTK"
+                                                      data-confirm-text="Apakah Anda yakin ingin membatalkan (VOID) Tanda Terima Kasir {{ $p->doc_number }}?{{ !empty($p->bbm_number) ? ' Peringatan: Dokumen ini terhubung ke BBM ' . $p->bbm_number . ' dan harus di-VOID BBM-nya terlebih dahulu.' : ' Saldo faktur piutang (AR) akan dikembalikan ke kondisi belum lunas.' }}"
+                                                      data-confirm-type="danger"
+                                                      data-confirm-btn="Ya, Void TTK"
+                                                      data-cancel-btn="Tidak, Kembali"
+                                                      data-loading-title="Memproses Void TTK"
+                                                      data-loading-sub="Membatalkan TTK & memulihkan saldo piutang..."
+                                                      data-doctype="VOID"
+                                                      class="inline">
+                                                    @csrf
+                                                    <button type="submit" 
+                                                            title="Batalkan / Void TTK"
+                                                            class="px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer flex items-center gap-0.5">
+                                                        <i data-lucide="ban" class="w-3 h-3"></i>
+                                                        <span>Void</span>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 text-slate-600">VOID</span>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
@@ -783,51 +801,40 @@
             
             <!-- Banner Kas Tunai Belum Disetor ke Bank -->
             @if(count($pendingCashTtk) > 0)
-                <div class="mb-5 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-white border border-amber-300 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div class="flex items-start gap-3">
-                        <span class="p-2.5 bg-amber-100 text-amber-800 rounded-xl mt-0.5 shadow-xs">
+                <div class="mb-5 p-4 rounded-2xl bg-amber-50/70 border border-amber-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="p-2 bg-amber-100 text-amber-800 rounded-xl">
                             <i data-lucide="banknote" class="w-5 h-5"></i>
                         </span>
                         <div>
-                            <div class="flex items-center gap-2">
-                                <h4 class="text-xs font-extrabold text-slate-900">
-                                    {{ count($pendingCashTtk) }} Tanda Terima Kasir (TTK Tunai) Siap Disetorkan ke Bank
-                                </h4>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 border border-amber-300 animate-pulse">
-                                    Kasir TAP
-                                </span>
-                            </div>
-                            <p class="text-xs text-slate-600 mt-0.5">
-                                Total uang kas fisik di brankas kasir sebesar <strong class="font-mono text-emerald-700 font-extrabold">Rp {{ number_format($pendingCashTtk->sum('amount'), 0, ',', '.') }}</strong> dari {{ count($pendingCashTtk) }} bukti TTK tunai. Klik tombol di samping untuk mencatat setoran ke rekening bank perusahaan (BBM Tunai).
-                            </p>
+                            <h4 class="text-xs font-bold text-slate-900">
+                                {{ count($pendingCashTtk) }} TTK Tunai Belum Disetor ke Bank &bull; Total: <span class="font-mono text-emerald-700 font-extrabold">Rp {{ number_format($pendingCashTtk->sum('amount'), 0, ',', '.') }}</span>
+                            </h4>
                         </div>
                     </div>
 
                     <button type="button" 
                             @click="openBbmTunaiModal()"
-                            class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-sm transition-all shrink-0">
+                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer">
                         <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
-                        <span>Setorkan Kasir ke Bank (BBM Tunai)</span>
+                        <span>Setorkan ke Bank (BBM Tunai)</span>
                     </button>
                 </div>
             @endif
 
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
-                    <div>
-                        <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                            <i data-lucide="landmark" class="w-4 h-4 text-indigo-600"></i>
-                            <span>Bukti Bank Masuk (BBM - Kas & Bank Masuk)</span>
-                        </h3>
-                        <p class="text-xs text-slate-500">1 Menu Terpadu untuk Bukti Bank Masuk Tunai (Setoran Kasir) dan Non Tunai (Transfer / Giro).</p>
-                    </div>
+                    <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                        <i data-lucide="landmark" class="w-4 h-4 text-indigo-600"></i>
+                        <span>Bukti Bank Masuk (BBM)</span>
+                    </h3>
 
                     <div class="flex items-center gap-2.5">
                         <button type="button" 
                                 @click="openBbmTunaiModal()"
-                                class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all">
+                                class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer">
                             <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                            <span>Buat BBM Tunai Baru</span>
+                            <span>Buat BBM Tunai</span>
                             @if(count($pendingCashTtk) > 0)
                                 <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white text-indigo-800 font-extrabold">{{ count($pendingCashTtk) }}</span>
                             @endif
@@ -837,23 +844,23 @@
                         <div class="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl text-xs font-bold">
                             <button type="button" 
                                     @click="bbmFilter = 'ALL'"
-                                    class="px-3 py-1.5 rounded-lg transition-all"
+                                    class="px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                                     :class="bbmFilter === 'ALL' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'">
-                                Semua BBM ({{ count($bankReceipts) }})
+                                Semua ({{ count($bankReceipts) }})
                             </button>
                             <button type="button" 
                                     @click="bbmFilter = 'TUNAI'"
-                                    class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                                    class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
                                     :class="bbmFilter === 'TUNAI' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
-                                BBM Tunai
+                                Tunai
                             </button>
                             <button type="button" 
                                     @click="bbmFilter = 'NON_TUNAI'"
-                                    class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                                    class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
                                     :class="bbmFilter === 'NON_TUNAI' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'">
                                 <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
-                                BBM Non Tunai
+                                Non Tunai
                             </button>
                         </div>
                     </div>
@@ -863,15 +870,16 @@
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                             <tr>
-                                <th class="py-3 px-4">No. Dokumen BBM</th>
-                                <th class="py-3 px-4 text-center">Tipe BBM</th>
-                                <th class="py-3 px-4">Ref Dokumen TTK</th>
-                                <th class="py-3 px-4">Toko / Pelanggan</th>
-                                <th class="py-3 px-4">Kas / Rekening Penerima</th>
-                                <th class="py-3 px-4">Tanggal Masuk</th>
-                                <th class="py-3 px-4 text-center">Faktur Terbayar</th>
-                                <th class="py-3 px-4 text-right">Total Penerimaan</th>
+                                <th class="py-3 px-4">No. BBM</th>
+                                <th class="py-3 px-4 text-center">Tipe</th>
+                                <th class="py-3 px-4">Ref TTK</th>
+                                <th class="py-3 px-4">Customer</th>
+                                <th class="py-3 px-4">Rekening Penerima</th>
+                                <th class="py-3 px-4">Tanggal</th>
+                                <th class="py-3 px-4 text-center">Faktur</th>
+                                <th class="py-3 px-4 text-right">Penerimaan</th>
                                 <th class="py-3 px-4 text-center">Status</th>
+                                <th class="py-3 px-4 text-center w-24">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-medium">
@@ -907,9 +915,41 @@
                                     </td>
                                     <td class="py-3.5 px-4 text-right font-mono font-extrabold text-indigo-900" x-text="'Rp ' + Number(bbm.amount).toLocaleString('id-ID')"></td>
                                     <td class="py-3.5 px-4 text-center">
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                            VERIFIED
-                                        </span>
+                                        <template x-if="bbm.status === 'VOID'">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 font-mono">
+                                                VOID
+                                            </span>
+                                        </template>
+                                        <template x-if="bbm.status !== 'VOID'">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                VERIFIED
+                                            </span>
+                                        </template>
+                                    </td>
+                                    <td class="py-3.5 px-4 text-center" @click.stop>
+                                        <template x-if="bbm.status !== 'VOID'">
+                                            <form method="POST" :action="`{{ url('finance/void-bbm') }}/${bbm.id}`"
+                                                  data-confirm="Konfirmasi Void / Pembatalan BBM"
+                                                  :data-confirm-text="'Apakah Anda yakin ingin membatalkan (VOID) Bukti Bank Masuk ' + bbm.doc_number + '? Status TTK terkait akan kembali ke belum disetor ke bank.'"
+                                                  data-confirm-type="danger"
+                                                  data-confirm-btn="Ya, Void BBM"
+                                                  data-cancel-btn="Tidak, Kembali"
+                                                  data-loading-title="Memproses Void BBM"
+                                                  data-loading-sub="Membatalkan Bukti Bank Masuk..."
+                                                  data-doctype="VOID"
+                                                  class="inline">
+                                                @csrf
+                                                <button type="submit" 
+                                                        title="Batalkan / Void BBM"
+                                                        class="px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer flex items-center gap-0.5 mx-auto">
+                                                    <i data-lucide="ban" class="w-3 h-3"></i>
+                                                    <span>Void</span>
+                                                </button>
+                                            </form>
+                                        </template>
+                                        <template x-if="bbm.status === 'VOID'">
+                                            <span class="text-slate-400 font-mono text-[10px]">-</span>
+                                        </template>
                                     </td>
                                 </tr>
                             </template>

@@ -90,7 +90,7 @@ class ReportController extends Controller
 
         $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId, $format, $areaId, $clusterId);
 
-        $formatSuffix = (in_array($reportType, ['PO_GR', 'SM', 'REPACK', 'SALES']) && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
+        $formatSuffix = (in_array($reportType, ['PO_GR', 'SM', 'REPACK', 'SALES', 'AR', 'CASH_BANK']) && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
         $fileName = "Laporan_{$reportType}_{$formatSuffix}_PT_Wahana_Putra_Yudha_" . date('Ymd_His') . ".csv";
 
         $headers = [
@@ -171,9 +171,9 @@ class ReportController extends Controller
             case 'SALES':
                 return $this->getSalesData($start, $end, $tapId, $whId, $format, $areaId, $clusterId);
             case 'AR':
-                return $this->getArData($start, $end, $tapId);
+                return $this->getArData($start, $end, $tapId, $format);
             case 'CASH_BANK':
-                return $this->getCashBankData($start, $end, $tapId);
+                return $this->getCashBankData($start, $end, $tapId, $format);
             case 'STOCK':
                 return $this->getStockData($start, $end, $tapId, $whId);
             default:
@@ -1052,7 +1052,7 @@ class ReportController extends Controller
         ];
     }
 
-    private function getArData($start, $end, $tapId = 'ALL')
+    private function getArData($start, $end, $tapId = 'ALL', $format = 'summary')
     {
         $query = DB::table('accounts_receivable')
             ->join('customers', 'accounts_receivable.customer_id', '=', 'customers.id')
@@ -1074,46 +1074,184 @@ class ReportController extends Controller
 
         $records = $query->get();
 
+        $arIds = $records->pluck('id')->toArray();
+        $soIds = $records->pluck('sales_order_id')->filter()->unique()->toArray();
+
+        // 1. Ambil rincian item produk dari SO terkait
+        $itemsBySo = [];
+        if (!empty($soIds)) {
+            $soItems = DB::table('sales_order_items')
+                ->join('products', 'sales_order_items.product_id', '=', 'products.id')
+                ->whereIn('sales_order_items.sales_order_id', $soIds)
+                ->select(
+                    'sales_order_items.*',
+                    'products.sku',
+                    'products.name as product_name',
+                    'products.type as product_type'
+                )
+                ->orderBy('sales_order_items.id')
+                ->get();
+
+            foreach ($soItems as $item) {
+                $itemsBySo[$item->sales_order_id][] = $item;
+            }
+        }
+
+        // 2. Ambil riwayat pembayaran TTK dari payment_allocations
+        $paymentsByAr = [];
+        if (!empty($arIds)) {
+            $allocations = DB::table('payment_allocations')
+                ->join('payments', 'payment_allocations.payment_id', '=', 'payments.id')
+                ->whereIn('payment_allocations.accounts_receivable_id', $arIds)
+                ->select(
+                    'payment_allocations.*',
+                    'payments.doc_number as ttk_number',
+                    'payments.payment_date',
+                    'payments.payment_method',
+                    'payments.cashier_name',
+                    'payments.status as payment_status'
+                )
+                ->orderBy('payments.payment_date')
+                ->orderBy('payments.id')
+                ->get();
+
+            foreach ($allocations as $alloc) {
+                $paymentsByAr[$alloc->accounts_receivable_id][] = $alloc;
+            }
+        }
+
         $rows = [];
         $totalPiutang = 0;
         $totalTerbayar = 0;
         $totalSisa = 0;
 
         foreach ($records as $r) {
+            $r->items = $itemsBySo[$r->sales_order_id] ?? [];
+            $r->payments = $paymentsByAr[$r->id] ?? [];
+
             $totalPiutang += (float)$r->total_amount;
             $totalTerbayar += (float)$r->paid_amount;
             $totalSisa += (float)$r->balance_amount;
-
-            $rows[] = [
-                $r->doc_number,
-                $r->so_number ?? '-',
-                $r->customer_name . " ({$r->customer_code})",
-                $r->sales_name ?? 'TAP Admin',
-                $r->invoice_date,
-                $r->due_date,
-                number_format($r->total_amount, 0, ',', '.'),
-                number_format($r->paid_amount, 0, ',', '.'),
-                number_format($r->balance_amount, 0, ',', '.'),
-                $r->status,
-            ];
         }
 
-        return [
-            'title' => 'Laporan Rekapitulasi Piutang Toko / Outlet (Account Receivable - AR)',
-            'headers' => ['No. Faktur AR', 'Ref SO', 'Toko / Pelanggan', 'Sales Penanggung Jawab', 'Tgl Faktur', 'Jatuh Tempo', 'Total Tagihan (Rp)', 'Terbayar (Rp)', 'Sisa Piutang (Rp)', 'Status AR'],
-            'records' => $records,
-            'rows' => $rows,
-            'summary' => [
-                'total_records' => count($records),
-                'total_amount' => $totalSisa,
-                'total_invoice' => $totalPiutang,
-                'total_paid' => $totalTerbayar,
-            ],
-            'excel_summary' => ['TOTAL SISA PIUTANG OUTSTANDING', '', '', '', '', '', number_format($totalPiutang, 0, ',', '.'), number_format($totalTerbayar, 0, ',', '.'), number_format($totalSisa, 0, ',', '.'), ''],
-        ];
+        if ($format === 'detailed') {
+            $headers = [
+                'No. Faktur AR',
+                'Ref SO',
+                'Toko / Pelanggan',
+                'Kode Toko',
+                'Sales PJ',
+                'Tgl Faktur',
+                'Jatuh Tempo',
+                'Total Tagihan (Rp)',
+                'Terbayar (Rp)',
+                'Sisa Piutang (Rp)',
+                'Status AR',
+                'SKU Item',
+                'Nama Produk',
+                'Tipe Produk',
+                'Qty Dipesan',
+                'Harga Satuan (Rp)',
+                'Subtotal (Rp)',
+                'Riwayat TTK & Pembayaran'
+            ];
+
+            foreach ($records as $r) {
+                $paymentSummaryStr = collect($r->payments)->map(function ($p) {
+                    $statusTag = ($p->payment_status === 'VOID') ? ' [VOID]' : '';
+                    return "{$p->ttk_number}{$statusTag} (Rp " . number_format($p->amount, 0, ',', '.') . " - {$p->payment_method} - {$p->payment_date})";
+                })->implode('; ');
+
+                if (empty($r->items)) {
+                    $rows[] = [
+                        $r->doc_number,
+                        $r->so_number ?? '-',
+                        $r->customer_name,
+                        $r->customer_code,
+                        $r->sales_name ?? 'TAP Admin',
+                        $r->invoice_date,
+                        $r->due_date,
+                        number_format($r->total_amount, 0, ',', '.'),
+                        number_format($r->paid_amount, 0, ',', '.'),
+                        number_format($r->balance_amount, 0, ',', '.'),
+                        $r->status,
+                        '-', '-', '-', 0, 0, 0,
+                        $paymentSummaryStr ?: 'Belum Ada Pembayaran'
+                    ];
+                } else {
+                    foreach ($r->items as $it) {
+                        $rows[] = [
+                            $r->doc_number,
+                            $r->so_number ?? '-',
+                            $r->customer_name,
+                            $r->customer_code,
+                            $r->sales_name ?? 'TAP Admin',
+                            $r->invoice_date,
+                            $r->due_date,
+                            number_format($r->total_amount, 0, ',', '.'),
+                            number_format($r->paid_amount, 0, ',', '.'),
+                            number_format($r->balance_amount, 0, ',', '.'),
+                            $r->status,
+                            $it->sku,
+                            $it->product_name,
+                            $it->product_type,
+                            $it->quantity,
+                            number_format($it->unit_price, 0, ',', '.'),
+                            number_format($it->subtotal, 0, ',', '.'),
+                            $paymentSummaryStr ?: 'Belum Ada Pembayaran'
+                        ];
+                    }
+                }
+            }
+
+            return [
+                'title' => 'Laporan Rincian Piutang Toko / Outlet (AR) Detail per Item & Pembayaran',
+                'headers' => $headers,
+                'records' => $records,
+                'rows' => $rows,
+                'format' => 'detailed',
+                'summary' => [
+                    'total_records' => count($records),
+                    'total_amount' => $totalSisa,
+                    'total_invoice' => $totalPiutang,
+                    'total_paid' => $totalTerbayar,
+                ],
+                'excel_summary' => ['TOTAL SISA PIUTANG OUTSTANDING', '', '', '', '', '', '', number_format($totalPiutang, 0, ',', '.'), number_format($totalTerbayar, 0, ',', '.'), number_format($totalSisa, 0, ',', '.'), '', '', '', '', '', '', '', ''],
+            ];
+        } else {
+            foreach ($records as $r) {
+                $rows[] = [
+                    $r->doc_number,
+                    $r->so_number ?? '-',
+                    $r->customer_name . " ({$r->customer_code})",
+                    $r->sales_name ?? 'TAP Admin',
+                    $r->invoice_date,
+                    $r->due_date,
+                    number_format($r->total_amount, 0, ',', '.'),
+                    number_format($r->paid_amount, 0, ',', '.'),
+                    number_format($r->balance_amount, 0, ',', '.'),
+                    $r->status,
+                ];
+            }
+
+            return [
+                'title' => 'Laporan Rekapitulasi Piutang Toko / Outlet (Account Receivable - AR)',
+                'headers' => ['No. Faktur AR', 'Ref SO', 'Toko / Pelanggan', 'Sales Penanggung Jawab', 'Tgl Faktur', 'Jatuh Tempo', 'Total Tagihan (Rp)', 'Terbayar (Rp)', 'Sisa Piutang (Rp)', 'Status AR'],
+                'records' => $records,
+                'rows' => $rows,
+                'format' => 'summary',
+                'summary' => [
+                    'total_records' => count($records),
+                    'total_amount' => $totalSisa,
+                    'total_invoice' => $totalPiutang,
+                    'total_paid' => $totalTerbayar,
+                ],
+                'excel_summary' => ['TOTAL SISA PIUTANG OUTSTANDING', '', '', '', '', '', number_format($totalPiutang, 0, ',', '.'), number_format($totalTerbayar, 0, ',', '.'), number_format($totalSisa, 0, ',', '.'), ''],
+            ];
+        }
     }
 
-    private function getCashBankData($start, $end, $tapId = 'ALL')
+    private function getCashBankData($start, $end, $tapId = 'ALL', $format = 'summary')
     {
         $query = DB::table('bank_receipts')
             ->join('payments', 'bank_receipts.payment_id', '=', 'payments.id')
@@ -1124,7 +1262,9 @@ class ReportController extends Controller
                 'payments.doc_number as ttk_number',
                 'payments.payment_method',
                 'payments.cashier_name',
-                'customers.name as customer_name'
+                'payments.notes as payment_notes',
+                'customers.name as customer_name',
+                'customers.code as customer_code'
             )
             ->orderBy('bank_receipts.id', 'desc');
 
@@ -1133,36 +1273,147 @@ class ReportController extends Controller
 
         $records = $query->get();
 
+        $paymentIds = $records->pluck('payment_id')->filter()->unique()->toArray();
+
+        // Ambil rincian alokasi AR yang dilunasi oleh TTK/BBM ini
+        $allocationsByPayment = [];
+        if (!empty($paymentIds)) {
+            $allocs = DB::table('payment_allocations')
+                ->join('accounts_receivable', 'payment_allocations.accounts_receivable_id', '=', 'accounts_receivable.id')
+                ->leftJoin('sales_orders', 'accounts_receivable.sales_order_id', '=', 'sales_orders.id')
+                ->whereIn('payment_allocations.payment_id', $paymentIds)
+                ->select(
+                    'payment_allocations.*',
+                    'accounts_receivable.doc_number as ar_number',
+                    'accounts_receivable.invoice_date as ar_date',
+                    'accounts_receivable.due_date as ar_due_date',
+                    'accounts_receivable.total_amount as ar_total_amount',
+                    'accounts_receivable.paid_amount as ar_paid_amount',
+                    'accounts_receivable.balance_amount as ar_balance_amount',
+                    'accounts_receivable.status as ar_status',
+                    'sales_orders.doc_number as so_number'
+                )
+                ->orderBy('accounts_receivable.id')
+                ->get();
+
+            foreach ($allocs as $al) {
+                $allocationsByPayment[$al->payment_id][] = $al;
+            }
+        }
+
         $rows = [];
         $totalMasuk = 0;
 
         foreach ($records as $r) {
+            $r->allocations = $allocationsByPayment[$r->payment_id] ?? [];
             $totalMasuk += (float)$r->amount;
-            $rows[] = [
-                $r->doc_number,
-                $r->receipt_type,
-                $r->ttk_number,
-                $r->receipt_date,
-                $r->customer_name,
-                $r->bank_name,
-                $r->account_number ?? '-',
-                $r->payment_method,
-                $r->cashier_name,
-                number_format($r->amount, 0, ',', '.'),
-            ];
         }
 
-        return [
-            'title' => 'Laporan Rekapitulasi Penerimaan Kas & Bank (TTK Multi-AR & BBM)',
-            'headers' => ['No. Dokumen BBM', 'Tipe BBM', 'Ref TTK', 'Tanggal Masuk', 'Toko Pelanggan', 'Kas / Bank Penerima', 'No. Rekening', 'Metode Bayar', 'Kasir Penerima', 'Total Nominal (Rp)'],
-            'records' => $records,
-            'rows' => $rows,
-            'summary' => [
-                'total_records' => count($records),
-                'total_amount' => $totalMasuk,
-            ],
-            'excel_summary' => ['TOTAL KAS/BANK MASUK', '', '', '', '', '', '', '', '', number_format($totalMasuk, 0, ',', '.')],
-        ];
+        if ($format === 'detailed') {
+            $headers = [
+                'No. Dokumen BBM',
+                'Tipe BBM',
+                'Ref TTK',
+                'Tanggal Masuk',
+                'Toko Pelanggan',
+                'Kode Toko',
+                'Kas / Bank Penerima',
+                'No. Rekening',
+                'Metode Bayar',
+                'Kasir Penerima',
+                'Nominal BBM (Rp)',
+                'No. Faktur AR Dilunasi',
+                'Ref SO',
+                'Tgl Faktur AR',
+                'Total Faktur AR (Rp)',
+                'Nominal Alokasi Bayar (Rp)',
+                'Sisa AR Terkini (Rp)',
+                'Status AR'
+            ];
+
+            foreach ($records as $r) {
+                if (empty($r->allocations)) {
+                    $rows[] = [
+                        $r->doc_number,
+                        $r->receipt_type,
+                        $r->ttk_number,
+                        $r->receipt_date,
+                        $r->customer_name,
+                        $r->customer_code,
+                        $r->bank_name,
+                        $r->account_number ?? '-',
+                        $r->payment_method,
+                        $r->cashier_name,
+                        number_format($r->amount, 0, ',', '.'),
+                        '-', '-', '-', 0, 0, 0, '-'
+                    ];
+                } else {
+                    foreach ($r->allocations as $al) {
+                        $rows[] = [
+                            $r->doc_number,
+                            $r->receipt_type,
+                            $r->ttk_number,
+                            $r->receipt_date,
+                            $r->customer_name,
+                            $r->customer_code,
+                            $r->bank_name,
+                            $r->account_number ?? '-',
+                            $r->payment_method,
+                            $r->cashier_name,
+                            number_format($r->amount, 0, ',', '.'),
+                            $al->ar_number,
+                            $al->so_number ?? '-',
+                            $al->ar_date,
+                            number_format($al->ar_total_amount, 0, ',', '.'),
+                            number_format($al->amount, 0, ',', '.'),
+                            number_format($al->balance_after, 0, ',', '.'),
+                            $al->ar_status
+                        ];
+                    }
+                }
+            }
+
+            return [
+                'title' => 'Laporan Rincian Penerimaan Kas & Bank (BBM) Detail Alokasi Faktur AR',
+                'headers' => $headers,
+                'records' => $records,
+                'rows' => $rows,
+                'format' => 'detailed',
+                'summary' => [
+                    'total_records' => count($records),
+                    'total_amount' => $totalMasuk,
+                ],
+                'excel_summary' => ['TOTAL KAS/BANK MASUK', '', '', '', '', '', '', '', '', '', number_format($totalMasuk, 0, ',', '.'), '', '', '', '', '', '', ''],
+            ];
+        } else {
+            foreach ($records as $r) {
+                $rows[] = [
+                    $r->doc_number,
+                    $r->receipt_type,
+                    $r->ttk_number,
+                    $r->receipt_date,
+                    $r->customer_name,
+                    $r->bank_name,
+                    $r->account_number ?? '-',
+                    $r->payment_method,
+                    $r->cashier_name,
+                    number_format($r->amount, 0, ',', '.'),
+                ];
+            }
+
+            return [
+                'title' => 'Laporan Rekapitulasi Penerimaan Kas & Bank (TTK Multi-AR & BBM)',
+                'headers' => ['No. Dokumen BBM', 'Tipe BBM', 'Ref TTK', 'Tanggal Masuk', 'Toko Pelanggan', 'Kas / Bank Penerima', 'No. Rekening', 'Metode Bayar', 'Kasir Penerima', 'Total Nominal (Rp)'],
+                'records' => $records,
+                'rows' => $rows,
+                'format' => 'summary',
+                'summary' => [
+                    'total_records' => count($records),
+                    'total_amount' => $totalMasuk,
+                ],
+                'excel_summary' => ['TOTAL KAS/BANK MASUK', '', '', '', '', '', '', '', '', number_format($totalMasuk, 0, ',', '.')],
+            ];
+        }
     }
 
     /**

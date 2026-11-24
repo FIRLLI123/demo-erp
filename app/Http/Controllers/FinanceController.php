@@ -29,13 +29,18 @@ class FinanceController extends Controller
         // 2. Daftar Tanda Terima Kasir (TTK) dengan alokasi Multi-AR
         $paymentsRaw = DB::table('payments')
             ->join('customers', 'payments.customer_id', '=', 'customers.id')
-            ->leftJoin('bank_receipts', 'payments.id', '=', 'bank_receipts.payment_id')
+            ->leftJoin('bank_receipts', function($join) {
+                $join->on('payments.id', '=', 'bank_receipts.payment_id')
+                     ->where('bank_receipts.status', '!=', 'VOID');
+            })
             ->select(
                 'payments.*',
                 'customers.name as customer_name',
                 'customers.code as customer_code',
                 'bank_receipts.doc_number as bbm_number',
-                'bank_receipts.receipt_type as bbm_type'
+                'bank_receipts.receipt_type as bbm_type',
+                'bank_receipts.id as bbm_id',
+                'bank_receipts.status as bbm_status'
             )
             ->orderBy('payments.id', 'desc')
             ->get();
@@ -446,5 +451,104 @@ class FinanceController extends Controller
             ->get();
 
         return view('finance.print-kwitansi', compact('payment', 'bbm', 'allocations'));
+    }
+
+    /**
+     * Membatalkan / Void Bukti Bank Masuk (BBM):
+     * - Status BBM berubah menjadi VOID.
+     * - TTK terkait kembali ke status belum disetor ke bank (belum ada BBM).
+     */
+    public function voidBbm(Request $request, $id)
+    {
+        $bbm = DB::table('bank_receipts')->where('id', $id)->first();
+        if (!$bbm) {
+            return redirect()->back()->with('error', 'Dokumen BBM tidak ditemukan!');
+        }
+
+        if ($bbm->status === 'VOID') {
+            return redirect()->back()->with('error', 'Dokumen BBM sudah dibatalkan (VOID) sebelumnya!');
+        }
+
+        DB::beginTransaction();
+        try {
+            DB::table('bank_receipts')->where('id', $id)->update([
+                'status' => 'VOID',
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+            return redirect()->route('finance.index', ['tab' => 'BBM'])
+                ->with('success', "Bukti Bank Masuk [{$bbm->doc_number}] berhasil di-VOID (Dibatalkan). TTK terkait kini dapat diproses atau di-VOID.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal membatalkan BBM: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Membatalkan / Void Tanda Terima Kasir (TTK):
+     * - SYARAT: Tidak boleh masih memiliki BBM aktif (BBM harus di-void terlebih dahulu).
+     * - EFEK:
+     *   1. Mengembalikan saldo dan status piutang AR ke kondisi semula (sebelum dibayar).
+     *   2. Menghapus / menandai VOID alokasi pembayaran.
+     *   3. Mengubah status TTK menjadi VOID.
+     *   4. Faktur AR yang kembali UNPAID kini dapat di-VOID bersama SO/GD jika diperlukan.
+     */
+    public function voidTtk(Request $request, $id)
+    {
+        $payment = DB::table('payments')->where('id', $id)->first();
+        if (!$payment) {
+            return redirect()->back()->with('error', 'Dokumen TTK tidak ditemukan!');
+        }
+
+        if ($payment->status === 'VOID') {
+            return redirect()->back()->with('error', 'Dokumen TTK sudah dibatalkan (VOID) sebelumnya!');
+        }
+
+        // Cek apakah TTK masih terhubung ke BBM yang AKTIF (status bukan VOID)
+        $activeBbm = DB::table('bank_receipts')
+            ->where('payment_id', $payment->id)
+            ->where('status', '!=', 'VOID')
+            ->first();
+
+        if ($activeBbm) {
+            return redirect()->back()->with('error', "Gagal Void: TTK [{$payment->doc_number}] masih terhubung ke Bukti Bank Masuk aktif [{$activeBbm->doc_number}]! Silakan batalkan (VOID) BBM terlebih dahulu pada tab Bank Masuk.");
+        }
+
+        $allocations = DB::table('payment_allocations')->where('payment_id', $payment->id)->get();
+
+        DB::beginTransaction();
+        try {
+            // 1. Kembalikan saldo masing-masing AR yang dialokasikan
+            foreach ($allocations as $alloc) {
+                $ar = DB::table('accounts_receivable')->where('id', $alloc->accounts_receivable_id)->first();
+                if ($ar) {
+                    $newPaid = max(0, (float)$ar->paid_amount - (float)$alloc->amount);
+                    $newBalance = (float)$ar->total_amount - $newPaid;
+                    $newStatus = $newPaid <= 0 ? 'UNPAID' : 'PARTIAL';
+
+                    DB::table('accounts_receivable')->where('id', $ar->id)->update([
+                        'paid_amount' => $newPaid,
+                        'balance_amount' => $newBalance,
+                        'status' => $newStatus,
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            // 2. Ubah status TTK menjadi VOID
+            DB::table('payments')->where('id', $id)->update([
+                'status' => 'VOID',
+                'notes' => trim(($payment->notes ? $payment->notes . ' | ' : '') . 'DIBATALKAN (VOID) pada ' . now()->format('d/m/Y H:i')),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+            return redirect()->route('finance.index', ['tab' => 'PAYMENTS'])
+                ->with('success', "Tanda Terima Kasir [{$payment->doc_number}] berhasil di-VOID. Saldo piutang (AR) telah dikembalikan ke kondisi belum lunas.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal membatalkan TTK: ' . $e->getMessage());
+        }
     }
 }

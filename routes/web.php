@@ -164,7 +164,9 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('finance')->name('finance.')->group(function () {
         Route::get('/', [FinanceController::class, 'index'])->name('index');
         Route::post('/store-ttk', [FinanceController::class, 'storeTtk'])->name('store-ttk');
+        Route::post('/void-ttk/{id}', [FinanceController::class, 'voidTtk'])->name('void-ttk');
         Route::post('/store-bbm-tunai', [FinanceController::class, 'storeBbmTunai'])->name('store-bbm-tunai');
+        Route::post('/void-bbm/{id}', [FinanceController::class, 'voidBbm'])->name('void-bbm');
         Route::get('/print-kwitansi/{id}', [FinanceController::class, 'printKwitansi'])->name('print-kwitansi');
     });
 

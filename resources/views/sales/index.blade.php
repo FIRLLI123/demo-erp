@@ -1,7 +1,7 @@
 <x-app-layout>
-    <x-slot name="title">Sales Order & Goods Delivery (SO - GD - AR)</x-slot>
-    <x-slot name="headerTitle">Sales Order & Pengiriman (SO &rarr; GD &rarr; AR)</x-slot>
-    <x-slot name="badge">SO &bull; GD &bull; AR &bull; SR</x-slot>
+    <x-slot name="title">Sales Order</x-slot>
+    <x-slot name="headerTitle">Sales Order & Pengiriman</x-slot>
+    <x-slot name="badge">SO &bull; GD &bull; AR</x-slot>
 
     <div x-data="salesApp()" x-init="initData()">
         
@@ -11,22 +11,20 @@
         <!-- Top Action Bar -->
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                    <span>Pesanan Penjualan & Pengiriman Barang</span>
-                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">PT WAHANA PUTRA YUDHA</span>
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">
+                    Pesanan Penjualan & Pengiriman
                 </h2>
-                <p class="text-xs text-slate-500">Operasional Resmi PT Wahana Putra Yudha: Pembuatan SO &rarr; Approval Finance &rarr; Sending Good (GD & AR) &rarr; Sales Retur</p>
             </div>
 
             <div class="flex items-center gap-2">
                 <a href="{{ route('reports.index', ['type' => 'SALES']) }}" 
                    class="px-3.5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0">
                     <i data-lucide="file-spreadsheet" class="w-4 h-4 text-rose-600"></i>
-                    <span>Rekap Penjualan (Excel/PDF)</span>
+                    <span>Rekap Laporan</span>
                 </a>
                 <button type="button" 
                         @click="createSoOpen = !createSoOpen" 
-                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
+                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer">
                     <i data-lucide="plus-circle" class="w-4 h-4 text-amber-400"></i>
                     <span x-text="createSoOpen ? 'Tutup Form' : '+ Buat SO Baru'"></span>
                 </button>
@@ -40,9 +38,9 @@
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
                 <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                     <i data-lucide="shopping-bag" class="w-4 h-4 text-amber-600"></i>
-                    <span>Formulir Sales Order (SO) Baru</span>
+                    <span>Form Sales Order (SO)</span>
                 </h3>
-                <button @click="createSoOpen = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+                <button @click="createSoOpen = false" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -174,10 +172,7 @@
                                     
                                     <!-- Searchable Produk -->
                                     <div class="{{ ($iccidEnabled ?? config('erp.enable_iccid', false)) ? 'md:col-span-4' : 'md:col-span-5' }} relative" @click.outside="row.dropdownOpen = false">
-                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">
-                                            Produk <span class="text-rose-500">*</span>
-                                            <span class="text-slate-400 font-normal">(Ketik SKU / Nama)</span>
-                                        </label>
+                                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Produk</label>
                                         <input type="hidden" :name="`items[${index}][product_id]`" :value="row.product_id" required>
                                         
                                         <div class="relative flex items-center">
@@ -186,7 +181,7 @@
                                                    @focus="row.dropdownOpen = true"
                                                    @input="row.dropdownOpen = true"
                                                    :disabled="!selectedWarehouseId"
-                                                   :placeholder="!selectedWarehouseId ? 'Pilih Gudang Sumber dulu...' : 'Ketik cari SKU atau nama produk...'"
+                                                   :placeholder="!selectedWarehouseId ? 'Pilih Sales dulu' : 'Cari produk...'"
                                                    class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:bg-slate-100 disabled:cursor-not-allowed">
                                             <button type="button"
                                                     x-show="row.product_id"
@@ -414,9 +409,9 @@
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
             <div class="p-5 border-b border-slate-100 flex items-center justify-between">
                 <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                    <span>Daftar Sales Order (SO)</span>
+                    <span>Daftar Sales Order</span>
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 text-slate-700">
-                        {{ count($orders) }} Pesanan
+                        {{ count($orders) }}
                     </span>
                 </h3>
             </div>
@@ -425,14 +420,14 @@
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
                         <tr>
-                            <th class="py-3 px-4">No. Dokumen SO</th>
+                            <th class="py-3 px-4">No. SO</th>
                             <th class="py-3 px-4">Tanggal</th>
-                            <th class="py-3 px-4">Outlet / Customer</th>
+                            <th class="py-3 px-4">Customer</th>
                             <th class="py-3 px-4">Sales & Gudang</th>
                             <th class="py-3 px-4">Catatan</th>
-                            <th class="py-3 px-4 text-center">Total Qty</th>
-                            <th class="py-3 px-4 text-right">Nilai Tagihan</th>
-                            <th class="py-3 px-4 text-center">Status Transaksi</th>
+                            <th class="py-3 px-4 text-center">Qty</th>
+                            <th class="py-3 px-4 text-right">Total</th>
+                            <th class="py-3 px-4 text-center">Status</th>
                             <th class="py-3 px-4 text-center w-28">Aksi</th>
                         </tr>
                     </thead>
@@ -680,21 +675,17 @@
 
                     <!-- Catatan Pesanan (Notes) Banner -->
                     <template x-if="selectedSo && selectedSo.notes">
-                        <div class="mb-5 px-4 py-3 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-start gap-3">
-                            <i data-lucide="file-text" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
-                            <div>
-                                <span class="text-[11px] font-bold text-amber-900 block">Catatan / Keterangan Pesanan (Notes):</span>
-                                <span class="text-xs text-slate-700 font-medium" x-text="selectedSo.notes"></span>
-                            </div>
+                        <div class="mb-4 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2 text-xs">
+                            <span class="font-bold text-slate-700">Catatan:</span>
+                            <span class="text-slate-600" x-text="selectedSo.notes"></span>
                         </div>
                     </template>
 
                     <!-- Detail Line Items Table -->
                     <div class="mb-5">
-                        <h5 class="text-xs font-bold text-slate-700 uppercase mb-2">Item Barang yang Dipesan:</h5>
                         <div class="border border-slate-200 rounded-xl overflow-hidden bg-white">
                             <table class="w-full text-left text-xs">
-                                <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+                                <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
                                     <tr>
                                         <th class="py-2.5 px-4">Produk</th>
                                         <th class="py-2.5 px-4">Tipe</th>
