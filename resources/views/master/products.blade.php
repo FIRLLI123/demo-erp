@@ -611,10 +611,11 @@
                                 <input type="checkbox" name="is_virtual" value="1" x-model="productForm.is_virtual" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
                                 <span>Produk Virtual / Saldo</span>
                             </label>
-                            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                            {{-- Kena PPN di-hide dan disimpan null sesuai permintaan user karena belum digunakan --}}
+                            {{-- <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
                                 <input type="checkbox" name="is_ppn" value="1" x-model="productForm.is_ppn" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                                 <span>Kena PPN</span>
-                            </label>
+                            </label> --}}
                         </div>
 
                         <div>
@@ -952,7 +953,7 @@
                             expired_date: item.expired_date || '',
                             is_consignment: Boolean(item.is_consignment),
                             is_virtual: Boolean(item.is_virtual),
-                            is_ppn: item.is_ppn !== undefined ? Boolean(item.is_ppn) : true,
+                            is_ppn: item.is_ppn !== undefined && item.is_ppn !== null ? Boolean(item.is_ppn) : null,
                             status: item.status || 'ACTIVE',
                         };
                     } else {
@@ -963,7 +964,7 @@
                             description: '', tracking_method: 'QUANTITY', cost_price: 0, selling_price: 0,
                             special_price: 0, uom: 'PCS', min_stock: 0, tax_alias: '',
                             activation_date: '', expired_date: '', is_consignment: false,
-                            is_virtual: false, is_ppn: true, status: 'ACTIVE',
+                            is_virtual: false, is_ppn: null, status: 'ACTIVE',
                         };
                     }
                     this.showProductModal = true;
