@@ -61,19 +61,14 @@
                         <i data-lucide="info" class="w-3.5 h-3.5 text-amber-600"></i>
                         <span>1. Profil Toko</span>
                     </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Outlet <span class="text-rose-500">*</span></label>
                             <input type="text" name="name" required class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                         </div>
 
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Tipe Outlet <span class="text-rose-500">*</span></label>
-                            <select name="type" required class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
-                                <option value="RETAIL">Retail (Outlet / Konter Reguler)</option>
-                                <option value="GROSIR">Grosir (Sub-Dealer / Toko Besar)</option>
-                            </select>
-                        </div>
+                        {{-- Tipe Outlet di-hide dan default RETAIL sesuai permintaan user --}}
+                        <input type="hidden" name="type" value="RETAIL">
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nomor RS / Chip Mkios Utama</label>
