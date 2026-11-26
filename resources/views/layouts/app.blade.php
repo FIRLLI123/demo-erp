@@ -566,7 +566,8 @@
                     </div>
                 </div>
 
-                <!-- Group: TRACKING & INFORMASI (Collapsible Dropdown) -->
+                <!-- Group: TRACKING & INFORMASI (Di-hide sesuai permintaan) -->
+                {{-- 
                 <div class="space-y-1">
                     <button type="button" @click="toggle('tracking')" 
                             :class="openMenus.tracking ? 'bg-slate-800/90 text-white font-bold ring-1 ring-slate-700/60 shadow-xs' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white font-semibold'"
@@ -604,8 +605,10 @@
                         </a>
                     </div>
                 </div>
+                --}}
 
-                <!-- Menu Paling Bawah: MASTER UI SHOWCASE & TEST LAB -->
+                <!-- Menu Paling Bawah: MASTER UI SHOWCASE & TEST LAB (Di-hide sesuai permintaan) -->
+                {{-- 
                 <div class="pt-3 mt-3 border-t border-slate-800/80">
                     <a href="{{ route('ui.showcase') }}" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all {{ request()->routeIs('ui.showcase*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-indigo-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white font-semibold' }}">
                         <div class="flex items-center gap-2.5">
@@ -615,6 +618,7 @@
                         <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono font-bold">TEST LAB</span>
                     </a>
                 </div>
+                --}}
             </nav>
 
             <!-- Bottom User & Role Profile -->
