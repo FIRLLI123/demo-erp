@@ -15,12 +15,19 @@
                 <p class="text-xs text-slate-500">Kelola akun pengguna, tanda tangan digital (signature), cakupan wilayah, dan hak akses.</p>
             </div>
 
-            <button type="button" 
-                    @click="toggleCreateForm()" 
-                    class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer">
-                <i data-lucide="user-plus" class="w-4 h-4 text-emerald-400"></i>
-                <span x-text="createOpen ? 'Tutup Formulir' : '+ Tambah Pengguna Baru'"></span>
-            </button>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('master.roles.matrix') }}" 
+                   class="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-indigo-600"></i>
+                    <span>Atur Hak Akses Role</span>
+                </a>
+                <button type="button" 
+                        @click="toggleCreateForm()" 
+                        class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer">
+                    <i data-lucide="user-plus" class="w-4 h-4 text-emerald-400"></i>
+                    <span x-text="createOpen ? 'Tutup Formulir' : '+ Tambah Pengguna Baru'"></span>
+                </button>
+            </div>
         </div>
 
         @if(session('success'))

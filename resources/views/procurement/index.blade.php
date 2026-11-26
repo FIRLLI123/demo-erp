@@ -450,6 +450,7 @@
                                                 <i data-lucide="arrow-right" class="w-3 h-3"></i>
                                             </a>
 
+                                            @can('po.void')
                                             <form method="POST"
                                                   action="{{ route('procurement.void-po', $po->id) }}"
                                                   data-ajax data-confirm="Konfirmasi Void / Pembatalan PO"
@@ -465,6 +466,7 @@
                                                     Void
                                                 </button>
                                             </form>
+                                            @endcan
                                         @endif
 
                                         <button type="button"

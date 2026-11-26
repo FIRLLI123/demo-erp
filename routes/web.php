@@ -93,6 +93,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/users/{id}/mapping', [MasterController::class, 'userMapping'])->name('users.mapping');
         Route::post('/users/{id}/mapping', [MasterController::class, 'saveUserMapping'])->name('users.save-mapping');
         
+        // Manajemen Matriks Role & Permissions (Spatie)
+        Route::get('/roles-matrix', [\App\Http\Controllers\RolePermissionController::class, 'index'])->name('roles.matrix');
+        Route::post('/roles-matrix/toggle', [\App\Http\Controllers\RolePermissionController::class, 'togglePermission'])->name('roles.matrix.toggle');
+        Route::post('/roles-matrix/toggle-module', [\App\Http\Controllers\RolePermissionController::class, 'toggleModule'])->name('roles.matrix.toggle-module');
+        Route::post('/roles/store', [\App\Http\Controllers\RolePermissionController::class, 'storeRole'])->name('roles.store');
+        Route::post('/roles/update/{id}', [\App\Http\Controllers\RolePermissionController::class, 'updateRole'])->name('roles.update');
+        Route::post('/roles/delete/{id}', [\App\Http\Controllers\RolePermissionController::class, 'deleteRole'])->name('roles.delete');
+        
         // Master Tambahan (Bank, Vendor, Price Profile, Segmen, Wilayah, Approval Matrix)
         Route::get('/banks', [MasterController::class, 'banks'])->name('banks');
         Route::post('/banks', [MasterController::class, 'storeBank'])->name('banks.store');

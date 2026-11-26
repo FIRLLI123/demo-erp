@@ -393,6 +393,13 @@
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.users*') ? 'bg-rose-500 ring-2 ring-rose-400/40' : 'bg-slate-600' }}"></span>
                             <span>Master Pengguna & Akun</span>
                         </a>
+                        <a href="{{ route('master.roles.matrix') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all {{ request()->routeIs('master.roles.matrix*') ? 'bg-[#1E293B] text-white font-extrabold border-l-4 border-indigo-500 shadow-md ring-1 ring-white/10' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white font-medium' }}">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.roles.matrix*') ? 'bg-indigo-400 ring-2 ring-indigo-400/40' : 'bg-slate-600' }}"></span>
+                                <span>Hak Akses & Role</span>
+                            </div>
+                            <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono font-bold">AKSES</span>
+                        </a>
                     </div>
                 </div>
 

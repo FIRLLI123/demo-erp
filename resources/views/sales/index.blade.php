@@ -495,6 +495,7 @@
                                         </button>
 
                                         {{-- Tombol Void Cepat di Baris Tabel jika SO belum lunas/selesai --}}
+                                        @can('so.void')
                                         @if(!in_array($so->status, ['COMPLETED', 'VOID']) && (!$so->invoice || ($so->invoice->status === 'UNPAID' && (float)$so->invoice->paid_amount == 0)))
                                             <form method="POST" action="{{ route('sales.void', $so->id) }}"
                                                   data-confirm="Konfirmasi Void / Pembatalan SO"
@@ -515,6 +516,7 @@
                                                 </button>
                                             </form>
                                         @endif
+                                        @endcan
                                     </div>
                                 </td>
                             </tr>
@@ -594,6 +596,7 @@
                         </template>
 
                         <!-- 4. Tombol Void SO (Hadir di PENDING_APPROVAL, APPROVED, hingga DELIVERED selama belum ada pembayaran AR) -->
+                        @can('so.void')
                         <template x-if="selectedSo && !['COMPLETED', 'VOID'].includes(selectedSo.status) && (!selectedSo.invoice || (selectedSo.invoice.status === 'UNPAID' && parseFloat(selectedSo.invoice.paid_amount || 0) === 0))">
                             <form method="POST" 
                                   :action="`{{ url('sales/void') }}/${selectedSo.id}`"
@@ -612,6 +615,7 @@
                                 </button>
                             </form>
                         </template>
+                        @endcan
 
                     </div>
                 </div>

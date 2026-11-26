@@ -1704,6 +1704,13 @@ class MasterController extends Controller
             ]);
         }
 
+        // Sinkronisasi Spatie Role
+        $createdUser = \App\Models\User::find($userId);
+        $roleModel = \Spatie\Permission\Models\Role::find($request->role_id);
+        if ($createdUser && $roleModel) {
+            $createdUser->syncRoles([$roleModel->name]);
+        }
+
         return redirect()->route('master.users')->with('success', "Akun pengguna [{$request->name}] berhasil dibuat. Silakan atur wilayah akses melalui tombol Mapping.");
     }
 
@@ -1749,6 +1756,13 @@ class MasterController extends Controller
                 'user_id' => $id,
                 'updated_at' => now()
             ]);
+        }
+
+        // Sinkronisasi Spatie Role
+        $updatedUser = \App\Models\User::find($id);
+        $roleModel = \Spatie\Permission\Models\Role::find($request->role_id);
+        if ($updatedUser && $roleModel) {
+            $updatedUser->syncRoles([$roleModel->name]);
         }
 
         return redirect()->route('master.users')->with('success', "Data profil akun [{$request->name}] berhasil diperbarui.");
