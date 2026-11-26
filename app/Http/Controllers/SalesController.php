@@ -149,15 +149,25 @@ class SalesController extends Controller
             }
         }
         
-        // Gudang untuk penjualan: SALES (Kanvas) dan INVENTORY (Stok TAP)
+        // Gudang untuk sumber stok penjualan SO: SALES (Kanvas), INVENTORY (Buffer TAP), dan MAIN (Utama TAP)
+        // Dibatasi sesuai mapping wilayah akses user via TerritoryScope
         $warehouses = TerritoryScope::applyWarehouseScope(
             DB::table('warehouses')
-                ->where('status', 'ACTIVE')
-                ->whereIn('type', ['SALES', 'INVENTORY']),
+                ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->join('areas', 'clusters.area_id', '=', 'areas.id')
+                ->where('warehouses.status', 'ACTIVE')
+                ->whereIn('warehouses.type', ['SALES', 'INVENTORY', 'MAIN'])
+                ->select(
+                    'warehouses.*',
+                    'taps.name as tap_name',
+                    'clusters.name as cluster_name',
+                    'areas.name as area_name'
+                ),
             'warehouses.id'
         )
-            ->orderBy('type')
-            ->orderBy('name')
+            ->orderBy('warehouses.type')
+            ->orderBy('warehouses.name')
             ->get();
 
         $products = DB::table('products')->where('status', 'ACTIVE')->orderBy('name')->get();

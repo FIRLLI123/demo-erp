@@ -90,21 +90,22 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Gudang Sumber Stok</label>
-                        {{-- Input Hidden untuk warehouse_id yang otomatis diisi dari sales --}}
-                        <input type="hidden" name="warehouse_id" :value="selectedWarehouseId">
-                        
-                        <div class="w-full text-xs font-bold py-2 px-3 rounded-xl border flex items-center justify-between"
-                             :class="selectedWarehouseName ? 'bg-amber-50/70 border-amber-200 text-slate-800' : 'bg-slate-100 border-slate-200 text-slate-400'">
-                            <div class="flex items-center gap-1.5 truncate">
-                                <i data-lucide="warehouse" class="w-3.5 h-3.5 shrink-0" :class="selectedWarehouseName ? 'text-amber-600' : 'text-slate-400'"></i>
-                                <span x-text="selectedWarehouseName || 'Otomatis mengikuti Sales'"></span>
-                            </div>
-                            <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase shrink-0"
-                                  :class="selectedWarehouseName ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-500'">
-                                KANVAS
-                            </span>
-                        </div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Gudang Sumber Stok <span class="text-rose-500">*</span>
+                        </label>
+                        <select name="warehouse_id" 
+                                x-model="selectedWarehouseId"
+                                @change="onWarehouseChange()"
+                                required
+                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 cursor-pointer shadow-2xs">
+                            <option value="">-- Pilih Gudang Sumber --</option>
+                            <template x-for="wh in warehouses" :key="wh.id">
+                                <option :value="wh.id" x-text="`[${wh.type}] ${wh.name} (${wh.tap_name || ''})`"></option>
+                            </template>
+                        </select>
+                        <template x-if="selectedWarehouseInfo">
+                            <span class="text-[10px] text-amber-700 font-bold mt-1 block truncate" x-text="selectedWarehouseInfo"></span>
+                        </template>
                     </div>
 
                     <div>
@@ -859,9 +860,17 @@
                 ],
 
                 salesList: @json($salesList),
+                warehouses: @json($warehouses ?? []),
                 products: @json($products),
                 stockBalances: @json($stockBalances),
                 availableIccids: @json($availableIccids),
+
+                get selectedWarehouseInfo() {
+                    if (!this.selectedWarehouseId) return '';
+                    const wh = this.warehouses.find(w => w.id == this.selectedWarehouseId);
+                    if (!wh) return '';
+                    return `Tipe: [${wh.type}] • TAP: ${wh.tap_name || '-'} • Cluster: ${wh.cluster_name || '-'}`;
+                },
 
                 get grandTotal() {
                     return this.items.reduce((acc, row) => acc + this.getRowSubtotal(row), 0);
@@ -937,24 +946,20 @@
                 },
 
                 onSalesChange() {
-                    if (!this.selectedSalesId) {
-                        this.selectedWarehouseId = '';
-                        this.selectedWarehouseName = '';
-                        this.onWarehouseChange();
-                        return;
+                    // Ketika sales dipilih, jika belum memilih gudang atau ingin default, 
+                    // set gudang kanvas milik sales tersebut jika ada di daftar wewenang user,
+                    // tapi user TETAP DAPAT mengganti/memilih gudang lain dari dropdown
+                    if (this.selectedSalesId && !this.selectedWarehouseId) {
+                        const sales = this.salesList.find(s => s.id == this.selectedSalesId);
+                        if (sales && sales.warehouse_id) {
+                            const whExists = this.warehouses.some(w => w.id == sales.warehouse_id);
+                            if (whExists) {
+                                this.selectedWarehouseId = sales.warehouse_id;
+                                this.onWarehouseChange();
+                            }
+                        }
                     }
 
-                    const sales = this.salesList.find(s => s.id == this.selectedSalesId);
-                    if (sales && sales.warehouse_id) {
-                        this.selectedWarehouseId = sales.warehouse_id;
-                        this.selectedWarehouseName = sales.warehouse_name;
-                    } else {
-                        this.selectedWarehouseId = '';
-                        this.selectedWarehouseName = '';
-                    }
-
-                    // Reset item pilihan agar stok menyesuaikan gudang sales yang baru
-                    this.onWarehouseChange();
                     this.$nextTick(() => {
                         lucide.createIcons();
                     });

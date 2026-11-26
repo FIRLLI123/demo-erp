@@ -140,7 +140,11 @@
 
             <form method="POST" action="{{ route('stock-movement.store') }}" 
                   enctype="multipart/form-data"
-                  @submit="isSubmitting = true"
+                  data-confirm="Konfirmasi Transfer Stok (Stock Movement)"
+                  data-confirm-text="Apakah Anda yakin ingin memproses mutasi pemindahan stok ini? Saldo stok gudang asal akan langsung dipotong dan ditambahkan ke gudang tujuan."
+                  data-confirm-type="emerald"
+                  data-confirm-btn="Ya, Proses Transfer Stok"
+                  data-cancel-btn="Tidak, Periksa Lagi"
                   data-loading-title="Memproses Transfer Stok"
                   data-loading-sub="Memindahkan saldo & update serial ICCID antar gudang..."
                   data-doctype="SM">
@@ -1349,7 +1353,11 @@
                     if (!file) return;
 
                     if (!this.multiSourceWhId) {
-                        alert('Silakan pilih Gudang Asal terlebih dahulu!');
+                        if (typeof window.showErrorAlert === 'function') {
+                            window.showErrorAlert('Silakan pilih Gudang Asal terlebih dahulu sebelum mengunggah file Excel.', 'Gudang Asal Belum Dipilih');
+                        } else {
+                            alert('Silakan pilih Gudang Asal terlebih dahulu!');
+                        }
                         event.target.value = '';
                         return;
                     }
@@ -1374,13 +1382,22 @@
                         const res = await response.json();
 
                         if (!response.ok || !res.success) {
-                            alert(res.message || 'Gagal membaca atau memvalidasi file Excel.');
+                            if (typeof window.showErrorAlert === 'function') {
+                                window.showErrorAlert(res.message || 'Gagal membaca atau memvalidasi file Excel.', 'Validasi File Gagal');
+                            } else {
+                                alert(res.message || 'Gagal membaca atau memvalidasi file Excel.');
+                            }
                             this.resetMultiUpload();
                         } else {
                             this.multiPreviewData = res;
                         }
                     } catch (err) {
-                        alert('Terjadi kesalahan jaringan atau server saat membaca file: ' + err.message);
+                        const errMsg = 'Terjadi kesalahan jaringan atau server saat membaca file: ' + err.message;
+                        if (typeof window.showErrorAlert === 'function') {
+                            window.showErrorAlert(errMsg, 'Kesalahan Jaringan');
+                        } else {
+                            alert(errMsg);
+                        }
                         this.resetMultiUpload();
                     } finally {
                         this.isValidatingFile = false;
@@ -1391,7 +1408,11 @@
 
                 confirmAndExecuteMulti() {
                     if (!this.multiPreviewData || this.multiPreviewData.has_errors) {
-                        alert('Pastikan seluruh data valid sebelum mengeksekusi transfer!');
+                        if (typeof window.showErrorAlert === 'function') {
+                            window.showErrorAlert('Pastikan seluruh data valid sebelum mengeksekusi transfer!', 'Data Belum Valid');
+                        } else {
+                            alert('Pastikan seluruh data valid sebelum mengeksekusi transfer!');
+                        }
                         return;
                     }
 
@@ -1400,22 +1421,43 @@
                     const sourceWh = this.allWarehouses.find(w => w.id == this.multiSourceWhId);
                     const sourceName = sourceWh ? sourceWh.name : 'Gudang Terpilih';
 
-                    const confirmed = confirm(`Konfirmasi Eksekusi Transfer Massal (SM Multi):\n\n` +
-                        `• Gudang Asal: ${sourceName}\n` +
-                        `• Tanggal: ${this.multiMovementDate}\n` +
-                        `• Total Item: ${totalRows} baris\n` +
-                        `• Total Qty: ${totalPcs} pcs\n\n` +
-                        `Apakah Anda yakin ingin memproses transaksi ini? Saldo stok akan langsung dipindahkan.`);
+                    const confirmMessage = `Apakah Anda yakin ingin memproses transfer massal sebanyak ${totalRows} baris produk (${totalPcs} pcs) dari "${sourceName}"? Saldo stok akan langsung dipindahkan ke masing-masing gudang tujuan secara atomik.`;
 
-                    if (!confirmed) return;
-
-                    this.executeMultiStockMovement();
+                    // Panggil Global Confirm Modal yang sama dengan PO
+                    if (typeof window.dispatchEvent === 'function') {
+                        window.dispatchEvent(new CustomEvent('open-confirm-modal', {
+                            detail: {
+                                title: 'Konfirmasi Transfer Massal (SM Multi)',
+                                message: confirmMessage,
+                                type: 'emerald',
+                                badge: 'KONFIRMASI SM MULTI',
+                                confirmText: 'Ya, Eksekusi Transfer',
+                                cancelText: 'Batal, Periksa Lagi',
+                                onConfirm: () => {
+                                    this.executeMultiStockMovement();
+                                }
+                            }
+                        }));
+                    } else {
+                        if (confirm(confirmMessage)) {
+                            this.executeMultiStockMovement();
+                        }
+                    }
                 },
 
                 async executeMultiStockMovement() {
                     this.isProcessingMulti = true;
                     this.progressPercent = 10;
                     this.progressStatusText = 'Memeriksa Kunci Baris Database...';
+
+                    // Tampilkan juga Global Loading Modal (sama seperti di PO)
+                    if (typeof window.showLoading === 'function') {
+                        window.showLoading(
+                            'Memproses Transfer SM Multi...',
+                            'Memindahkan saldo stok massal & memvalidasi transaksi atomik...',
+                            'SM-MULTI'
+                        );
+                    }
 
                     // Simulasi smooth progress animation
                     const progressTimer = setInterval(() => {
@@ -1454,27 +1496,49 @@
                         clearInterval(progressTimer);
                         const result = await response.json();
 
+                        // Sembunyikan global loading
+                        if (typeof window.hideLoading === 'function') {
+                            window.hideLoading();
+                        }
+
                         if (!response.ok || !result.success) {
                             this.progressPercent = 100;
                             this.progressStatusText = 'Gagal Diproses!';
                             setTimeout(() => {
-                                alert(result.message || 'Terjadi kesalahan saat memproses transfer massal.');
                                 this.isProcessingMulti = false;
                                 this.progressPercent = 0;
+                                if (typeof window.showErrorAlert === 'function') {
+                                    window.showErrorAlert(result.message || 'Terjadi kesalahan saat memproses transfer massal.', 'Transfer Gagal');
+                                } else {
+                                    alert(result.message || 'Terjadi kesalahan saat memproses transfer massal.');
+                                }
                             }, 300);
                         } else {
                             this.progressPercent = 100;
                             this.progressStatusText = 'Transfer Selesai 100%!';
                             setTimeout(() => {
-                                alert(result.message);
-                                window.location.reload();
-                            }, 500);
+                                this.multiModalOpen = false;
+                                if (typeof window.showSuccessAlert === 'function') {
+                                    window.showSuccessAlert(result.message, 'Transfer Multi Berhasil!', { reload: true });
+                                } else {
+                                    alert(result.message);
+                                    window.location.reload();
+                                }
+                            }, 400);
                         }
                     } catch (err) {
                         clearInterval(progressTimer);
+                        if (typeof window.hideLoading === 'function') {
+                            window.hideLoading();
+                        }
                         this.progressPercent = 0;
                         this.isProcessingMulti = false;
-                        alert('Koneksi terputus atau server error: ' + err.message + '\n\nSeluruh data dibatalkan secara aman (tidak ada saldo gantung).');
+                        const errorMsg = 'Koneksi terputus atau server error: ' + err.message + '\n\nSeluruh data dibatalkan secara aman (tidak ada saldo gantung).';
+                        if (typeof window.showErrorAlert === 'function') {
+                            window.showErrorAlert(errorMsg, 'Kesalahan Jaringan / Server');
+                        } else {
+                            alert(errorMsg);
+                        }
                     }
                 }
             };
