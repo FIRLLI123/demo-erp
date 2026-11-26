@@ -145,13 +145,21 @@ class FinanceController extends Controller
             ->orderBy('name')
             ->get();
 
+        // 6. Master Rekening Bank Perusahaan Aktif (untuk pilihan setor kas BBM & transfer TTK)
+        $companyBanks = DB::table('company_banks')
+            ->where('status', 'ACTIVE')
+            ->where('account_type', 'BANK')
+            ->orderBy('bank_name')
+            ->get();
+
         return view('finance.index', [
             'receivables' => $receivablesRaw,
             'payments' => $paymentsRaw,
             'bankReceipts' => $bankReceiptsRaw,
             'pendingCashTtk' => $pendingCashTtk,
             'unpaidReceivables' => $unpaidReceivables,
-            'customersWithUnpaidAr' => $customersWithUnpaidAr
+            'customersWithUnpaidAr' => $customersWithUnpaidAr,
+            'companyBanks' => $companyBanks,
         ]);
     }
 
@@ -248,14 +256,6 @@ class FinanceController extends Controller
 
                 $finalBankName = $bankName;
                 $finalAccountNum = $accountNumber;
-
-                if ($paymentMethod === 'DEPOSIT') {
-                    $finalBankName = 'SALDO TITIPAN PELANGGAN';
-                    $finalAccountNum = 'DEPOSIT-SALDO';
-                } elseif ($paymentMethod === 'RETURN_DEDUCTION') {
-                    $finalBankName = 'POTONGAN NOTA RETUR';
-                    $finalAccountNum = 'DEDUCTION-RETUR';
-                }
 
                 DB::table('bank_receipts')->insert([
                     'doc_type' => 'BBM',

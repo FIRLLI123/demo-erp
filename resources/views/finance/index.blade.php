@@ -109,13 +109,12 @@
                             <label class="block text-xs font-bold text-slate-700 mb-1">
                                 Rekening Bank Operasional Tujuan <span class="text-rose-500">*</span>
                             </label>
-                            <select x-model="selectedBankOption" 
-                                    @change="onBankOptionChange()"
+                            <select x-model="selectedBankId" 
+                                    @change="onBankSelectionChange('BBM')"
                                     class="w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="BCA">BCA Operasional TAP - 711-0988-234</option>
-                                <option value="MANDIRI">Bank Mandiri TAP - 137-00-1928374-1</option>
-                                <option value="BRI">BRI Operasional TAP - 0341-01-002938-50-3</option>
-                                <option value="BNI">BNI Operasional TAP - 089-234-8891</option>
+                                <template x-for="b in companyBanks" :key="b.id">
+                                    <option :value="b.id" x-text="`${b.bank_name} - ${b.account_number} (${b.account_holder})`"></option>
+                                </template>
                             </select>
                             <input type="hidden" name="bank_name" :value="bbmBankName">
                             <input type="hidden" name="account_number" :value="bbmAccountNumber">
@@ -393,10 +392,8 @@
                                 x-model="paymentMethod" 
                                 required 
                                 class="w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            <option value="CASH">Uang Tunai (Kasir TAP - BBM dibuat terpisah)</option>
-                            <option value="TRANSFER">Transfer Bank (BBM Non Tunai Otomatis)</option>
-                            <option value="DEPOSIT">Saldo Titipan Pelanggan (BBM Non Tunai Otomatis)</option>
-                            <option value="RETURN_DEDUCTION">Potongan Nota Retur (BBM Non Tunai Otomatis)</option>
+                            <option value="CASH">Tunai (Kasir TAP - Perlu Setor BBM)</option>
+                            <option value="TRANSFER">Non Tunai / Transfer Bank (BBM Otomatis)</option>
                         </select>
                     </div>
 
@@ -406,26 +403,25 @@
                         <div>
                             <span class="font-extrabold block text-amber-950">Pembayaran Kasir Tunai (Physical Cash)</span>
                             <span class="text-[11px] text-amber-800 leading-relaxed block mt-0.5">
-                                Uang fisik disimpan di brankas/kasir TAP. Dokumen TTK diterbitkan untuk toko. <strong>BBM Tunai TIDAK otomatis dibuat sekarang</strong>, melainkan diterbitkan di tab <b>Bukti Bank Masuk (BBM)</b> saat uang kas disetorkan ke rekening bank.
+                                Uang fisik disimpan di brankas/kasir TAP. <strong>BBM Tunai TIDAK langsung dibuat</strong>, melainkan disetorkan nanti melalui tab <b>Bukti Bank Masuk (BBM)</b> saat uang kas disetor ke bank.
                             </span>
                         </div>
                     </div>
 
                     <!-- Input Bank Penerima jika NON-TUNAI -->
-                    <div x-show="paymentMethod !== 'CASH'">
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Bank Penerima</label>
-                        <input type="text" 
-                               name="bank_name" 
-                               value="BCA Operasional TAP" 
-                               class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none">
-                    </div>
-
-                    <div x-show="paymentMethod !== 'CASH'">
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Rekening Bank</label>
-                        <input type="text" 
-                               name="account_number" 
-                               value="711-0988-234" 
-                               class="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none font-mono">
+                    <div x-show="paymentMethod !== 'CASH'" class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Rekening Bank Penerima (Master Bank) <span class="text-rose-500">*</span>
+                        </label>
+                        <select x-model="selectedTtkBankId" 
+                                @change="onBankSelectionChange('TTK')"
+                                class="w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <template x-for="b in companyBanks" :key="b.id">
+                                <option :value="b.id" x-text="`${b.bank_name} - ${b.account_number} (${b.account_holder})`"></option>
+                            </template>
+                        </select>
+                        <input type="hidden" name="bank_name" :value="ttkBankName">
+                        <input type="hidden" name="account_number" :value="ttkAccountNumber">
                     </div>
 
                     <div class="md:col-span-3">
@@ -1044,17 +1040,36 @@
                 bankReceiptsList: @json($bankReceipts),
                 paymentsList: @json($payments),
                 pendingCashTtkList: @json($pendingCashTtk),
+                companyBanks: @json($companyBanks),
 
                 customerArList: [],
                 selectedAllocations: {}, // format: { arId: { selected: true/false, amount: 100000 } }
 
+                // Bank Selection State
+                selectedBankId: '',
+                bbmBankName: '',
+                bbmAccountNumber: '',
+
+                selectedTtkBankId: '',
+                ttkBankName: '',
+                ttkAccountNumber: '',
+
                 // BBM Tunai State
                 selectedCashTtkIds: [],
-                selectedBankOption: 'BCA',
-                bbmBankName: 'BCA Operasional TAP',
-                bbmAccountNumber: '711-0988-234',
 
                 initData() {
+                    // Inisialisasi default bank dari master company_banks
+                    if (this.companyBanks && this.companyBanks.length > 0) {
+                        const defaultBank = this.companyBanks[0];
+                        this.selectedBankId = defaultBank.id;
+                        this.bbmBankName = defaultBank.bank_name;
+                        this.bbmAccountNumber = defaultBank.account_number;
+
+                        this.selectedTtkBankId = defaultBank.id;
+                        this.ttkBankName = defaultBank.bank_name;
+                        this.ttkAccountNumber = defaultBank.account_number;
+                    }
+
                     const firstAr = @json($receivables->first());
                     if (firstAr) this.selectedAr = firstAr;
 
@@ -1090,19 +1105,19 @@
                         .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
                 },
 
-                onBankOptionChange() {
-                    if (this.selectedBankOption === 'BCA') {
-                        this.bbmBankName = 'BCA Operasional TAP';
-                        this.bbmAccountNumber = '711-0988-234';
-                    } else if (this.selectedBankOption === 'MANDIRI') {
-                        this.bbmBankName = 'Bank Mandiri TAP';
-                        this.bbmAccountNumber = '137-00-1928374-1';
-                    } else if (this.selectedBankOption === 'BRI') {
-                        this.bbmBankName = 'BRI Operasional TAP';
-                        this.bbmAccountNumber = '0341-01-002938-50-3';
-                    } else if (this.selectedBankOption === 'BNI') {
-                        this.bbmBankName = 'BNI Operasional TAP';
-                        this.bbmAccountNumber = '089-234-8891';
+                onBankSelectionChange(target) {
+                    if (target === 'BBM') {
+                        const bank = this.companyBanks.find(b => b.id == this.selectedBankId);
+                        if (bank) {
+                            this.bbmBankName = bank.bank_name;
+                            this.bbmAccountNumber = bank.account_number;
+                        }
+                    } else if (target === 'TTK') {
+                        const bank = this.companyBanks.find(b => b.id == this.selectedTtkBankId);
+                        if (bank) {
+                            this.ttkBankName = bank.bank_name;
+                            this.ttkAccountNumber = bank.account_number;
+                        }
                     }
                 },
 
