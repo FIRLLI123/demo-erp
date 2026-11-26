@@ -143,34 +143,45 @@
                 <!-- Header Info (Rute & Tanggal) -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Gudang Asal (Source) <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Gudang Asal (Source) <span class="text-rose-500">*</span>
+                        </label>
                         <select name="source_warehouse_id" 
                                 x-model="sourceWhId" 
-                                @change="onWarehouseChange()"
+                                @change="onSourceWarehouseChange()"
                                 required 
                                 class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 cursor-pointer shadow-2xs">
                             <option value="">-- Pilih Gudang Asal --</option>
-                            @foreach($warehouses as $wh)
-                                <option value="{{ $wh->id }}">
-                                    [{{ $wh->type }}] {{ $wh->name }} ({{ $wh->tap_name }})
-                                </option>
-                            @endforeach
+                            <template x-for="wh in allWarehouses" :key="wh.id">
+                                <option :value="wh.id" x-text="`[${wh.type}] ${wh.name} (${wh.tap_name} - ${wh.area_name || ''})`"></option>
+                            </template>
                         </select>
+                        <template x-if="sourceWhAreaName">
+                            <span class="text-[10px] text-cyan-700 font-bold mt-1 block">
+                                Wilayah Area: <span x-text="sourceWhAreaName"></span>
+                            </span>
+                        </template>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Gudang Tujuan (Destination) <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Gudang Tujuan (Destination) <span class="text-rose-500">*</span>
+                        </label>
                         <select name="destination_warehouse_id" 
                                 x-model="destWhId" 
                                 required 
-                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 cursor-pointer shadow-2xs">
-                            <option value="">-- Pilih Gudang Tujuan --</option>
-                            @foreach($warehouses as $wh)
-                                <option value="{{ $wh->id }}" :disabled="destWhId == {{ $wh->id }} && sourceWhId == {{ $wh->id }}">
-                                    [{{ $wh->type }}] {{ $wh->name }} ({{ $wh->tap_name }})
-                                </option>
-                            @endforeach
+                                :disabled="!sourceWhId"
+                                class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 cursor-pointer shadow-2xs disabled:bg-slate-100 disabled:text-slate-400">
+                            <option value="" x-text="sourceWhId ? '-- Pilih Gudang Tujuan (Area Sama) --' : '-- Pilih Gudang Asal Dulu --'"></option>
+                            <template x-for="wh in availableDestinationWarehouses" :key="wh.id">
+                                <option :value="wh.id" :disabled="wh.id == sourceWhId" x-text="`[${wh.type}] ${wh.name} (${wh.tap_name})`"></option>
+                            </template>
                         </select>
+                        <template x-if="sourceWhId">
+                            <span class="text-[10px] text-slate-500 font-medium mt-1 block">
+                                Menampilkan <strong class="text-slate-800" x-text="availableDestinationWarehouses.length"></strong> gudang dalam <strong class="text-cyan-800" x-text="sourceWhAreaName"></strong>
+                            </span>
+                        </template>
                     </div>
 
                     <div>
@@ -706,6 +717,7 @@
                 destWhId: '',
 
                 // Master Data
+                allWarehouses: @json($warehouses ?? []),
                 allMovements: @json($movements ?? []),
                 allAreas: @json($areas ?? []),
                 allClusters: @json($clusters ?? []),
@@ -1006,11 +1018,45 @@
                     }
                 },
 
-                onWarehouseChange() {
+                onSourceWarehouseChange() {
+                    const self = this;
+                    // Reset tujuan jika tidak satu area dengan sumber yang baru dipilih
+                    if (this.sourceWhId && this.destWhId) {
+                        const srcWh = this.allWarehouses.find(w => w.id == self.sourceWhId);
+                        const dstWh = this.allWarehouses.find(w => w.id == self.destWhId);
+                        if (!srcWh || !dstWh || srcWh.area_id !== dstWh.area_id || self.sourceWhId == self.destWhId) {
+                            this.destWhId = '';
+                        }
+                    } else {
+                        this.destWhId = '';
+                    }
+
                     this.items.forEach(function(row) {
                         row.selected_iccids = [];
                         row.iccid_text = '';
                     });
+                },
+
+                get currentSourceWarehouse() {
+                    if (!this.sourceWhId) return null;
+                    return this.allWarehouses.find(w => w.id == this.sourceWhId);
+                },
+
+                get sourceWhAreaName() {
+                    const src = this.currentSourceWarehouse;
+                    return src ? (src.area_name || '') : '';
+                },
+
+                get availableDestinationWarehouses() {
+                    if (!this.sourceWhId) return [];
+                    const src = this.currentSourceWarehouse;
+                    if (!src || !src.area_id) return [];
+                    // Filter: hanya gudang dalam Area yang sama
+                    return this.allWarehouses.filter(w => w.area_id == src.area_id && w.id != src.id);
+                },
+
+                onWarehouseChange() {
+                    this.onSourceWarehouseChange();
                 },
 
                 getAvailableStock(productId) {

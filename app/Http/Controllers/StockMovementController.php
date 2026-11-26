@@ -134,11 +134,14 @@ class StockMovementController extends Controller
         $whQuery = DB::table('warehouses')
             ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->join('areas', 'clusters.area_id', '=', 'areas.id')
             ->where('warehouses.status', 'ACTIVE')
             ->select(
                 'warehouses.*',
                 'taps.name as tap_name',
-                'clusters.name as cluster_name'
+                'clusters.name as cluster_name',
+                'clusters.area_id',
+                'areas.name as area_name'
             );
 
         $warehouses = TerritoryScope::applyWarehouseScope($whQuery, 'warehouses.id')
@@ -260,11 +263,27 @@ class StockMovementController extends Controller
             return redirect()->back()->with('error', 'Pilih minimal 1 item produk untuk dipindahkan!');
         }
 
-        $sourceWh = DB::table('warehouses')->where('id', $sourceWhId)->first();
-        $destWh = DB::table('warehouses')->where('id', $destWhId)->first();
+        $sourceWh = DB::table('warehouses')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->where('warehouses.id', $sourceWhId)
+            ->select('warehouses.*', 'clusters.area_id')
+            ->first();
+
+        $destWh = DB::table('warehouses')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->where('warehouses.id', $destWhId)
+            ->select('warehouses.*', 'clusters.area_id')
+            ->first();
 
         if (!$sourceWh || !$destWh) {
             return redirect()->back()->with('error', 'Data gudang tidak valid!');
+        }
+
+        // Validasi Area: Mutasi stok (SM) hanya diperbolehkan antar gudang dalam 1 Area yang sama
+        if ($sourceWh->area_id !== $destWh->area_id) {
+            return redirect()->back()->with('error', 'Gudang tujuan harus berada dalam Area wilayah yang sama dengan gudang asal!');
         }
 
         DB::beginTransaction();
