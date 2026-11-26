@@ -181,19 +181,45 @@
                             <input type="text" name="phone" placeholder="" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
                         </div>
 
+                        <!-- Spinner Wilayah Berjenjang: Provinsi -> Kota/Kab -> Kecamatan -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
-                            <input type="text" name="kecamatan_name" placeholder="" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
+                            <select name="provinsi_name" 
+                                    x-model="createRegion.provinsi_name"
+                                    @change="onCreateProvinsiChange()"
+                                    class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer">
+                                <option value="">-- Pilih Provinsi --</option>
+                                <template x-for="p in masterProvinsi" :key="p.id">
+                                    <option :value="p.name" x-text="p.name"></option>
+                                </template>
+                            </select>
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Kota / Kabupaten</label>
-                            <input type="text" name="kota_name" placeholder="" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <select name="kota_name" 
+                                    x-model="createRegion.kota_name"
+                                    @change="onCreateKotaChange()"
+                                    :disabled="!createRegion.provinsi_name"
+                                    class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400">
+                                <option value="">-- Pilih Kota / Kab --</option>
+                                <template x-for="k in createKotaOptions" :key="k.id">
+                                    <option :value="k.name" x-text="k.name"></option>
+                                </template>
+                            </select>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
-                            <input type="text" name="provinsi_name" placeholder="" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
+                            <select name="kecamatan_name" 
+                                    x-model="createRegion.kecamatan_name"
+                                    :disabled="!createRegion.kota_name"
+                                    class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400">
+                                <option value="">-- Pilih Kecamatan --</option>
+                                <template x-for="c in createKecamatanOptions" :key="c.id">
+                                    <option :value="c.name" x-text="c.name"></option>
+                                </template>
+                            </select>
                         </div>
 
                         <div>
@@ -365,23 +391,48 @@
 
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                                     <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WA</label>
-                                        <input type="text" name="phone" x-model="editData.phone" class="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
-                                        <input type="text" name="kecamatan_name" x-model="editData.kecamatan_name" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
+                                        <select name="provinsi_name" 
+                                                x-model="editData.provinsi_name"
+                                                @change="onEditProvinsiChange()"
+                                                class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 cursor-pointer">
+                                            <option value="">-- Pilih Provinsi --</option>
+                                            <template x-for="p in masterProvinsi" :key="p.id">
+                                                <option :value="p.name" x-text="p.name" :selected="editData && editData.provinsi_name === p.name"></option>
+                                            </template>
+                                        </select>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Kota / Kabupaten</label>
-                                        <input type="text" name="kota_name" x-model="editData.kota_name" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <select name="kota_name" 
+                                                x-model="editData.kota_name"
+                                                @change="onEditKotaChange()"
+                                                :disabled="!editData || !editData.provinsi_name"
+                                                class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400">
+                                            <option value="">-- Pilih Kota / Kab --</option>
+                                            <template x-for="k in editKotaOptions" :key="k.id">
+                                                <option :value="k.name" x-text="k.name" :selected="editData && editData.kota_name === k.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
+                                        <select name="kecamatan_name" 
+                                                x-model="editData.kecamatan_name"
+                                                :disabled="!editData || !editData.kota_name"
+                                                class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400">
+                                            <option value="">-- Pilih Kecamatan --</option>
+                                            <template x-for="c in editKecamatanOptions" :key="c.id">
+                                                <option :value="c.name" x-text="c.name" :selected="editData && editData.kecamatan_name === c.name"></option>
+                                            </template>
+                                        </select>
                                     </div>
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                                     <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
-                                        <input type="text" name="provinsi_name" x-model="editData.provinsi_name" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WA</label>
+                                        <input type="text" name="phone" x-model="editData.phone" class="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2">
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Lengkap</label>
@@ -855,6 +906,69 @@
                 isDigipos: true,
                 editModalOpen: false,
                 editData: null,
+
+                // Master Wilayah Indonesia (Tabel: master_provinsi, master_kota_kab, master_kecamatan)
+                masterProvinsi: @json($masterProvinsi ?? []),
+                masterKotaKab: @json($masterKotaKab ?? []),
+                masterKecamatan: @json($masterKecamatan ?? []),
+
+                // Form Tambah Region State
+                createRegion: {
+                    provinsi_name: 'Jawa Barat',
+                    kota_name: '',
+                    kecamatan_name: ''
+                },
+
+                get createKotaOptions() {
+                    if (!this.createRegion.provinsi_name) return [];
+                    const prov = this.masterProvinsi.find(p => p.name === this.createRegion.provinsi_name);
+                    if (!prov) return [];
+                    return this.masterKotaKab.filter(k => k.provinsi_id == prov.id);
+                },
+
+                get createKecamatanOptions() {
+                    if (!this.createRegion.kota_name) return [];
+                    const kota = this.masterKotaKab.find(k => k.name === this.createRegion.kota_name);
+                    if (!kota) return [];
+                    return this.masterKecamatan.filter(c => c.kota_kab_id == kota.id);
+                },
+
+                onCreateProvinsiChange() {
+                    this.createRegion.kota_name = '';
+                    this.createRegion.kecamatan_name = '';
+                },
+
+                onCreateKotaChange() {
+                    this.createRegion.kecamatan_name = '';
+                },
+
+                // Modal Edit Region Cascading Computed
+                get editKotaOptions() {
+                    if (!this.editData || !this.editData.provinsi_name) return [];
+                    const prov = this.masterProvinsi.find(p => p.name === this.editData.provinsi_name);
+                    if (!prov) return [];
+                    return this.masterKotaKab.filter(k => k.provinsi_id == prov.id);
+                },
+
+                get editKecamatanOptions() {
+                    if (!this.editData || !this.editData.kota_name) return [];
+                    const kota = this.masterKotaKab.find(k => k.name === this.editData.kota_name);
+                    if (!kota) return [];
+                    return this.masterKecamatan.filter(c => c.kota_kab_id == kota.id);
+                },
+
+                onEditProvinsiChange() {
+                    if (this.editData) {
+                        this.editData.kota_name = '';
+                        this.editData.kecamatan_name = '';
+                    }
+                },
+
+                onEditKotaChange() {
+                    if (this.editData) {
+                        this.editData.kecamatan_name = '';
+                    }
+                },
 
                 // Cascading Filter & Pagination Server-Side (Sinkron dengan x-filter-territory)
                 allClusters: @json($clusters),

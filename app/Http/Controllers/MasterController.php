@@ -1262,7 +1262,15 @@ class MasterController extends Controller
             'sales.tap_id'
         )->get();
 
-        return view('master.customers', compact('customers', 'areas', 'clusters', 'taps', 'salesList', 'perPage'));
+        // Data Master Wilayah Indonesia (Tabel master_provinsi, master_kota_kab, master_kecamatan)
+        $masterProvinsi = DB::table('master_provinsi')->orderBy('name')->get();
+        $masterKotaKab = DB::table('master_kota_kab')->orderBy('name')->get();
+        $masterKecamatan = DB::table('master_kecamatan')->orderBy('name')->get();
+
+        return view('master.customers', compact(
+            'customers', 'areas', 'clusters', 'taps', 'salesList', 'perPage',
+            'masterProvinsi', 'masterKotaKab', 'masterKecamatan'
+        ));
     }
 
     /**
