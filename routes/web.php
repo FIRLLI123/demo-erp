@@ -130,6 +130,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [StockMovementController::class, 'index'])->name('index');
         Route::post('/store', [StockMovementController::class, 'store'])->name('store');
         Route::get('/download-template', [StockMovementController::class, 'downloadTemplate'])->name('download-template');
+        Route::get('/download-multi-template', [StockMovementController::class, 'downloadMultiTemplate'])->name('download-multi-template');
+        Route::post('/preview-multi', [StockMovementController::class, 'previewMulti'])->name('preview-multi');
+        Route::post('/store-multi', [StockMovementController::class, 'storeMulti'])->name('store-multi');
     });
 
     // Inventory (Stock, ICCID, SM, Repack)

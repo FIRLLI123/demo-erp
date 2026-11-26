@@ -25,10 +25,16 @@
                     <span>Rekap Laporan SM (Excel/PDF)</span>
                 </a>
                 <button type="button" 
-                        @click="createSmOpen = !createSmOpen" 
+                        @click="openMultiModal()" 
+                        class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer">
+                    <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-100"></i>
+                    <span>Upload SM Multi (Excel)</span>
+                </button>
+                <button type="button" 
+                        @click="createSmOpen = !createSmOpen; multiModalOpen = false" 
                         class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer">
                     <i data-lucide="plus-circle" class="w-4 h-4 text-cyan-400"></i>
-                    <span x-text="createSmOpen ? 'Tutup Formulir' : '+ Buat SM Baru'"></span>
+                    <span x-text="createSmOpen ? 'Tutup Formulir' : '+ Buat SM Manual'"></span>
                 </button>
             </div>
         </div>
@@ -703,6 +709,221 @@
             </div>
         </div>
 
+        <!-- ============================================== -->
+        <!-- MODAL SM MULTI (UPLOAD EXCEL & VALIDASI)       -->
+        <!-- ============================================== -->
+        <template x-if="multiModalOpen">
+            <div @click.self="if (!isProcessingMulti) multiModalOpen = false"
+                 class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="bg-white rounded-3xl border border-slate-200 max-w-4xl w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+                    
+                    <!-- Header Modal -->
+                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                        <div>
+                            <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                                <i data-lucide="layers" class="w-4 h-4 text-emerald-600"></i>
+                                <span>Transfer Massal Antar Gudang (SM Multi)</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Pindahkan banyak jenis barang sekaligus menggunakan file Excel/CSV</p>
+                        </div>
+                        <button type="button" 
+                                :disabled="isProcessingMulti"
+                                @click="multiModalOpen = false" 
+                                class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer disabled:opacity-50">&times;</button>
+                    </div>
+
+                    <!-- Step 1: Pengaturan Sumber & File Upload -->
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Gudang Asal (Sumber Stok) <span class="text-rose-500">*</span>
+                                </label>
+                                <select x-model="multiSourceWhId" 
+                                        :disabled="isProcessingMulti || multiPreviewData !== null"
+                                        @change="onMultiSourceChange()"
+                                        class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer disabled:bg-slate-100">
+                                    <option value="">-- Pilih Gudang Asal --</option>
+                                    <template x-for="wh in allWarehouses" :key="wh.id">
+                                        <option :value="wh.id" x-text="`[${wh.type}] ${wh.name} (${wh.tap_name})`"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Tanggal Mutasi <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="date" 
+                                       x-model="multiMovementDate" 
+                                       :disabled="isProcessingMulti || multiPreviewData !== null"
+                                       class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Dokumen</label>
+                                <input type="text" 
+                                       x-model="multiNotes" 
+                                       :disabled="isProcessingMulti || multiPreviewData !== null"
+                                       placeholder="e.g. Dropping Stok Massal Cluster" 
+                                       class="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100">
+                            </div>
+                        </div>
+
+                        <!-- Panel File Upload & Download Template -->
+                        <div x-show="!multiPreviewData" class="p-6 rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 text-center transition-all bg-white">
+                            <div class="max-w-md mx-auto">
+                                <i data-lucide="file-spreadsheet" class="w-10 h-10 text-emerald-600 mx-auto mb-2"></i>
+                                <h4 class="font-bold text-slate-800 text-xs mb-1">Pilih File Excel / CSV Hasil Pengisian Template</h4>
+                                <p class="text-[11px] text-slate-500 mb-4">Format kolom: <code>id_item | qty | warehouse_tujuan</code></p>
+                                
+                                <div class="flex items-center justify-center gap-3 flex-wrap">
+                                    <a href="{{ route('stock-movement.download-multi-template') }}" 
+                                       class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all">
+                                        <i data-lucide="download" class="w-3.5 h-3.5 text-slate-600"></i>
+                                        <span>Unduh Template Excel (2 Sheet)</span>
+                                    </a>
+
+                                    <label class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                           :class="!multiSourceWhId ? 'opacity-50 pointer-events-none' : ''">
+                                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                        <span>Pilih File & Preview</span>
+                                        <input type="file" 
+                                               accept=".xlsx,.xls,.csv" 
+                                               @change="handleFileUpload($event)" 
+                                               class="hidden">
+                                    </label>
+                                </div>
+                                <span x-show="!multiSourceWhId" class="text-[10px] text-amber-700 font-bold block mt-2">
+                                    *Pilih Gudang Asal terlebih dahulu sebelum mengunggah file
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Panel Loading / Validasi File -->
+                        <div x-show="isValidatingFile" class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200">
+                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mb-2"></div>
+                            <h5 class="text-xs font-extrabold text-slate-800">Memeriksa & Memvalidasi Isi File...</h5>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Memeriksa ketersediaan stok di gudang asal dan validasi area gudang tujuan</p>
+                        </div>
+
+                        <!-- Step 2: TABEL PREVIEW HASIL VALIDASI -->
+                        <div x-show="multiPreviewData && !isValidatingFile" class="space-y-3">
+                            <!-- Summary Bar -->
+                            <div class="p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                                 :class="multiPreviewData && multiPreviewData.has_errors ? 'bg-rose-50 border border-rose-200 text-rose-900' : 'bg-emerald-50 border border-emerald-200 text-emerald-900'">
+                                <div class="flex items-center gap-2">
+                                    <i :data-lucide="multiPreviewData && multiPreviewData.has_errors ? 'alert-octagon' : 'check-circle-2'" 
+                                       class="w-5 h-5"
+                                       :class="multiPreviewData && multiPreviewData.has_errors ? 'text-rose-600' : 'text-emerald-600'"></i>
+                                    <div>
+                                        <span class="font-extrabold block" x-text="multiPreviewData && multiPreviewData.has_errors ? 'Terdapat data tidak valid! Perbaiki file sebelum melanjutkan.' : 'Seluruh data valid dan siap dipindahkan!'"></span>
+                                        <span class="text-[11px] opacity-80" x-text="`Total: ${multiPreviewData ? multiPreviewData.total_rows : 0} baris (${multiPreviewData ? multiPreviewData.valid_rows_count : 0} Valid, ${multiPreviewData ? (multiPreviewData.total_rows - multiPreviewData.valid_rows_count) : 0} Error) &bull; Volume: ${multiPreviewData ? multiPreviewData.total_pcs.toLocaleString('id-ID') : 0} pcs`"></span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button type="button" 
+                                            @click="resetMultiUpload()" 
+                                            class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold border border-slate-200">
+                                        Ganti File
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Preview Table -->
+                            <div class="border border-slate-200 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 sticky top-0 z-10">
+                                        <tr>
+                                            <th class="py-2.5 px-3 w-12 text-center">Baris</th>
+                                            <th class="py-2.5 px-3">SKU & Nama Produk</th>
+                                            <th class="py-2.5 px-3 text-right">Stok Asal</th>
+                                            <th class="py-2.5 px-3 text-center">Qty Pindah</th>
+                                            <th class="py-2.5 px-3">Gudang Tujuan</th>
+                                            <th class="py-2.5 px-3 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 font-medium">
+                                        <template x-if="multiPreviewData">
+                                            <template x-for="row in multiPreviewData.rows" :key="row.line">
+                                                <tr :class="row.is_valid ? 'hover:bg-slate-50' : 'bg-rose-50/60'">
+                                                    <td class="py-2.5 px-3 text-center font-mono text-slate-400" x-text="row.line"></td>
+                                                    <td class="py-2.5 px-3">
+                                                        <span class="font-bold text-slate-900 block" x-text="row.product_name"></span>
+                                                        <span class="font-mono text-[10px] text-slate-500" x-text="`ID: ${row.item_id} &bull; ${row.sku}`"></span>
+                                                    </td>
+                                                    <td class="py-2.5 px-3 text-right font-mono font-semibold text-slate-700" x-text="`${row.available_stock.toLocaleString('id-ID')} pcs`"></td>
+                                                    <td class="py-2.5 px-3 text-center font-mono font-extrabold text-cyan-800" x-text="`${row.qty.toLocaleString('id-ID')} pcs`"></td>
+                                                    <td class="py-2.5 px-3">
+                                                        <span class="font-semibold text-slate-800 text-xs block" x-text="row.dest_wh_name"></span>
+                                                    </td>
+                                                    <td class="py-2.5 px-3 text-center">
+                                                        <template x-if="row.is_valid">
+                                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                                VALID
+                                                            </span>
+                                                        </template>
+                                                        <template x-if="!row.is_valid">
+                                                            <div>
+                                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 block mb-1">
+                                                                    ERROR
+                                                                </span>
+                                                                <span class="text-[10px] text-rose-700 font-semibold block text-left" x-text="row.errors.join('; ')"></span>
+                                                            </div>
+                                                        </template>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: ANIMASI MODERN PROGRESS BAR PROSES SM MULTI -->
+                        <div x-show="isProcessingMulti" class="p-6 rounded-2xl bg-slate-900 text-white shadow-xl space-y-4">
+                            <div class="flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></div>
+                                    <span class="font-extrabold tracking-wide text-emerald-400 uppercase text-[10px]" x-text="progressStatusText"></span>
+                                </div>
+                                <span class="font-mono font-extrabold text-white text-sm" x-text="`${progressPercent}%`"></span>
+                            </div>
+
+                            <!-- Progress Track -->
+                            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                                <div class="h-full bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-400 rounded-full transition-all duration-300 ease-out shadow-xs"
+                                     :style="`width: ${progressPercent}%`"></div>
+                            </div>
+
+                            <p class="text-[11px] text-slate-400 text-center font-medium">
+                                Harap tunggu, transaksi atomik sedang mengeksekusi perpindahan saldo & pencatatan kartu stok...
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Footer Action -->
+                    <div class="flex items-center justify-end gap-3 pt-4 mt-4 border-t border-slate-100">
+                        <button type="button" 
+                                :disabled="isProcessingMulti"
+                                @click="multiModalOpen = false" 
+                                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer disabled:opacity-50">
+                            Tutup
+                        </button>
+
+                        <button type="button" 
+                                x-show="multiPreviewData && !multiPreviewData.has_errors && !isProcessingMulti"
+                                @click="confirmAndExecuteMulti()"
+                                class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            <span>Konfirmasi & Eksekusi Transfer</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </template>
+
     </div>
 
     @push('scripts')
@@ -725,6 +946,17 @@
                 allProducts: @json($products ?? []),
                 stockBalances: @json($stockBalances ?? []),
                 availableIccids: @json($availableIccids ?? []),
+
+                // SM Multi State
+                multiModalOpen: false,
+                multiSourceWhId: '',
+                multiMovementDate: '{{ date('Y-m-d') }}',
+                multiNotes: 'Transfer Stok Massal (SM Multi)',
+                multiPreviewData: null,
+                isValidatingFile: false,
+                isProcessingMulti: false,
+                progressPercent: 0,
+                progressStatusText: 'Menyiapkan Data...',
 
                 // Filter States (Client-Side)
                 startDate: '',
@@ -1090,6 +1322,160 @@
                         return s.trim();
                     }).filter(Boolean);
                     return items.length;
+                },
+
+                // SM Multi Methods
+                openMultiModal() {
+                    this.multiModalOpen = true;
+                    this.createSmOpen = false;
+                    this.resetMultiUpload();
+                    this.refreshIcons();
+                },
+
+                onMultiSourceChange() {
+                    this.multiPreviewData = null;
+                },
+
+                resetMultiUpload() {
+                    this.multiPreviewData = null;
+                    this.isValidatingFile = false;
+                    this.isProcessingMulti = false;
+                    this.progressPercent = 0;
+                    this.refreshIcons();
+                },
+
+                async handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    if (!this.multiSourceWhId) {
+                        alert('Silakan pilih Gudang Asal terlebih dahulu!');
+                        event.target.value = '';
+                        return;
+                    }
+
+                    this.isValidatingFile = true;
+                    this.multiPreviewData = null;
+
+                    const formData = new FormData();
+                    formData.append('source_warehouse_id', this.multiSourceWhId);
+                    formData.append('file', file);
+                    formData.append('_token', '{{ csrf_token() }}');
+
+                    try {
+                        const response = await fetch('{{ route('stock-movement.preview-multi') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                            },
+                            body: formData
+                        });
+
+                        const res = await response.json();
+
+                        if (!response.ok || !res.success) {
+                            alert(res.message || 'Gagal membaca atau memvalidasi file Excel.');
+                            this.resetMultiUpload();
+                        } else {
+                            this.multiPreviewData = res;
+                        }
+                    } catch (err) {
+                        alert('Terjadi kesalahan jaringan atau server saat membaca file: ' + err.message);
+                        this.resetMultiUpload();
+                    } finally {
+                        this.isValidatingFile = false;
+                        event.target.value = '';
+                        this.refreshIcons();
+                    }
+                },
+
+                confirmAndExecuteMulti() {
+                    if (!this.multiPreviewData || this.multiPreviewData.has_errors) {
+                        alert('Pastikan seluruh data valid sebelum mengeksekusi transfer!');
+                        return;
+                    }
+
+                    const totalPcs = this.multiPreviewData.total_pcs.toLocaleString('id-ID');
+                    const totalRows = this.multiPreviewData.valid_rows_count;
+                    const sourceWh = this.allWarehouses.find(w => w.id == this.multiSourceWhId);
+                    const sourceName = sourceWh ? sourceWh.name : 'Gudang Terpilih';
+
+                    const confirmed = confirm(`Konfirmasi Eksekusi Transfer Massal (SM Multi):\n\n` +
+                        `• Gudang Asal: ${sourceName}\n` +
+                        `• Tanggal: ${this.multiMovementDate}\n` +
+                        `• Total Item: ${totalRows} baris\n` +
+                        `• Total Qty: ${totalPcs} pcs\n\n` +
+                        `Apakah Anda yakin ingin memproses transaksi ini? Saldo stok akan langsung dipindahkan.`);
+
+                    if (!confirmed) return;
+
+                    this.executeMultiStockMovement();
+                },
+
+                async executeMultiStockMovement() {
+                    this.isProcessingMulti = true;
+                    this.progressPercent = 10;
+                    this.progressStatusText = 'Memeriksa Kunci Baris Database...';
+
+                    // Simulasi smooth progress animation
+                    const progressTimer = setInterval(() => {
+                        if (this.progressPercent < 85) {
+                            this.progressPercent += Math.floor(Math.random() * 15) + 5;
+                            if (this.progressPercent > 40 && this.progressPercent < 70) {
+                                this.progressStatusText = 'Memotong Saldo Asal & Menambah Saldo Tujuan...';
+                            } else if (this.progressPercent >= 70) {
+                                this.progressStatusText = 'Mencatat Kartu Stok & Menomori Dokumen...';
+                            }
+                        }
+                    }, 250);
+
+                    try {
+                        const payload = {
+                            source_warehouse_id: this.multiSourceWhId,
+                            movement_date: this.multiMovementDate,
+                            notes: this.multiNotes,
+                            rows: this.multiPreviewData.rows.filter(r => r.is_valid).map(r => ({
+                                item_id: r.item_id,
+                                qty: r.qty,
+                                dest_wh_id: r.dest_wh_id
+                            })),
+                            _token: '{{ csrf_token() }}'
+                        };
+
+                        const response = await fetch('{{ route('stock-movement.store-multi') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        clearInterval(progressTimer);
+                        const result = await response.json();
+
+                        if (!response.ok || !result.success) {
+                            this.progressPercent = 100;
+                            this.progressStatusText = 'Gagal Diproses!';
+                            setTimeout(() => {
+                                alert(result.message || 'Terjadi kesalahan saat memproses transfer massal.');
+                                this.isProcessingMulti = false;
+                                this.progressPercent = 0;
+                            }, 300);
+                        } else {
+                            this.progressPercent = 100;
+                            this.progressStatusText = 'Transfer Selesai 100%!';
+                            setTimeout(() => {
+                                alert(result.message);
+                                window.location.reload();
+                            }, 500);
+                        }
+                    } catch (err) {
+                        clearInterval(progressTimer);
+                        this.progressPercent = 0;
+                        this.isProcessingMulti = false;
+                        alert('Koneksi terputus atau server error: ' + err.message + '\n\nSeluruh data dibatalkan secara aman (tidak ada saldo gantung).');
+                    }
                 }
             };
         }
