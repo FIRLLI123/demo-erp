@@ -121,12 +121,12 @@
                     <!-- 2 KOMPONEN BAHAN REPACK -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                         
-                        <!-- KOMPONEN 1: BAHAN FISIK 0K (ICCID / QUANTITY) -->
+                        <!-- KOMPONEN 1: BAHAN UTAMA / FISIK (ICCID / QUANTITY) -->
                         <div class="border-2 border-slate-200 rounded-2xl p-4 bg-slate-50/50">
                             <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
                                 <div class="flex items-center gap-1.5">
                                     <span class="w-5 h-5 rounded-full bg-amber-500 text-white font-mono font-bold text-[11px] flex items-center justify-center">1</span>
-                                    <span class="text-xs font-extrabold text-slate-800">Komponen Fisik (Kartu 0K / Blank)</span>
+                                    <span class="text-xs font-extrabold text-slate-800">Komponen 1 (Produk / Bahan Fisik)</span>
                                 </div>
                                 @if($iccidEnabled)
                                     <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-100 text-purple-700">Tracking: ICCID</span>
@@ -137,13 +137,13 @@
 
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Pilih Produk Bahan Fisik</label>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Pilih Produk Bahan</label>
                                     <select name="comp1_product_id" 
                                             x-model="comp1Id" 
                                             @change="onComp1Change()"
                                             required 
                                             class="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
-                                        <option value="">-- Pilih Produk Fisik --</option>
+                                        <option value="">-- Pilih Produk Bahan --</option>
                                         @foreach($rawPhysicalProducts as $rp)
                                             <option value="{{ $rp->id }}" data-cost="{{ $rp->cost_price }}" data-sku="{{ $rp->sku }}">
                                                 [{{ $rp->type }}] {{ $rp->name }}

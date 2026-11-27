@@ -88,18 +88,15 @@ class RepackController extends Controller
         TerritoryScope::applyWarehouseScope($whQuery, 'id');
         $warehouses = $whQuery->get();
 
-        // Produk Bahan 1 (Fisik 0K / Blank Card)
+        // Produk Bahan 1 (Semua Produk Aktif: SA, Voucher, Modem, Blank Card, dll.)
         $rawPhysicalQuery = DB::table('products')
             ->where('status', 'ACTIVE');
         if ($iccidEnabled) {
             $rawPhysicalQuery->where('tracking_method', 'ICCID');
         }
-        $rawPhysicalProducts = $rawPhysicalQuery->where(function ($q) {
-                $q->where('sku', 'like', 'RAW%')
-                  ->orWhere('name', 'like', '%0K%')
-                  ->orWhere('name', 'like', '%Blank%')
-                  ->orWhere('type', 'SA');
-            })
+        $rawPhysicalProducts = $rawPhysicalQuery
+            ->orderBy('type')
+            ->orderBy('name')
             ->get();
 
         // Produk Bahan 2 (Bulk Saldo / Pulsa Kuota)
