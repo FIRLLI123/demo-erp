@@ -168,7 +168,7 @@ class FinanceController extends Controller
         $customerId = (int)$request->input('customer_id');
         $paymentDate = $request->input('payment_date', date('Y-m-d'));
         $paymentMethod = $request->input('payment_method', 'CASH');
-        $cashierName = $request->input('cashier_name', 'Kasir Finance TAP');
+        $cashierName = $request->input('cashier_name') ?: (auth()->user()->name ?? 'Kasir');
         $bankName = $request->input('bank_name', 'BCA Operasional TAP');
         $accountNumber = $request->input('account_number', '711-0988-234');
         $notes = $request->input('notes', 'Pelunasan Faktur Piutang via TTK');
