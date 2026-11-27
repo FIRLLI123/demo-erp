@@ -91,46 +91,181 @@ class ReportController extends Controller
         $data = $this->getReportData($reportType, $startDate, $endDate, $tapId, $warehouseId, $format, $areaId, $clusterId);
 
         $formatSuffix = (in_array($reportType, ['PO_GR', 'SM', 'REPACK', 'SALES', 'AR', 'CASH_BANK']) && $format === 'detailed') ? 'Detail_Item' : 'Rekap_Ringkas';
-        $fileName = "Laporan_{$reportType}_{$formatSuffix}_PT_Wahana_Putra_Yudha_" . date('Ymd_His') . ".csv";
+        $fileName = "Laporan_{$reportType}_{$formatSuffix}_PT_Wahana_Putra_Yudha_" . date('Ymd_His') . ".xlsx";
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
-        ];
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle(substr(str_replace(['*', ':', '/', '\\', '?', '[', ']'], '_', $reportType), 0, 31));
 
-        $callback = function () use ($data) {
-            $handle = fopen('php://output', 'w');
-            // Add UTF-8 BOM for Excel
-            fputs($handle, "\xEF\xBB\xBF");
+        // Judul & Header Perusahaan
+        $sheet->setCellValue('A1', 'PT WAHANA PUTRA YUDHA');
+        $sheet->setCellValue('A2', 'TELKOMSEL AUTHORIZED PARTNER');
+        $sheet->setCellValue('A3', $data['title'] ?? 'Laporan ERP');
+        $sheet->setCellValue('A4', 'Periode: ' . date('d-m-Y', strtotime($startDate)) . ' s/d ' . date('d-m-Y', strtotime($endDate)) . ' | Tanggal Cetak: ' . date('d-m-Y H:i:s'));
 
-            // Title and Company Header
-            fputcsv($handle, ['PT WAHANA PUTRA YUDHA']);
-            fputcsv($handle, ['TELKOMSEL AUTHORIZED PARTNER']);
-            fputcsv($handle, [$data['title']]);
-            fputcsv($handle, ['Tanggal Cetak', date('d-m-Y H:i:s')]);
-            fputcsv($handle, []);
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFCC0000'));
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A4')->getFont()->setItalic(true)->setSize(9)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF666666'));
 
-            // Columns Header
-            fputcsv($handle, $data['headers']);
+        // Baris Header Kolom
+        $headerRow = 6;
+        $headers = $data['headers'] ?? [];
+        $colIndex = 1;
+        foreach ($headers as $headerText) {
+            $cellCoord = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex) . $headerRow;
+            $sheet->setCellValue($cellCoord, $headerText);
+            $colIndex++;
+        }
 
-            // Rows
-            foreach ($data['rows'] as $row) {
-                fputcsv($handle, $row);
+        $highestColString = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(max(1, count($headers)));
+
+        // Style Table Header (Dark Blue / Teal styling with white bold text)
+        $sheet->getStyle("A{$headerRow}:{$highestColString}{$headerRow}")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1E293B']
+            ],
+            'alignment' => [
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            ]
+        ]);
+        $sheet->getRowDimension($headerRow)->setRowHeight(26);
+
+        // Baris Data
+        $currentRow = 7;
+        foreach ($data['rows'] as $row) {
+            $colIndex = 1;
+            foreach ($row as $val) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+                $headerName = strtolower($headers[$colIndex - 1] ?? '');
+
+                // Cek apakah kolom ini adalah kolom uang/harga/rupiah atau kuantitas/pcs
+                $isCurrency = (
+                    str_contains($headerName, 'rp') ||
+                    str_contains($headerName, 'harga') ||
+                    str_contains($headerName, 'subtotal') ||
+                    str_contains($headerName, 'total') ||
+                    str_contains($headerName, 'nominal') ||
+                    str_contains($headerName, 'modal') ||
+                    str_contains($headerName, 'penjualan') ||
+                    str_contains($headerName, 'piutang') ||
+                    str_contains($headerName, 'terbayar') ||
+                    str_contains($headerName, 'sisa') ||
+                    str_contains($headerName, 'saldo') ||
+                    str_contains($headerName, 'debet') ||
+                    str_contains($headerName, 'kredit') ||
+                    str_contains($headerName, 'amount')
+                ) && !str_contains($headerName, 'qty') && !str_contains($headerName, 'pcs');
+
+                $isQuantity = str_contains($headerName, 'qty') || str_contains($headerName, 'pcs') || str_contains($headerName, 'kuantitas');
+
+                // Jika nilai dalam format string angka Indonesia (cth: "55.000", "2.910.000,00", dll)
+                $cleanVal = is_string($val) ? trim($val) : $val;
+                if (is_string($cleanVal) && preg_match('/^-?[\d\.]+$/', $cleanVal) && !preg_match('/^[0\.\-]+$/', $cleanVal) && str_contains($cleanVal, '.')) {
+                    // Deteksi angka ribuan dengan titik (cth: "55.000" -> 55000)
+                    $numericVal = (float) str_replace('.', '', $cleanVal);
+                } elseif (is_numeric($cleanVal)) {
+                    $numericVal = (float) $cleanVal;
+                } else {
+                    $numericVal = null;
+                }
+
+                if ($numericVal !== null && ($isCurrency || $isQuantity || is_numeric($cleanVal))) {
+                    $sheet->setCellValueExplicit($colLetter . $currentRow, $numericVal, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                    if ($isCurrency) {
+                        $sheet->getStyle($colLetter . $currentRow)->getNumberFormat()->setFormatCode('#,##0');
+                        $sheet->getStyle($colLetter . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+                    } elseif ($isQuantity) {
+                        $sheet->getStyle($colLetter . $currentRow)->getNumberFormat()->setFormatCode('#,##0');
+                        $sheet->getStyle($colLetter . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+                    }
+                } else {
+                    $sheet->setCellValueExplicit($colLetter . $currentRow, (string)$val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                    // Center align untuk tanggal, status, nomor dokumen pendek
+                    if (str_contains($headerName, 'tanggal') || str_contains($headerName, 'status') || str_contains($headerName, 'channel')) {
+                        $sheet->getStyle($colLetter . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                    }
+                }
+
+                $colIndex++;
+            }
+            $sheet->getRowDimension($currentRow)->setRowHeight(20);
+            $currentRow++;
+        }
+
+        // Summary Row jika ada
+        if (!empty($data['excel_summary'])) {
+            $colIndex = 1;
+            foreach ($data['excel_summary'] as $val) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+                $headerName = strtolower($headers[$colIndex - 1] ?? '');
+
+                $isCurrency = (
+                    str_contains($headerName, 'rp') ||
+                    str_contains($headerName, 'harga') ||
+                    str_contains($headerName, 'subtotal') ||
+                    str_contains($headerName, 'total') ||
+                    str_contains($headerName, 'nominal') ||
+                    str_contains($headerName, 'penjualan') ||
+                    str_contains($headerName, 'piutang') ||
+                    str_contains($headerName, 'terbayar') ||
+                    str_contains($headerName, 'sisa')
+                ) && !str_contains($headerName, 'qty') && !str_contains($headerName, 'pcs');
+
+                $isQuantity = str_contains($headerName, 'qty') || str_contains($headerName, 'pcs');
+
+                $cleanVal = is_string($val) ? trim($val) : $val;
+                if (is_string($cleanVal) && preg_match('/^-?[\d\.]+$/', $cleanVal) && !preg_match('/^[0\.\-]+$/', $cleanVal) && str_contains($cleanVal, '.')) {
+                    $numericVal = (float) str_replace('.', '', $cleanVal);
+                } elseif (is_numeric($cleanVal)) {
+                    $numericVal = (float) $cleanVal;
+                } else {
+                    $numericVal = null;
+                }
+
+                if ($numericVal !== null) {
+                    $sheet->setCellValueExplicit($colLetter . $currentRow, $numericVal, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                    $sheet->getStyle($colLetter . $currentRow)->getNumberFormat()->setFormatCode('#,##0');
+                    $sheet->getStyle($colLetter . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+                } else {
+                    $sheet->setCellValueExplicit($colLetter . $currentRow, (string)$val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                }
+                $colIndex++;
             }
 
-            // Summary row if any
-            if (!empty($data['excel_summary'])) {
-                fputcsv($handle, []);
-                fputcsv($handle, $data['excel_summary']);
-            }
+            $sheet->getStyle("A{$currentRow}:{$highestColString}{$currentRow}")->applyFromArray([
+                'font' => ['bold' => true, 'size' => 10],
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'F1F5F9']
+                ]
+            ]);
+            $sheet->getRowDimension($currentRow)->setRowHeight(22);
+            $currentRow++;
+        }
 
-            fclose($handle);
-        };
+        // Border untuk seluruh tabel
+        $dataEndRow = $currentRow - 1;
+        if ($dataEndRow >= $headerRow) {
+            $sheet->getStyle("A{$headerRow}:{$highestColString}{$dataEndRow}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('CBD5E1');
+        }
 
-        return response()->stream($callback, 200, $headers);
+        // Auto size columns
+        foreach (range(1, count($headers)) as $col) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+        }
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 
     public function printPdf(Request $request)
