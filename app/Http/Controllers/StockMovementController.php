@@ -150,6 +150,31 @@ class StockMovementController extends Controller
             ->orderBy('warehouses.name')
             ->get();
 
+        // 4b. Master Gudang Tujuan: mencakup seluruh gudang aktif dalam Area terkait (Bogor & Sukabumi dalam 1 Area include semua)
+        $accessibleAreaIds = $warehouses->pluck('area_id')->unique()->filter()->values()->all();
+        if (empty($accessibleAreaIds)) {
+            $accessibleAreaIds = DB::table('areas')->where('status', 'ACTIVE')->pluck('id')->all();
+        }
+
+        $destinationWarehouses = DB::table('warehouses')
+            ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
+            ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->join('areas', 'clusters.area_id', '=', 'areas.id')
+            ->where('warehouses.status', 'ACTIVE')
+            ->whereIn('areas.id', $accessibleAreaIds)
+            ->select(
+                'warehouses.*',
+                'taps.name as tap_name',
+                'taps.cluster_id',
+                'clusters.name as cluster_name',
+                'clusters.area_id',
+                'areas.name as area_name'
+            )
+            ->orderBy('clusters.name')
+            ->orderBy('warehouses.type')
+            ->orderBy('warehouses.name')
+            ->get();
+
         $iccidEnabled = (bool) config('erp.enable_iccid', false);
 
         $products = DB::table('products')
@@ -205,6 +230,7 @@ class StockMovementController extends Controller
         return view('stock_movement.index', compact(
             'movements',
             'warehouses',
+            'destinationWarehouses',
             'products',
             'stockBalances',
             'availableIccids',
@@ -282,9 +308,9 @@ class StockMovementController extends Controller
             return redirect()->back()->with('error', 'Data gudang tidak valid!');
         }
 
-        // Validasi Cluster: Mutasi stok (SM) hanya diperbolehkan antar gudang dalam 1 Cluster yang sama
-        if ($sourceWh->cluster_id !== $destWh->cluster_id) {
-            return redirect()->back()->with('error', "Gudang tujuan harus berada dalam Cluster yang sama ({$sourceWh->cluster_name}) dengan gudang asal!");
+        // Validasi Area: Mutasi stok (SM) diperbolehkan antar gudang dalam 1 Area yang sama (termasuk antar-cluster dalam 1 Area)
+        if ($sourceWh->area_id !== $destWh->area_id) {
+            return redirect()->back()->with('error', "Gudang tujuan harus berada dalam Area wilayah yang sama dengan gudang asal!");
         }
 
         DB::beginTransaction();
@@ -802,8 +828,8 @@ class StockMovementController extends Controller
                 $errors[] = "ID Gudang Tujuan [{$rawDestWhId}] tidak ditemukan";
             } elseif ($destWhId === $sourceWhId) {
                 $errors[] = "Gudang tujuan sama dengan gudang asal";
-            } elseif ($destWh->cluster_id !== $sourceWh->cluster_id) {
-                $errors[] = "Gudang tujuan beda Cluster dengan gudang asal";
+            } elseif ($destWh->area_id !== $sourceWh->area_id) {
+                $errors[] = "Gudang tujuan beda Area wilayah dengan gudang asal";
             }
 
             if ($product && $qty > 0) {
@@ -936,8 +962,8 @@ class StockMovementController extends Controller
                     ->select('warehouses.*', 'taps.cluster_id', 'clusters.area_id')
                     ->first();
 
-                if (!$destWh || $destWh->cluster_id !== $sourceWh->cluster_id) {
-                    throw new \Exception("Gudang tujuan ID {$destWhId} tidak valid atau berbeda Cluster wilayah!");
+                if (!$destWh || $destWh->area_id !== $sourceWh->area_id) {
+                    throw new \Exception("Gudang tujuan ID {$destWhId} tidak valid atau berbeda Area wilayah!");
                 }
 
                 $nextNum = DB::table('stock_movements')->count() + 1;
