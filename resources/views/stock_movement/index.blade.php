@@ -163,12 +163,12 @@
                                 class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 cursor-pointer shadow-2xs">
                             <option value="">-- Pilih Gudang Asal --</option>
                             <template x-for="wh in allWarehouses" :key="wh.id">
-                                <option :value="wh.id" x-text="`[${wh.type}] ${wh.name} (${wh.tap_name} - ${wh.area_name || ''})`"></option>
+                                <option :value="wh.id" x-text="`[${wh.type}] ${wh.name} (${wh.tap_name} - ${wh.cluster_name || ''})`"></option>
                             </template>
                         </select>
-                        <template x-if="sourceWhAreaName">
+                        <template x-if="sourceWhClusterName">
                             <span class="text-[10px] text-cyan-700 font-bold mt-1 block">
-                                Wilayah Area: <span x-text="sourceWhAreaName"></span>
+                                Wilayah Cluster: <span x-text="sourceWhClusterName"></span> (<span x-text="sourceWhAreaName"></span>)
                             </span>
                         </template>
                     </div>
@@ -182,14 +182,14 @@
                                 required 
                                 :disabled="!sourceWhId"
                                 class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 cursor-pointer shadow-2xs disabled:bg-slate-100 disabled:text-slate-400">
-                            <option value="" x-text="sourceWhId ? '-- Pilih Gudang Tujuan (Area Sama) --' : '-- Pilih Gudang Asal Dulu --'"></option>
+                            <option value="" x-text="sourceWhId ? '-- Pilih Gudang Tujuan (Cluster Sama) --' : '-- Pilih Gudang Asal Dulu --'"></option>
                             <template x-for="wh in availableDestinationWarehouses" :key="wh.id">
                                 <option :value="wh.id" :disabled="wh.id == sourceWhId" x-text="`[${wh.type}] ${wh.name} (${wh.tap_name})`"></option>
                             </template>
                         </select>
                         <template x-if="sourceWhId">
                             <span class="text-[10px] text-slate-500 font-medium mt-1 block">
-                                Menampilkan <strong class="text-slate-800" x-text="availableDestinationWarehouses.length"></strong> gudang dalam <strong class="text-cyan-800" x-text="sourceWhAreaName"></strong>
+                                Menampilkan <strong class="text-slate-800" x-text="availableDestinationWarehouses.length"></strong> gudang dalam Cluster <strong class="text-cyan-800" x-text="sourceWhClusterName"></strong>
                             </span>
                         </template>
                     </div>
@@ -1256,11 +1256,11 @@
 
                 onSourceWarehouseChange() {
                     const self = this;
-                    // Reset tujuan jika tidak satu area dengan sumber yang baru dipilih
+                    // Reset tujuan jika tidak satu cluster dengan sumber yang baru dipilih
                     if (this.sourceWhId && this.destWhId) {
                         const srcWh = this.allWarehouses.find(w => w.id == self.sourceWhId);
                         const dstWh = this.allWarehouses.find(w => w.id == self.destWhId);
-                        if (!srcWh || !dstWh || srcWh.area_id !== dstWh.area_id || self.sourceWhId == self.destWhId) {
+                        if (!srcWh || !dstWh || srcWh.cluster_id !== dstWh.cluster_id || self.sourceWhId == self.destWhId) {
                             this.destWhId = '';
                         }
                     } else {
@@ -1278,6 +1278,11 @@
                     return this.allWarehouses.find(w => w.id == this.sourceWhId);
                 },
 
+                get sourceWhClusterName() {
+                    const src = this.currentSourceWarehouse;
+                    return src ? (src.cluster_name || '') : '';
+                },
+
                 get sourceWhAreaName() {
                     const src = this.currentSourceWarehouse;
                     return src ? (src.area_name || '') : '';
@@ -1286,9 +1291,9 @@
                 get availableDestinationWarehouses() {
                     if (!this.sourceWhId) return [];
                     const src = this.currentSourceWarehouse;
-                    if (!src || !src.area_id) return [];
-                    // Filter: hanya gudang dalam Area yang sama
-                    return this.allWarehouses.filter(w => w.area_id == src.area_id && w.id != src.id);
+                    if (!src || !src.cluster_id) return [];
+                    // Filter: hanya gudang dalam Cluster yang sama
+                    return this.allWarehouses.filter(w => w.cluster_id == src.cluster_id && w.id != src.id);
                 },
 
                 onWarehouseChange() {

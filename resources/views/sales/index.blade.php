@@ -404,17 +404,135 @@
             </form>
         </div>
 
+        <!-- ============================================================== -->
+        <!-- KOMPONEN UI: FILTER CLIENT-SIDE (TANGGAL, WILAYAH & SEARCH)    -->
+        <!-- ============================================================== -->
+        <div class="space-y-3 mb-5">
+            <!-- Filter Tanggal Client-Side (100% Cepat Tanpa Reload Halaman) -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-2xs">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mr-1">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-rose-600"></i>
+                            <span>Periode Tanggal SO:</span>
+                        </span>
+                        <!-- Preset Tanggal Client-Side -->
+                        <div class="inline-flex items-center p-0.5 bg-slate-100 rounded-xl gap-0.5">
+                            <button type="button"
+                                    @click="setClientDatePreset('all')"
+                                    :class="!startDate && !endDate ? 'bg-slate-900 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Semua
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('today')"
+                                    :class="isPresetActive('today') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Hari Ini
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('7days')"
+                                    :class="isPresetActive('7days') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                7 Hari
+                            </button>
+                            <button type="button"
+                                    @click="setClientDatePreset('this_month')"
+                                    :class="isPresetActive('this_month') ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                                    class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer">
+                                Bulan Ini
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Input Tanggal Custom (Client-Side) -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
+                            <span class="text-[11px] text-slate-400 font-semibold">Dari:</span>
+                            <input type="date"
+                                   x-model="startDate"
+                                   @change="resetPage(); syncSelection(); refreshIcons()"
+                                   class="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer">
+                        </div>
+                        <span class="text-slate-300 text-xs">-</span>
+                        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
+                            <span class="text-[11px] text-slate-400 font-semibold">Sampai:</span>
+                            <input type="date"
+                                   x-model="endDate"
+                                   @change="resetPage(); syncSelection(); refreshIcons()"
+                                   class="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer">
+                        </div>
+                        <button type="button"
+                                x-show="startDate || endDate"
+                                @click="setClientDatePreset('all')"
+                                title="Reset Filter Tanggal"
+                                class="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 transition-colors cursor-pointer">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            <span>Reset Tanggal</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Wilayah & Search (Sinkron Client-Side dengan x-filter-territory) -->
+            <x-filter-territory
+                tab="so"
+                :show-area="true"
+                :show-cluster="true"
+                :show-tap="true"
+                :show-search="true"
+                model-search="searchSo"
+                search-placeholder="Cari No. SO, No. GD, Customer, Sales, Gudang, Catatan..."
+                :areas="$areas"
+                :clusters="$clusters"
+                :taps="$taps" />
+        </div>
+
         <!-- ============================================== -->
         <!-- BAGIAN 1: HEADER TABLE (DAFTAR DOKUMEN SO)     -->
         <!-- ============================================== -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
-            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                    <span>Daftar Sales Order</span>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 text-slate-700">
-                        {{ count($orders) }}
-                    </span>
-                </h3>
+            <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+                <div class="flex items-center gap-2.5">
+                    <h3 class="font-extrabold text-slate-900 text-xs flex items-center gap-2">
+                        <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-700"></i>
+                        <span>Daftar Sales Order (SO)</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold font-mono" x-text="filteredOrders.length + ' data'"></span>
+                    </h3>
+                </div>
+
+                <!-- Kontrol Filter Status & Checkbox Void Client-Side -->
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    <!-- Dropdown Filter Status SO -->
+                    <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs shadow-2xs">
+                        <span class="text-slate-400 font-semibold text-[11px]">Status:</span>
+                        <select x-model="statusFilter" @change="resetPage(); syncSelection(); refreshIcons()" class="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer">
+                            <option value="">Semua Status</option>
+                            <option value="DRAFT">DRAFT</option>
+                            <option value="PENDING_APPROVAL">PENDING APPROVAL</option>
+                            <option value="APPROVED">APPROVED</option>
+                            <option value="DELIVERED">DELIVERED</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                        </select>
+                    </div>
+
+                    <!-- Checkbox Void -->
+                    <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none text-xs font-bold"
+                           :class="showVoid ? 'bg-rose-50 border-rose-300 text-rose-800 shadow-2xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
+                        <input type="checkbox"
+                               x-model="showVoid"
+                               @change="resetPage(); syncSelection(); refreshIcons()"
+                               class="rounded text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer border-slate-300">
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="ban" class="w-3.5 h-3.5" :class="showVoid ? 'text-rose-600' : 'text-slate-400'"></i>
+                            <span>Tampilkan SO yang Di-VOID</span>
+                        </span>
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold"
+                              :class="showVoid ? 'bg-rose-200/80 text-rose-900' : 'bg-slate-100 text-slate-500'"
+                              x-text="voidCount + ' Void'">
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -433,8 +551,9 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 font-medium">
-                        @forelse($orders as $so)
-                            <tr @click="selectSo({{ json_encode($so) }})"
+                        @foreach($orders as $so)
+                            <tr x-show="paginatedOrderIds.includes({{ $so->id }})"
+                                @click="selectSoById({{ $so->id }})"
                                 class="cursor-pointer transition-colors"
                                 :class="selectedSo && selectedSo.id === {{ $so->id }} ? 'bg-amber-50/80 border-l-4 border-amber-500' : 'hover:bg-slate-50/70'">
                                 
@@ -520,15 +639,62 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="py-8 text-center text-slate-400">
-                                    Belum ada transaksi Sales Order. Klik "+ Buat SO Baru" untuk memulai.
-                                </td>
-                            </tr>
-                        @endforelse
+                        @endforeach
+
+                        <tr x-show="filteredOrders.length === 0" x-cloak>
+                            <td colspan="9" class="py-8">
+                                <x-empty-state title="Tidak Ada Dokumen SO" description="Belum ada Sales Order yang sesuai dengan filter wilayah, tanggal, status, atau pencarian Anda." icon="file-search" />
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Client-Side Pagination Bar SO -->
+            <div class="p-4 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
+                <div class="flex items-center gap-3">
+                    <div>
+                        Menampilkan <strong class="text-slate-800" x-text="soPaginationStart"></strong> - <strong class="text-slate-800" x-text="soPaginationEnd"></strong> dari <strong class="text-slate-800" x-text="filteredOrders.length"></strong> data SO
+                    </div>
+                    <span class="text-slate-300">|</span>
+                    <label class="flex items-center gap-1.5 text-xs">
+                        <span>Baris:</span>
+                        <select x-model="soPerPage" @change="soPage = 1; refreshIcons()" class="border border-slate-200 rounded-lg px-2 py-1 bg-white text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="ALL">Semua</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-1" x-show="totalSoPages > 1">
+                    <button type="button"
+                            @click="soPage = Math.max(1, soPage - 1); refreshIcons()"
+                            :disabled="soPage === 1"
+                            class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 text-xs font-bold flex items-center gap-1 cursor-pointer">
+                        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                        <span>Prev</span>
+                    </button>
+
+                    <template x-for="(p, idx) in displayedSoPages" :key="idx">
+                        <button type="button"
+                                @click="if (p !== '...') { soPage = p; refreshIcons(); }"
+                                :disabled="p === '...'"
+                                :class="soPage === p ? 'bg-amber-600 text-white font-extrabold border-amber-600 shadow-xs' : (p === '...' ? 'cursor-default border-transparent text-slate-400' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 font-semibold')"
+                                class="min-w-[30px] h-7 px-1.5 rounded-lg border text-xs flex items-center justify-center transition-all cursor-pointer"
+                                x-text="p">
+                        </button>
+                    </template>
+
+                    <button type="button"
+                            @click="soPage = Math.min(totalSoPages, soPage + 1); refreshIcons()"
+                            :disabled="soPage === totalSoPages"
+                            class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 text-xs font-bold flex items-center gap-1 cursor-pointer">
+                        <span>Next</span>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -837,6 +1003,11 @@
     @push('scripts')
     <script>
         function salesApp() {
+            const rawOrders = @json($orders);
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
             return {
                 createSoOpen: false,
                 returnModalOpen: false,
@@ -848,6 +1019,25 @@
                 selectedSalesId: '',
                 selectedCustomerId: '',
                 creditInfo: null,
+
+                // Data Records
+                allOrders: rawOrders,
+                allClusters: @json($clusters ?? []),
+                allTaps: @json($taps ?? []),
+
+                // Filter Client-Side: Tanggal, Wilayah, Status & Search (Default AUTO HARI INI)
+                startDate: todayStr,
+                endDate: todayStr,
+                selectedArea: '',
+                selectedCluster: '',
+                selectedTap: '',
+                searchSo: '',
+                statusFilter: '',
+                showVoid: false,
+
+                // Pagination SO
+                soPage: 1,
+                soPerPage: '10',
 
                 items: [
                     {
@@ -868,6 +1058,224 @@
                 products: @json($products),
                 stockBalances: @json($stockBalances),
                 availableIccids: @json($availableIccids),
+
+                get voidCount() {
+                    return this.allOrders.filter(so => so.status === 'VOID').length;
+                },
+
+                get clusterOptions() {
+                    if (!this.selectedArea) return this.allClusters;
+                    return this.allClusters.filter(c => String(c.area_id) === String(this.selectedArea));
+                },
+
+                get tapOptions() {
+                    if (this.selectedCluster) {
+                        return this.allTaps.filter(t => String(t.cluster_id) === String(this.selectedCluster));
+                    }
+                    if (this.selectedArea) {
+                        return this.allTaps.filter(t => String(t.area_id) === String(this.selectedArea));
+                    }
+                    return this.allTaps;
+                },
+
+                onAreaChange() {
+                    this.selectedCluster = '';
+                    this.selectedTap = '';
+                    this.resetPage();
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                onClusterChange() {
+                    this.selectedTap = '';
+                    this.resetPage();
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                onTapChange() {
+                    this.resetPage();
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                onSearchChange() {
+                    this.resetPage();
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                hasActiveFilter() {
+                    return Boolean(this.selectedArea || this.selectedCluster || this.selectedTap || this.searchSo || this.startDate || this.endDate || this.statusFilter || this.showVoid);
+                },
+
+                resetFilter() {
+                    this.selectedArea = '';
+                    this.selectedCluster = '';
+                    this.selectedTap = '';
+                    this.searchSo = '';
+                    this.statusFilter = '';
+                    this.showVoid = false;
+                    this.setClientDatePreset('all');
+                },
+
+                setClientDatePreset(type) {
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+                    if (type === 'all') {
+                        this.startDate = '';
+                        this.endDate = '';
+                    } else if (type === 'today') {
+                        const todayStr = fmt(now);
+                        this.startDate = todayStr;
+                        this.endDate = todayStr;
+                    } else if (type === '7days') {
+                        const past = new Date();
+                        past.setDate(past.getDate() - 6);
+                        this.startDate = fmt(past);
+                        this.endDate = fmt(now);
+                    } else if (type === 'this_month') {
+                        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        this.startDate = fmt(firstDay);
+                        this.endDate = fmt(lastDay);
+                    }
+                    this.resetPage();
+                    this.syncSelection();
+                    this.refreshIcons();
+                },
+
+                isPresetActive(type) {
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                    if (type === 'today') {
+                        const todayStr = fmt(now);
+                        return this.startDate === todayStr && this.endDate === todayStr;
+                    }
+                    if (type === '7days') {
+                        const past = new Date();
+                        past.setDate(past.getDate() - 6);
+                        return this.startDate === fmt(past) && this.endDate === fmt(now);
+                    }
+                    if (type === 'this_month') {
+                        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        return this.startDate === fmt(firstDay) && this.endDate === fmt(lastDay);
+                    }
+                    return false;
+                },
+
+                resetPage() {
+                    this.soPage = 1;
+                },
+
+                refreshIcons() {
+                    this.$nextTick(() => {
+                        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                            lucide.createIcons();
+                        }
+                    });
+                },
+
+                isOrderVisible(so) {
+                    if (!this.showVoid && so.status === 'VOID') return false;
+
+                    if (this.selectedArea && String(so.area_id) !== String(this.selectedArea)) return false;
+                    if (this.selectedCluster && String(so.cluster_id) !== String(this.selectedCluster)) return false;
+                    if (this.selectedTap && String(so.tap_id) !== String(this.selectedTap)) return false;
+
+                    if (this.statusFilter && so.status !== this.statusFilter) return false;
+
+                    if (this.startDate) {
+                        const soDate = so.order_date ? String(so.order_date).substring(0, 10) : '';
+                        if (soDate && soDate < this.startDate) return false;
+                    }
+                    if (this.endDate) {
+                        const soDate = so.order_date ? String(so.order_date).substring(0, 10) : '';
+                        if (soDate && soDate > this.endDate) return false;
+                    }
+
+                    if (this.searchSo) {
+                        const q = this.searchSo.toLowerCase().trim();
+                        const gdDoc = so.delivery ? (so.delivery.doc_number || '') : '';
+                        const match = (so.doc_number && so.doc_number.toLowerCase().includes(q)) ||
+                                      (gdDoc && gdDoc.toLowerCase().includes(q)) ||
+                                      (so.customer_name && so.customer_name.toLowerCase().includes(q)) ||
+                                      (so.customer_code && so.customer_code.toLowerCase().includes(q)) ||
+                                      (so.sales_name && so.sales_name.toLowerCase().includes(q)) ||
+                                      (so.warehouse_name && so.warehouse_name.toLowerCase().includes(q)) ||
+                                      (so.tap_name && so.tap_name.toLowerCase().includes(q)) ||
+                                      (so.cluster_name && so.cluster_name.toLowerCase().includes(q)) ||
+                                      (so.notes && so.notes.toLowerCase().includes(q));
+                        if (!match) return false;
+                    }
+                    return true;
+                },
+
+                get filteredOrders() {
+                    return this.allOrders.filter(so => this.isOrderVisible(so));
+                },
+
+                get totalSoPages() {
+                    if (this.soPerPage === 'ALL') return 1;
+                    const perPage = parseInt(this.soPerPage, 10) || 10;
+                    return Math.max(1, Math.ceil(this.filteredOrders.length / perPage));
+                },
+
+                get paginatedOrderIds() {
+                    if (this.soPerPage === 'ALL') return this.filteredOrders.map(so => so.id);
+                    const perPage = parseInt(this.soPerPage, 10) || 10;
+                    const start = (this.soPage - 1) * perPage;
+                    return this.filteredOrders.slice(start, start + perPage).map(so => so.id);
+                },
+
+                get soPaginationStart() {
+                    if (this.filteredOrders.length === 0) return 0;
+                    if (this.soPerPage === 'ALL') return 1;
+                    const perPage = parseInt(this.soPerPage, 10) || 10;
+                    return (this.soPage - 1) * perPage + 1;
+                },
+
+                get soPaginationEnd() {
+                    if (this.filteredOrders.length === 0) return 0;
+                    if (this.soPerPage === 'ALL') return this.filteredOrders.length;
+                    const perPage = parseInt(this.soPerPage, 10) || 10;
+                    return Math.min(this.soPage * perPage, this.filteredOrders.length);
+                },
+
+                get displayedSoPages() {
+                    const current = this.soPage;
+                    const total = this.totalSoPages;
+                    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+                    if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+                    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+                    return [1, '...', current - 1, current, current + 1, '...', total];
+                },
+
+                syncSelection() {
+                    this.$nextTick(() => {
+                        if (this.selectedSo && !this.isOrderVisible(this.selectedSo)) {
+                            this.selectedSo = this.filteredOrders.length > 0 ? this.filteredOrders[0] : null;
+                        } else if (!this.selectedSo && this.filteredOrders.length > 0) {
+                            this.selectedSo = this.filteredOrders[0];
+                        }
+                    });
+                },
+
+                selectSoById(soId) {
+                    const found = this.allOrders.find(o => o.id === soId);
+                    if (found) {
+                        this.selectedSo = found;
+                        this.$nextTick(() => {
+                            this.refreshIcons();
+                            const el = document.getElementById('detailSection');
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        });
+                    }
+                },
 
                 get selectedWarehouseInfo() {
                     if (!this.selectedWarehouseId) return '';
@@ -890,18 +1298,28 @@
                 },
 
                 initData() {
-                    const firstSo = @json($orders->first());
-                    if (firstSo) this.selectedSo = firstSo;
+                    // Auto Hari Ini
+                    this.setClientDatePreset('today');
 
-                    this.$nextTick(() => {
-                        lucide.createIcons();
+                    if (this.filteredOrders.length > 0) {
+                        this.selectedSo = this.filteredOrders[0];
+                    } else if (this.allOrders.length > 0) {
+                        this.selectedSo = this.allOrders[0];
+                    }
+
+                    this.$watch('searchSo', () => {
+                        this.resetPage();
+                        this.syncSelection();
+                        this.refreshIcons();
                     });
+
+                    this.refreshIcons();
                 },
 
                 selectSo(so) {
                     this.selectedSo = so;
                     this.$nextTick(() => {
-                        lucide.createIcons();
+                        this.refreshIcons();
                         const el = document.getElementById('detailSection');
                         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     });

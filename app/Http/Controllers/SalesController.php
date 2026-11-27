@@ -16,6 +16,8 @@ class SalesController extends Controller
             ->join('customers', 'sales_orders.customer_id', '=', 'customers.id')
             ->join('sales', 'sales_orders.sales_id', '=', 'sales.id')
             ->join('taps', 'sales_orders.tap_id', '=', 'taps.id')
+            ->leftJoin('clusters', 'taps.cluster_id', '=', 'clusters.id')
+            ->leftJoin('areas', 'clusters.area_id', '=', 'areas.id')
             ->join('warehouses', 'sales_orders.warehouse_id', '=', 'warehouses.id')
             ->select(
                 'sales_orders.*',
@@ -24,6 +26,10 @@ class SalesController extends Controller
                 'customers.type as customer_type',
                 'sales.name as sales_name',
                 'taps.name as tap_name',
+                'taps.cluster_id',
+                'clusters.name as cluster_name',
+                'clusters.area_id',
+                'areas.name as area_name',
                 'warehouses.name as warehouse_name',
                 'warehouses.type as warehouse_type'
             )
@@ -181,6 +187,23 @@ class SalesController extends Controller
                 ->get()
             : collect([]);
 
+        $areas = TerritoryScope::applyAreaScope(
+            DB::table('areas')->where('status', 'ACTIVE')->orderBy('name'),
+            'areas.id'
+        )->get();
+        $clusters = TerritoryScope::applyClusterScope(
+            DB::table('clusters')->where('status', 'ACTIVE')->orderBy('name'),
+            'clusters.id'
+        )->get();
+        $taps = TerritoryScope::applyTapScope(
+            DB::table('taps')
+                ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
+                ->where('taps.status', 'ACTIVE')
+                ->select('taps.*', 'clusters.area_id')
+                ->orderBy('taps.name'),
+            'taps.id'
+        )->get();
+
         return view('sales.index', compact(
             'orders',
             'deliveries',
@@ -191,7 +214,10 @@ class SalesController extends Controller
             'products',
             'stockBalances',
             'availableIccids',
-            'iccidEnabled'
+            'iccidEnabled',
+            'areas',
+            'clusters',
+            'taps'
         ));
     }
 

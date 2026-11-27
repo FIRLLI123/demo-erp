@@ -139,6 +139,7 @@ class StockMovementController extends Controller
             ->select(
                 'warehouses.*',
                 'taps.name as tap_name',
+                'taps.cluster_id',
                 'clusters.name as cluster_name',
                 'clusters.area_id',
                 'areas.name as area_name'
@@ -267,23 +268,23 @@ class StockMovementController extends Controller
             ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
             ->where('warehouses.id', $sourceWhId)
-            ->select('warehouses.*', 'clusters.area_id')
+            ->select('warehouses.*', 'taps.cluster_id', 'clusters.name as cluster_name', 'clusters.area_id')
             ->first();
 
         $destWh = DB::table('warehouses')
             ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
             ->where('warehouses.id', $destWhId)
-            ->select('warehouses.*', 'clusters.area_id')
+            ->select('warehouses.*', 'taps.cluster_id', 'clusters.name as cluster_name', 'clusters.area_id')
             ->first();
 
         if (!$sourceWh || !$destWh) {
             return redirect()->back()->with('error', 'Data gudang tidak valid!');
         }
 
-        // Validasi Area: Mutasi stok (SM) hanya diperbolehkan antar gudang dalam 1 Area yang sama
-        if ($sourceWh->area_id !== $destWh->area_id) {
-            return redirect()->back()->with('error', 'Gudang tujuan harus berada dalam Area wilayah yang sama dengan gudang asal!');
+        // Validasi Cluster: Mutasi stok (SM) hanya diperbolehkan antar gudang dalam 1 Cluster yang sama
+        if ($sourceWh->cluster_id !== $destWh->cluster_id) {
+            return redirect()->back()->with('error', "Gudang tujuan harus berada dalam Cluster yang sama ({$sourceWh->cluster_name}) dengan gudang asal!");
         }
 
         DB::beginTransaction();
@@ -715,7 +716,7 @@ class StockMovementController extends Controller
             ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
             ->where('warehouses.id', $sourceWhId)
-            ->select('warehouses.*', 'clusters.area_id')
+            ->select('warehouses.*', 'taps.cluster_id', 'clusters.area_id')
             ->first();
 
         $file = $request->file('file');
@@ -749,7 +750,7 @@ class StockMovementController extends Controller
             ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
             ->where('warehouses.status', 'ACTIVE')
-            ->select('warehouses.*', 'clusters.area_id', 'taps.name as tap_name')
+            ->select('warehouses.*', 'taps.cluster_id', 'clusters.area_id', 'taps.name as tap_name')
             ->get()
             ->keyBy('id');
 
@@ -801,8 +802,8 @@ class StockMovementController extends Controller
                 $errors[] = "ID Gudang Tujuan [{$rawDestWhId}] tidak ditemukan";
             } elseif ($destWhId === $sourceWhId) {
                 $errors[] = "Gudang tujuan sama dengan gudang asal";
-            } elseif ($destWh->area_id !== $sourceWh->area_id) {
-                $errors[] = "Gudang tujuan beda Area (Area asal: {$sourceWh->area_id}, tujuan: {$destWh->area_id})";
+            } elseif ($destWh->cluster_id !== $sourceWh->cluster_id) {
+                $errors[] = "Gudang tujuan beda Cluster dengan gudang asal";
             }
 
             if ($product && $qty > 0) {
@@ -888,7 +889,7 @@ class StockMovementController extends Controller
             ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
             ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
             ->where('warehouses.id', $sourceWhId)
-            ->select('warehouses.*', 'clusters.area_id')
+            ->select('warehouses.*', 'taps.cluster_id', 'clusters.area_id')
             ->first();
 
         // Group rows per gudang tujuan (1 dokumen SM dibuat per 1 rute gudang tujuan)
@@ -932,11 +933,11 @@ class StockMovementController extends Controller
                     ->join('taps', 'warehouses.tap_id', '=', 'taps.id')
                     ->join('clusters', 'taps.cluster_id', '=', 'clusters.id')
                     ->where('warehouses.id', $destWhId)
-                    ->select('warehouses.*', 'clusters.area_id')
+                    ->select('warehouses.*', 'taps.cluster_id', 'clusters.area_id')
                     ->first();
 
-                if (!$destWh || $destWh->area_id !== $sourceWh->area_id) {
-                    throw new \Exception("Gudang tujuan ID {$destWhId} tidak valid atau berbeda Area wilayah!");
+                if (!$destWh || $destWh->cluster_id !== $sourceWh->cluster_id) {
+                    throw new \Exception("Gudang tujuan ID {$destWhId} tidak valid atau berbeda Cluster wilayah!");
                 }
 
                 $nextNum = DB::table('stock_movements')->count() + 1;

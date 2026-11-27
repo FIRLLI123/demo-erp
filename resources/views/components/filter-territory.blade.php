@@ -185,7 +185,7 @@
                 @elseif($tab === 'sales')
                     <strong class="text-rose-600" x-text="typeof filteredCount !== 'undefined' ? filteredCount : 0"></strong>
                     <span class="text-slate-400 font-normal"> / <span x-text="typeof allSales !== 'undefined' ? allSales.length : 0"></span> data</span>
-                @elseif($tab === 'po')
+                @elseif($tab === 'po' || $tab === 'so' || $tab === 'sales_orders')
                     <strong class="text-rose-600" x-text="typeof filteredOrders !== 'undefined' ? filteredOrders.length : 0"></strong>
                     <span class="text-slate-400 font-normal"> / <span x-text="typeof allOrders !== 'undefined' ? allOrders.length : 0"></span> data</span>
                 @elseif($tab === 'sm')
